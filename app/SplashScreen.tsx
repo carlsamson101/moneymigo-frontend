@@ -212,7 +212,7 @@ export default function SplashScreen() {
       >
         <Animated.View style={[styles.shimmer, { transform: [{ translateX: shimmerX }] }]} />
         <Animated.Image
-          source={require('../assets/images/moneymigo.png')}
+          source={require('../assets/images/moneymigo-nobackg.png')}
           style={styles.logo}
           resizeMode="contain"
         />

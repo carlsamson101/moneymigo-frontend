@@ -2500,7 +2500,6 @@ useEffect(() => {
 )}
 
 
-
 {/* ==================== PERIOD MODAL ==================== */}
 <Modal
   visible={dropdownOpen}
@@ -5067,49 +5066,61 @@ progressLabel: {
   color: "#92400E",
 },
 
-overlay: {
-  flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.6)",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 20,
-  zIndex: 9999,
-},
-tutorialBox: {
-  backgroundColor: "#ffffff",
-  borderRadius: 20,
-  padding: 25,
-  width: "85%",
-  alignItems: "center",
-  elevation: 8,
-  shadowColor: "#000",
-  shadowOpacity: 0.25,
-  shadowRadius: 10,
-},
-tutorialTitle: {
-  fontSize: 20,
-  fontWeight: "700",
-  color: "#1f4b81ff",
-  marginBottom: 10,
-},
-tutorialText: {
-  fontSize: 14,
-  color: "#334155",
-  textAlign: "center",
-  marginBottom: 20,
-  lineHeight: 20,
-},
-tutorialButton: {
-  backgroundColor: "#1f4b81ff",
-  paddingVertical: 10,
-  paddingHorizontal: 30,
-  borderRadius: 10,
-},
-tutorialButtonText: {
-  color: "#fff",
-  fontWeight: "700",
-  fontSize: 16,
-},
+ooverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(31, 75, 129, 0.85)', // Darker overlay using #1f4b81
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  tutorialBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#1f4b81',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  tutorialTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f4b81', // Primary color
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  tutorialText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#4a4a4a',
+    marginBottom: 24,
+  },
+  tutorialButton: {
+    backgroundColor: '#1f4b81', // Primary button color
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#1f4b81',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  tutorialButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 
 overspendText: {
   fontSize: 12,

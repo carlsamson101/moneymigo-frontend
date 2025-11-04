@@ -265,7 +265,7 @@ function AppLogin() {
       <View style={styles.content}>
         <View style={styles.topContent}>
           <Image
-            source={require('../assets/images/moneymigo.png')}
+            source={require('../assets/images/moneymigo-nobackg.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -457,7 +457,7 @@ if (response.data.needsVerification) {
       <View style={styles.content}>
         <View style={styles.topContent}>
           <Image
-            source={require('../assets/images/moneymigo.png')}
+            source={require('../assets/images/moneymigo-nobackg.png')}
             style={styles.logo}
             resizeMode="contain"
           />

@@ -6,8 +6,7 @@ import { router } from "expo-router";
 
 export default function GettingStartedScreen() {
   const handleBack = () => {
-    router.push("/"); // 👈 Navigates back to app/(tabs)/index.tsx
-    // or router.back() if you just want to return to previous screen
+    router.push("/");
   };
 
   return (
@@ -15,7 +14,7 @@ export default function GettingStartedScreen() {
       {/* 🔙 Back Button Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={22} color="#1E3A8A" />
+          <Ionicons name="arrow-back" size={22} color="#1f4b81" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Getting Started</Text>
@@ -33,12 +32,13 @@ export default function GettingStartedScreen() {
         onPress={() => router.push("/homeTutorial")}
       >
         <LinearGradient
-          colors={["#3B82F6", "#2563EB"]}
+          colors={["#1f4b81", "#7fb1d6"]}
           style={styles.optionGradient}
         >
           <Ionicons name="home-outline" size={38} color="#fff" />
         </LinearGradient>
         <Text style={styles.optionText}>Home Page Tutorial</Text>
+        <Text style={styles.optionDesc}>Learn how to navigate your dashboard</Text>
       </TouchableOpacity>
 
       {/* Budget Page Tutorial */}
@@ -47,17 +47,18 @@ export default function GettingStartedScreen() {
         onPress={() => router.push("/budgetTutorial")}
       >
         <LinearGradient
-          colors={["#10B981", "#059669"]}
+          colors={["#1f4b81", "#7fb1d6"]}
           style={styles.optionGradient}
         >
           <Ionicons name="cash-outline" size={38} color="#fff" />
         </LinearGradient>
         <Text style={styles.optionText}>Budget Page Tutorial</Text>
+        <Text style={styles.optionDesc}>Master your budget tracking tools</Text>
       </TouchableOpacity>
 
       <View style={styles.footerNote}>
         <Text style={styles.footerText}>
-          You can revisit these tutorials anytime from the Help button.
+          💡 You can revisit these tutorials anytime from the Help button.
         </Text>
       </View>
     </View>
@@ -67,7 +68,7 @@ export default function GettingStartedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "flex-start",
     padding: 24,
@@ -86,8 +87,8 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     marginBottom: 10,
     elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
+    shadowColor: "#1f4b81",
+    shadowOpacity: 0.1,
     shadowRadius: 3,
   },
   backBtn: {
@@ -98,55 +99,73 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1E3A8A",
+    color: "#1f4b81",
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#1f4b81",
   },
 
   mainTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
-    color: "#111827",
+    color: "#1f4b81",
     marginTop: 20,
     marginBottom: 8,
     textAlign: "center",
   },
   subTitle: {
     fontSize: 15,
-    color: "#6B7280",
-    marginBottom: 28,
+    color: "#64748B",
+    marginBottom: 32,
     textAlign: "center",
   },
   optionCard: {
     width: "100%",
     backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
     alignItems: "center",
     marginBottom: 18,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    shadowColor: "#1f4b81",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    elevation: 3,
   },
   optionGradient: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 75,
+    height: 75,
+    borderRadius: 37.5,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 14,
+    shadowColor: "#1f4b81",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    elevation: 5,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#1f4b81",
+    marginBottom: 4,
+  },
+  optionDesc: {
+    fontSize: 13,
+    color: "#64748B",
+    textAlign: "center",
   },
   footerNote: {
     position: "absolute",
@@ -156,8 +175,9 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: "#94A3B8",
     textAlign: "center",
-    maxWidth: 260,
+    maxWidth: 280,
+    lineHeight: 18,
   },
 });

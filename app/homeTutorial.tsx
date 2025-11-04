@@ -107,14 +107,15 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
          {/* Menu Preview for Navigation slide */}
         {step.showMenuPreview && (
           <View style={styles.menuPreview}>
-           
-            
-            {/* Center FAB with cyan glow */}
+            {/* Center FAB with glow */}
             <View style={styles.previewFAB}>
               <View style={styles.previewFABGlow}>
-                <View style={styles.previewFABInner}>
+                <LinearGradient
+                  colors={["#1f4b81", "#7fb1d6"]}
+                  style={styles.previewFABGradient}
+                >
                   <Ionicons name="chevron-back" size={28} color="#fff" />
-                </View>
+                </LinearGradient>
               </View>
             </View>
           </View>
@@ -133,12 +134,12 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
           ]}
         >
           <LinearGradient
-            colors={["#1F2937", "#374151"]}
+            colors={["#1f4b81", "#2d5f9f"]}
             style={styles.cardGradient}
           >
             {/* Icon */}
             <View style={styles.iconContainer}>
-              <Ionicons name={step.icon as any} size={32} color="#F59E0B" />
+              <Ionicons name={step.icon as any} size={32} color="#7fb1d6" />
             </View>
 
             {/* Content */}
@@ -165,7 +166,7 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
                   style={styles.secondaryBtn}
                   onPress={handlePrevious}
                 >
-                  <Ionicons name="arrow-back" size={18} color="#9CA3AF" />
+                  <Ionicons name="arrow-back" size={18} color="#7fb1d6" />
                   <Text style={styles.secondaryBtnText}>Back</Text>
                 </TouchableOpacity>
               )}
@@ -182,7 +183,7 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
                 onPress={handleNext}
               >
                 <LinearGradient
-                  colors={["#F59E0B", "#D97706"]}
+                  colors={["#7fb1d6", "#5a9cc9"]}
                   style={styles.primaryBtnGradient}
                 >
                   <Text style={styles.primaryBtnText}>
@@ -212,10 +213,10 @@ export default function HomeScreen() {
       {/* 🔙 Back Button Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={22} color="#1E3A8A" />
+          <Ionicons name="arrow-back" size={22} color="#1f4b81" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Home</Text>
+        <Text style={styles.headerTitle}>Home Tutorial</Text>
         <View style={{ width: 50 }} /> 
       </View>
       
@@ -225,22 +226,22 @@ export default function HomeScreen() {
         <View style={styles.headerSection}>
           <View style={styles.budgetCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="wallet-outline" size={20} color="#1F2937" />
+              <Ionicons name="wallet-outline" size={20} color="#1f4b81" />
               <Text style={styles.cardLabel}>Budget Left</Text>
             </View>
             <Text style={styles.budgetAmount}>₱0.00</Text>
             <TouchableOpacity style={styles.editBtn}>
-              <Ionicons name="pencil-outline" size={16} color="#3B82F6" />
+              <Ionicons name="pencil-outline" size={16} color="#1f4b81" />
               <Text style={styles.editBtnText}>47h 51m to edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.addBtn}>
-              <Ionicons name="add-circle" size={24} color="#3B82F6" />
+              <Ionicons name="add-circle" size={24} color="#1f4b81" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.expensesCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="receipt-outline" size={20} color="#1F2937" />
+              <Ionicons name="receipt-outline" size={20} color="#1f4b81" />
               <Text style={styles.cardLabel}>Expenses</Text>
             </View>
             <Text style={styles.expensesAmount}>₱0.00</Text>
@@ -250,14 +251,14 @@ export default function HomeScreen() {
         {/* Budget Period */}
         <View style={styles.periodSection}>
           <View style={styles.periodHeader}>
-            <Ionicons name="calendar-outline" size={20} color="#1F2937" />
+            <Ionicons name="calendar-outline" size={20} color="#1f4b81" />
             <Text style={styles.periodLabel}>Budget Period</Text>
           </View>
           <View style={styles.periodContent}>
             <Text style={styles.periodDate}>Nov 4, 2025 — Nov 11, 2025</Text>
             <TouchableOpacity style={styles.periodBtn}>
               <Text style={styles.periodBtnText}>Weekly</Text>
-              <Ionicons name="chevron-down" size={16} color="#3B82F6" />
+              <Ionicons name="chevron-down" size={16} color="#1f4b81" />
             </TouchableOpacity>
           </View>
         </View>
@@ -265,7 +266,7 @@ export default function HomeScreen() {
         {/* Budget Progress */}
         <View style={styles.progressSection}>
           <View style={styles.progressHeader}>
-            <Ionicons name="bar-chart-outline" size={20} color="#1F2937" />
+            <Ionicons name="bar-chart-outline" size={20} color="#1f4b81" />
             <Text style={styles.progressLabel}>Budget Progress</Text>
             <Text style={styles.progressPercent}>0%</Text>
           </View>
@@ -297,7 +298,7 @@ export default function HomeScreen() {
           style={styles.helpBtn}
           onPress={() => setShowTutorial(true)}
         >
-          <Ionicons name="help-circle" size={28} color="#3B82F6" />
+          <Ionicons name="help-circle" size={28} color="#1f4b81" />
         </TouchableOpacity>
       )}
     </View>
@@ -307,7 +308,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F8FAFC",
     top: 20,
   },
   homeContent: {
@@ -321,16 +322,20 @@ const styles = StyleSheet.create({
   },
   budgetCard: {
     flex: 2,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#E8F1F8",
     borderRadius: 16,
     padding: 16,
     position: "relative",
+    borderWidth: 1,
+    borderColor: "#d1e3f0",
   },
   expensesCard: {
     flex: 1,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "#E8F1F8",
     borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#d1e3f0",
   },
   cardHeader: {
     flexDirection: "row",
@@ -341,18 +346,18 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#1f4b81",
   },
   budgetAmount: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#1E40AF",
+    color: "#1f4b81",
     marginBottom: 8,
   },
   expensesAmount: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#1E40AF",
+    color: "#1f4b81",
   },
   editBtn: {
     flexDirection: "row",
@@ -363,11 +368,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#d1e3f0",
   },
   editBtnText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#3B82F6",
+    color: "#1f4b81",
   },
   addBtn: {
     position: "absolute",
@@ -379,6 +386,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#1f4b81",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   periodHeader: {
     flexDirection: "row",
@@ -389,7 +403,7 @@ const styles = StyleSheet.create({
   periodLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#1f4b81",
   },
   periodContent: {
     flexDirection: "row",
@@ -398,26 +412,35 @@ const styles = StyleSheet.create({
   },
   periodDate: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "#64748B",
   },
   periodBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#E8F1F8",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#d1e3f0",
   },
   periodBtnText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#3B82F6",
+    color: "#1f4b81",
   },
   progressSection: {
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#1f4b81",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   progressHeader: {
     flexDirection: "row",
@@ -428,24 +451,24 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#1f4b81",
     flex: 1,
   },
   progressPercent: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#3B82F6",
+    color: "#1f4b81",
   },
   progressBar: {
     height: 8,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#E8F1F8",
     borderRadius: 4,
     overflow: "hidden",
     marginBottom: 12,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#7fb1d6",
     borderRadius: 4,
   },
   progressFooter: {
@@ -455,13 +478,13 @@ const styles = StyleSheet.create({
   progressFooterLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#9CA3AF",
+    color: "#94A3B8",
     marginBottom: 4,
   },
   progressFooterValue: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#1f4b81",
   },
   alignRight: {
     alignItems: "flex-end",
@@ -476,31 +499,33 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: "#1f4b81",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
+    borderWidth: 2,
+    borderColor: "#E8F1F8",
   },
 
   // Tutorial Overlay Styles
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(31, 75, 129, 0.7)",
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: "rgba(31, 75, 129, 0.4)",
   },
   highlightBox: {
     position: "absolute",
     backgroundColor: "transparent",
     borderWidth: 3,
-    borderColor: "#F59E0B",
+    borderColor: "#7fb1d6",
     borderRadius: 12,
-    shadowColor: "#F59E0B",
+    shadowColor: "#7fb1d6",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.6,
     shadowRadius: 15,
     elevation: 10,
   },
@@ -509,9 +534,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#1f4b81",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -522,10 +547,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    backgroundColor: "rgba(127, 177, 214, 0.2)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "rgba(127, 177, 214, 0.3)",
   },
   tutorialTitle: {
     fontSize: 20,
@@ -535,7 +562,7 @@ const styles = StyleSheet.create({
   },
   tutorialDescription: {
     fontSize: 15,
-    color: "#D1D5DB",
+    color: "#E8F1F8",
     lineHeight: 22,
     marginBottom: 20,
   },
@@ -550,11 +577,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#4B5563",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
   activeDot: {
     width: 24,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#7fb1d6",
   },
   buttonRow: {
     flexDirection: "row",
@@ -569,10 +596,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: "rgba(156, 163, 175, 0.1)",
+    backgroundColor: "rgba(127, 177, 214, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(127, 177, 214, 0.3)",
   },
   secondaryBtnText: {
-    color: "#9CA3AF",
+    color: "#7fb1d6",
     fontSize: 15,
     fontWeight: "600",
   },
@@ -581,7 +610,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   skipBtnText: {
-    color: "#9CA3AF",
+    color: "#E8F1F8",
     fontSize: 15,
     fontWeight: "600",
   },
@@ -608,6 +637,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#1f4b81",
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   backBtn: {
     flexDirection: "row",
@@ -617,12 +653,12 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1E3A8A",
+    color: "#1f4b81",
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#1f4b81",
   },
   menuPreview: {
     position: "absolute",
@@ -632,27 +668,6 @@ const styles = StyleSheet.create({
     height: 400,
     alignItems: "center",
   },
-  previewMenuItem: {
-    position: "absolute",
-    zIndex: 10,
-    right: 0,
-  },
-  previewCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(17,24,39,0.95)",
-    borderWidth: 2,
-    borderColor: "#1f4b81ff",
-  },
-  previewLabel: {
-    color: "#fff",
-    fontSize: 8,
-    fontWeight: "600",
-    marginTop: 2,
-  },
   previewFAB: {
     position: "absolute",
     top: 200,
@@ -660,31 +675,23 @@ const styles = StyleSheet.create({
     zIndex: 11,
   },
   previewFABGlow: {
-  width: 58,
-  height: 58,
-  borderRadius: 29,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(22, 169, 184, 0.25)", // soft cyan aura
-  shadowColor: "#16A9B8",
-  shadowOpacity: 0.9,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 0 },
-  elevation: 12, // Android glow
-},
-  previewFABGradient: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(127, 177, 214, 0.2)",
+    shadowColor: "#7fb1d6",
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 12,
   },
-  previewFABInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  previewFABGradient: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(147,232,233,0.95)",
   },
 });
