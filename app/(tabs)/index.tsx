@@ -409,7 +409,53 @@ useFocusEffect(
       fetchUser();
     }, [])
   );
+ useEffect(() => {
+  const checkFirstTimeUser = async () => {
+    try {
+      const token = await getToken();
+      if (!token?.id) return;
 
+      const userId = token.userId || token._id || token.id || "guest";
+      const key = `hasSeenGettingStarted_${userId}`;
+
+      // 🔹 Check AsyncStorage if user already saw the card
+      const hasSeen = await AsyncStorage.getItem(key);
+      if (hasSeen === "true") {
+        setShowGettingStarted(false);
+        return;
+      }
+
+      // 🔹 Optional: confirm they’re truly new (no budget history or savings)
+      const [historyRes, savingsRes] = await Promise.allSettled([
+        api.get(`/budget-history/${token.id}`),
+        api.get(`/savings/${token.id}`),
+      ]);
+
+      const hasHistory =
+        historyRes.status === "fulfilled" &&
+        Array.isArray(historyRes.value.data) &&
+        historyRes.value.data.length > 0;
+
+      const hasSavings =
+        savingsRes.status === "fulfilled" &&
+        Array.isArray(savingsRes.value.data) &&
+        savingsRes.value.data.length > 0;
+
+      if (hasHistory || hasSavings) {
+        // user has activity — not first time
+        await AsyncStorage.setItem(key, "true");
+        setShowGettingStarted(false);
+      } else {
+        // brand-new user
+        setShowGettingStarted(true);
+      }
+    } catch (err) {
+      console.error("❌ Error checking first-time user:", err);
+    }
+  };
+
+  checkFirstTimeUser();
+}, []);
 
 
    useFocusEffect(
