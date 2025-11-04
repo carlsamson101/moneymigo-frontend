@@ -198,8 +198,14 @@ const onRefresh = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
+<ScrollView
+    style={styles.container}
+    showsVerticalScrollIndicator={false}
+    contentContainerStyle={{ paddingBottom: 80 }}
+    refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
+    }
+  >      <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
       
       {/* Header */}
       <LinearGradient colors={['#1f4b81ff', '#7fb1d6ff']} style={styles.header}>
@@ -464,7 +470,7 @@ const onRefresh = () => {
           }}
         />
       )}
-    </View>
+  </ScrollView>
   );
 }
 

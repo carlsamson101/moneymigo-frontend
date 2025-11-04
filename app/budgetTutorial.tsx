@@ -174,8 +174,8 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               left: 0,
               right: 0,
               height: hole.top,
-              backgroundColor: "rgba(31, 75, 129, 0.65)",
-              backdropFilter: "blur(2px)",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(1px)",
             }}
           />
           <div
@@ -186,8 +186,8 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               left: 0,
               width: hole.left,
               height: hole.height,
-              backgroundColor: "rgba(31, 75, 129, 0.65)",
-              backdropFilter: "blur(2px)",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(1px)",
             }}
           />
           <div
@@ -198,8 +198,8 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               left: holeRight,
               right: 0,
               height: hole.height,
-              backgroundColor: "rgba(31, 75, 129, 0.65)",
-              backdropFilter: "blur(2px)",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(1px)",
             }}
           />
           <div
@@ -210,8 +210,8 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "rgba(31, 75, 129, 0.65)",
-              backdropFilter: "blur(2px)",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(1px)",
             }}
           />
 
@@ -251,11 +251,11 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
       >
         <div
           style={{
-            background: "linear-gradient(135deg, #ffffff 0%, #f8fafb 100%)",
+            background: "#ffffff",
             borderRadius: "20px",
             padding: "1.5rem",
-            boxShadow: "0 20px 40px rgba(31, 75, 129, 0.25), 0 0 0 1px rgba(31, 75, 129, 0.1)",
-            border: "2px solid #E8F1F8",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+            border: "1px solid #E5E7EB",
           }}
         >
           <div
@@ -267,7 +267,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: `linear-gradient(135deg, rgba(31, 75, 129, 0.1) 0%, rgba(127, 177, 214, 0.15) 100%)`,
+              background: `rgba(31, 75, 129, 0.1)`,
               marginBottom: "0.9rem",
               boxShadow: `0 0 24px rgba(127, 177, 214, 0.3)`,
               border: `2px solid rgba(127, 177, 214, 0.4)`,
@@ -280,7 +280,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                 inset: -3,
                 borderRadius: "1.5rem",
                 border: `2px solid #7fb1d6`,
-                opacity: 0.3,
+                opacity: 0.25,
                 animation: "ping 2s cubic-bezier(0, 0, 0.2, 1) infinite",
               }}
             />
@@ -290,7 +290,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
             style={{
               fontSize: "1.3rem",
               fontWeight: 800,
-              color: "#1f4b81",
+              color: "#1F2937",
               marginBottom: "0.3rem",
               letterSpacing: "-0.01em",
             }}
@@ -301,7 +301,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
             style={{
               fontSize: "0.98rem",
               fontWeight: 700,
-              color: "#7fb1d6",
+              color: "#1f4b81",
               marginBottom: "0.5rem",
             }}
           >
@@ -309,7 +309,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
           </p>
           <p
             style={{
-              color: "#64748B",
+              color: "#6B7280",
               lineHeight: 1.7,
               fontSize: "0.98rem",
               marginBottom: "1.1rem",
@@ -334,9 +334,9 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                   width: currentStep === i ? "1.6rem" : "0.45rem",
                   height: "0.45rem",
                   borderRadius: "9999px",
-                  backgroundColor: currentStep === i ? "#1f4b81" : "#E8F1F8",
+                  backgroundColor: currentStep === i ? "#1f4b81" : "#E5E7EB",
                   transition: "all 0.25s ease",
-                  boxShadow: currentStep === i ? `0 0 10px rgba(31, 75, 129, 0.4)` : "none",
+                  boxShadow: currentStep === i ? `0 0 10px rgba(31, 75, 129, 0.5)` : "none",
                 }}
               />
             ))}
@@ -347,7 +347,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               textAlign: "center",
               fontSize: "0.85rem",
               fontWeight: 700,
-              color: "#7fb1d6",
+              color: "#6B7280",
               marginBottom: "0.9rem",
             }}
           >
@@ -371,10 +371,10 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                   gap: "0.5rem",
                   padding: "0.55rem 1rem",
                   borderRadius: "10px",
-                  backgroundColor: "#E8F1F8",
-                  color: "#1f4b81",
+                  backgroundColor: "#F3F4F6",
+                  color: "#6B7280",
                   fontWeight: 700,
-                  border: "1px solid #d1e3f0",
+                  border: "1px solid #E5E7EB",
                   cursor: "pointer",
                 }}
               >
@@ -389,7 +389,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
               onClick={onClose}
               style={{
                 padding: "0.55rem 1rem",
-                color: "#94A3B8",
+                color: "#6B7280",
                 background: "none",
                 border: "none",
                 fontWeight: 700,
@@ -410,7 +410,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                 gap: "0.5rem",
                 padding: "0.75rem 1.2rem",
                 borderRadius: "12px",
-                background: `linear-gradient(135deg, #1f4b81 0%, #2d5f9f 100%)`,
+                background: `#1f4b81`,
                 color: "white",
                 fontWeight: 800,
                 fontSize: "1rem",
@@ -437,16 +437,16 @@ export default function BudgetTutorialScreen() {
     <div
       style={{
         minHeight: "100vh",
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#f3f4f6",
         position: "relative",
       }}
     >
       <div
         style={{
-          background: "linear-gradient(135deg, #1f4b81 0%, #2d5f9f 100%)",
+          backgroundColor: "#1f4b81",
           color: "white",
           padding: "1rem",
-          boxShadow: "0 2px 8px rgba(31, 75, 129, 0.2)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
         }}
       >
         <div
@@ -481,7 +481,7 @@ export default function BudgetTutorialScreen() {
       <div
         className="budget-overview"
         style={{
-          background: "linear-gradient(135deg, #1f4b81 0%, #2d5f9f 50%, #7fb1d6 100%)",
+          background: "linear-gradient(to bottom right, #1f4b81, #2d5f9f, #7fb1d6)",
           padding: "2rem 1rem",
           color: "white",
         }}
@@ -500,7 +500,6 @@ export default function BudgetTutorialScreen() {
                 padding: "0.375rem 0.875rem",
                 borderRadius: "9999px",
                 marginTop: "0.75rem",
-                border: "1px solid rgba(255, 255, 255, 0.3)",
               }}
             >
               <Calendar size={14} />
@@ -528,7 +527,6 @@ export default function BudgetTutorialScreen() {
                     display: "flex",
                     alignItems: "center",
                     gap: "1rem",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
                   }}
                 >
                   <div
@@ -540,7 +538,6 @@ export default function BudgetTutorialScreen() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      border: "2px solid rgba(255, 255, 255, 0.3)",
                     }}
                   >
                     <Icon size={24} />
@@ -570,7 +567,7 @@ export default function BudgetTutorialScreen() {
           backgroundColor: "white",
           padding: "1.25rem",
           textAlign: "center",
-          borderBottom: "1px solid #E8F1F8",
+          borderBottom: "1px solid #e5e7eb",
         }}
       >
         <div
@@ -630,8 +627,8 @@ export default function BudgetTutorialScreen() {
             className="clear-all-btn"
             style={{
               background: "white",
-              color: "#1f4b81",
-              border: "2px solid #E8F1F8",
+              color: "#374151",
+              border: "2px solid #e5e7eb",
               padding: "1rem 1.5rem",
               borderRadius: "12px",
               fontWeight: "600",
