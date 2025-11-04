@@ -2,14 +2,15 @@
   "name": "moneymate-frontend",
   "main": "expo-router/entry",
   "version": "1.0.0",
-  "scripts": {
-    "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
-    "lint": "expo lint"
-  },
+"scripts": {
+  "start": "expo start",
+  "reset-project": "node ./scripts/reset-project.js",
+  "android": "expo run:android",
+  "ios": "expo run:ios",
+  "web": "expo start --web",
+  "build": "npx expo export --platform web",
+  "lint": "expo lint"
+},
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
