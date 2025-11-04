@@ -26,62 +26,76 @@ export default function SplashScreen() {
   /* ✅ AUTH CHECK — only runs ONCE per app session                             */
   /* -------------------------------------------------------------------------- */
   useEffect(() => {
-    const checkAuth = async () => {
-      if (globalThis.__splashNavigated) return;
-      globalThis.__splashNavigated = true;
+   const checkAuth = async () => {
+  if (globalThis.__splashNavigated) return;
+  globalThis.__splashNavigated = true;
 
-      try {
-        const tokenData = await AsyncStorage.getItem("token");
-        const expiry = await AsyncStorage.getItem("authExpiry");
-        const net = await NetInfo.fetch();
+  try {
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
 
-        let nextRoute = "/login"; // default
+    // 🚫 Allow special pages to bypass this redirect
+    if (
+      path.startsWith("/AdminLoginPage") ||
+      path.startsWith("/storeAuth") ||
+      path.startsWith("/AdminHomePage") ||
+      path.startsWith("/StoreDashboard")
+    ) {
+      console.log("🟡 Skipping user auth redirect for:", path);
+      return;
+    }
 
-        if (tokenData && expiry) {
-          const now = new Date();
-          const expiryDate = new Date(expiry);
+    const tokenData = await AsyncStorage.getItem("token");
+    const expiry = await AsyncStorage.getItem("authExpiry");
+    const net = await NetInfo.fetch();
 
-          if (now < expiryDate) {
-            if (net.isConnected) {
-              try {
-                await api.get("/auth/verify", {
-                  headers: { Authorization: `Bearer ${tokenData}` },
-                });
-                console.log("✅ Token verified online — go to tabs");
-                nextRoute = "/(tabs)";
-              } catch {
-                console.log("❌ Invalid token — clearing");
-                await AsyncStorage.multiRemove(["token", "authExpiry"]);
-              }
-            } else {
-              console.log("📦 Offline mode — go to tabs");
-              nextRoute = "/(tabs)";
-            }
-          } else {
-            console.log("⏰ Token expired — go to login");
+    let nextRoute = "/login"; // default
+
+    if (tokenData && expiry) {
+      const now = new Date();
+      const expiryDate = new Date(expiry);
+
+      if (now < expiryDate) {
+        if (net.isConnected) {
+          try {
+            await api.get("/auth/verify", {
+              headers: { Authorization: `Bearer ${tokenData}` },
+            });
+            console.log("✅ Token verified online — go to tabs");
+            nextRoute = "/(tabs)";
+          } catch {
+            console.log("❌ Invalid token — clearing");
             await AsyncStorage.multiRemove(["token", "authExpiry"]);
           }
         } else {
-          console.log("🔑 No token found — go to login");
+          console.log("📦 Offline mode — go to tabs");
+          nextRoute = "/(tabs)";
         }
-
-        // ⏳ Delay 3s before navigation (fade + route)
-        Animated.timing(fadeOut, {
-          toValue: 0,
-          duration: 600,
-          delay: 2500,
-          useNativeDriver: true,
-        }).start(() => router.replace(nextRoute));
-      } catch (err) {
-        console.error("⚠️ Auth check failed:", err);
-        Animated.timing(fadeOut, {
-          toValue: 0,
-          duration: 600,
-          delay: 2500,
-          useNativeDriver: true,
-        }).start(() => router.replace("/login"));
+      } else {
+        console.log("⏰ Token expired — go to login");
+        await AsyncStorage.multiRemove(["token", "authExpiry"]);
       }
-    };
+    } else {
+      console.log("🔑 No token found — go to login");
+    }
+
+    // ⏳ Delay 3s before navigation (fade + route)
+    Animated.timing(fadeOut, {
+      toValue: 0,
+      duration: 600,
+      delay: 2500,
+      useNativeDriver: true,
+    }).start(() => router.replace(nextRoute));
+  } catch (err) {
+    console.error("⚠️ Auth check failed:", err);
+    Animated.timing(fadeOut, {
+      toValue: 0,
+      duration: 600,
+      delay: 2500,
+      useNativeDriver: true,
+    }).start(() => router.replace("/login"));
+  }
+};
+
 
     checkAuth();
   }, []);
