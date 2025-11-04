@@ -409,55 +409,6 @@ useFocusEffect(
       fetchUser();
     }, [])
   );
- useEffect(() => {
-  const checkFirstTimeUser = async () => {
-    try {
-      const token = await getToken();
-      if (!token?.id) return;
-
-      const userId = token.userId || token._id || token.id || "guest";
-      const key = `hasSeenGettingStarted_${userId}`;
-
-      // 🔹 Check AsyncStorage if user already saw the card
-      const hasSeen = await AsyncStorage.getItem(key);
-      if (hasSeen === "true") {
-        setShowGettingStarted(false);
-        return;
-      }
-
-      // 🔹 Optional: confirm they’re truly new (no budget history or savings)
-      const [historyRes, savingsRes] = await Promise.allSettled([
-        api.get(`/budget-history/${token.id}`),
-        api.get(`/savings/${token.id}`),
-      ]);
-
-      const hasHistory =
-        historyRes.status === "fulfilled" &&
-        Array.isArray(historyRes.value.data) &&
-        historyRes.value.data.length > 0;
-
-      const hasSavings =
-        savingsRes.status === "fulfilled" &&
-        Array.isArray(savingsRes.value.data) &&
-        savingsRes.value.data.length > 0;
-
-      if (hasHistory || hasSavings) {
-        // user has activity — not first time
-        await AsyncStorage.setItem(key, "true");
-        setShowGettingStarted(false);
-      } else {
-        // brand-new user
-        setShowGettingStarted(true);
-      }
-    } catch (err) {
-      console.error("❌ Error checking first-time user:", err);
-    }
-  };
-
-  checkFirstTimeUser();
-}, []);
-
-
    useFocusEffect(
   useCallback(() => {
      const fetchUser = async () => {
@@ -557,6 +508,50 @@ useEffect(() => {
   };
   showFirstTimeBudgetAlert();
 }, []);
+
+useEffect(() => {
+  const showFirstTimeTutorial = async () => {
+    try {
+      const token = await getToken();
+      if (!token?.id) return;
+
+      const userId = token.userId || token._id || token.id || "guest";
+      const key = `hasSeenGettingStarted_${userId}`;
+      const hasSeen = await AsyncStorage.getItem(key);
+      if (hasSeen === "true") return;
+
+      // Check if user already has activity
+      const [historyRes, savingsRes] = await Promise.allSettled([
+        api.get(`/budget-history/${token.id}`),
+        api.get(`/savings/${token.id}`)
+      ]);
+
+      const hasHistory =
+        historyRes.status === "fulfilled" &&
+        Array.isArray(historyRes.value.data) &&
+        historyRes.value.data.length > 0;
+
+      const hasSavings =
+        savingsRes.status === "fulfilled" &&
+        Array.isArray(savingsRes.value.data) &&
+        savingsRes.value.data.length > 0;
+
+      if (hasHistory || hasSavings) {
+        await AsyncStorage.setItem(key, "true");
+        return;
+      }
+
+      // 🎉 Show the getting started modal if brand new
+      setShowGettingStarted(true);
+    } catch (err) {
+      console.error("❌ Error checking first-time tutorial:", err);
+    }
+  };
+
+  showFirstTimeTutorial();
+}, []);
+
+
 
 // --- fetch unread notifications (cached) ---
 const fetchUnreadCount = async () => {
@@ -2472,66 +2467,38 @@ useEffect(() => {
 
 {/* ==================== GETTING STARTED CARD (only first time) ==================== */}
 {showGettingStarted && (
-  <TouchableOpacity
-    activeOpacity={0.85}
-    onPress={async () => {
-      const token = await getToken();
-      if (token?.id) {
-        await AsyncStorage.setItem(`hasSeenGettingStarted_${token.id}`, "true");
-      }
-      setShowGettingStarted(false);
-      router.push("/gettingStarted");
-    }}
-    style={{
-      backgroundColor: "#ffffff",
-      borderRadius: 14,
-      padding: 14,
-      marginTop: 10,
-      marginBottom: 18,
-      marginHorizontal: 3,
-      flexDirection: "row",
-      alignItems: "center",
-      shadowColor: "#000",
-      shadowOpacity: 0.08,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 3,
-      borderWidth: 1,
-      borderColor: "#CBD5E1",
-    }}
+  <Modal
+    visible={showGettingStarted}
+    transparent
+    animationType="fade"
+    onRequestClose={() => setShowGettingStarted(false)}
   >
-    <LinearGradient
-      colors={["#1e40af", "#3b82f6"]}
-      start={[0, 0]}
-      end={[1, 1]}
-      style={{
-        borderRadius: 10,
-        padding: 12,
-        marginRight: 12,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 46,
-        height: 46,
-        shadowColor: "#000",
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-      }}
-    >
-      <Ionicons name="sparkles-outline" size={22} color="#fff" />
-    </LinearGradient>
-
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 15, fontWeight: "700", color: "#1f4b81ff" }}>
-        Getting Started
-      </Text>
-      <Text style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>
-        Learn how to use MoneyMigo efficiently
-      </Text>
+    <View style={styles.overlay}>
+      <View style={styles.tutorialBox}>
+        <Text style={styles.tutorialTitle}>Getting Started 🎯</Text>
+        <Text style={styles.tutorialText}>
+          Welcome to MoneyMigo!{"\n"}{"\n"}
+          💰 Set your first budget{"\n"}
+          🛍️ Track your expenses{"\n"}
+          🎯 Start saving smarter
+        </Text>
+        <TouchableOpacity
+          style={styles.tutorialButton}
+          onPress={async () => {
+            const token = await getToken();
+            const key = `hasSeenGettingStarted_${token.id}`;
+            await AsyncStorage.setItem(key, "true");
+            setShowGettingStarted(false);
+            router.push("/gettingStarted");
+          }}
+        >
+          <Text style={styles.tutorialButtonText}>Start Tutorial</Text>
+        </TouchableOpacity>
+      </View>
     </View>
-
-    <Ionicons name="chevron-forward" size={22} color="#1f4b81ff" />
-  </TouchableOpacity>
+  </Modal>
 )}
+
 
 
 {/* ==================== PERIOD MODAL ==================== */}
@@ -5099,6 +5066,51 @@ progressLabel: {
   fontSize: 10,
   color: "#92400E",
 },
+
+overlay: {
+  flex: 1,
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+  zIndex: 9999,
+},
+tutorialBox: {
+  backgroundColor: "#ffffff",
+  borderRadius: 20,
+  padding: 25,
+  width: "85%",
+  alignItems: "center",
+  elevation: 8,
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+},
+tutorialTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  color: "#1f4b81ff",
+  marginBottom: 10,
+},
+tutorialText: {
+  fontSize: 14,
+  color: "#334155",
+  textAlign: "center",
+  marginBottom: 20,
+  lineHeight: 20,
+},
+tutorialButton: {
+  backgroundColor: "#1f4b81ff",
+  paddingVertical: 10,
+  paddingHorizontal: 30,
+  borderRadius: 10,
+},
+tutorialButtonText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 16,
+},
+
 overspendText: {
   fontSize: 12,
   fontWeight: "600",
