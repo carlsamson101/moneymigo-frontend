@@ -17,39 +17,38 @@ const TUTORIAL_STEPS = [
     title: "Weekly Budget Period",
     description: "Your budget period is set to Weekly by default. Track your spending week by week for better control.",
     icon: "calendar-outline",
-    position: { top: 120, left: 20, right: 20 },
-    highlightArea: { top: 100, left: 10, right: 10, height: 80 },
+    position: { top: 360, left: 30, right: 30 },
+    highlightArea: { top: 235, left: 16, right: 16, height: 90 },
   },
   {
     id: 2,
     title: "Create Your First Budget",
     description: "Tap the + icon to create your first budget. It's quick and easy to get started!",
     icon: "add-circle-outline",
-    position: { top: 70, right: 20 },
-    highlightArea: { top: 35, right: 15, width: 60, height: 60 },
+    position: { top: 180, left: 20, right: 20 },
+    highlightArea: { top: 90, left: 16, width: (SCREEN_WIDTH - 32) * 0.66, height: 140 },
   },
   {
     id: 3,
     title: "Change Budget Period",
     description: "Need to switch to Daily or Monthly? Tap 'Weekly' button to adjust your timeframe anytime.",
     icon: "swap-horizontal-outline",
-    position: { top: 200, right: 20 },
-    highlightArea: { top: 160, right: 10, width: 100, height: 50 },
+    position: { top: 380, left: 20, right: 20 },
+    highlightArea: { top: 284, right: 25, width: 100, height: 40 },
   },
-
   {
     id: 4,
     title: "Navigation Menu",
-    description: "Access all features like Budget, Savings, and Reports. You can drag the menu anywhere on your screen!",
+    description: "Access all features like Budget, Savings, and Reports. Tap the floating button to open the menu - you can even drag it anywhere on your screen!",
     icon: "menu-outline",
-    position: { bottom: 120, left: 20, right: 20 },
-    // 🔥 Highlight the FAB position (right side of screen, middle height)
+    position: { bottom: 350, left: 20, right: 20 },
     highlightArea: { 
-      top: FAB_DEFAULT_Y - 10, 
+      top: FAB_DEFAULT_Y - 15, 
       right: SCREEN_WIDTH - FAB_DEFAULT_X - FAB_SIZE - 10, 
       width: FAB_SIZE + 20, 
       height: FAB_SIZE + 20 
     },
+    showMenuPreview: true,
   },
 ];
 
@@ -103,6 +102,22 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
               },
             ]}
           />
+        )}
+
+         {/* Menu Preview for Navigation slide */}
+        {step.showMenuPreview && (
+          <View style={styles.menuPreview}>
+           
+            
+            {/* Center FAB with cyan glow */}
+            <View style={styles.previewFAB}>
+              <View style={styles.previewFABGlow}>
+                <View style={styles.previewFABInner}>
+                  <Ionicons name="chevron-back" size={28} color="#fff" />
+                </View>
+              </View>
+            </View>
+          </View>
         )}
 
         {/* Tutorial card */}
@@ -188,14 +203,13 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
 export default function HomeScreen() {
   const [showTutorial, setShowTutorial] = useState(true);
 
-const handleBack = () => {
-    router.push("/gettingStarted"); // 👈 navigates to gettingStarted.tsx
-    // or use: router.back();  // if you just want to go back one screen
+  const handleBack = () => {
+    router.push("/gettingStarted");
   };
 
   return (
     <View style={styles.container}>
-         {/* 🔙 Back Button Header */}
+      {/* 🔙 Back Button Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Ionicons name="arrow-back" size={22} color="#1E3A8A" />
@@ -204,6 +218,7 @@ const handleBack = () => {
         <Text style={styles.headerTitle}>Home</Text>
         <View style={{ width: 50 }} /> 
       </View>
+      
       {/* Your actual home screen content */}
       <View style={styles.homeContent}>
         {/* Header Section */}
@@ -471,11 +486,11 @@ const styles = StyleSheet.create({
   // Tutorial Overlay Styles
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   highlightBox: {
     position: "absolute",
@@ -587,13 +602,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-   headerBar: {
+  headerBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-  
   },
   backBtn: {
     flexDirection: "row",
@@ -609,5 +623,68 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
     color: "#1F2937",
+  },
+  menuPreview: {
+    position: "absolute",
+    top: FAB_DEFAULT_Y - 200,
+    right: SCREEN_WIDTH - FAB_DEFAULT_X - FAB_SIZE + 5,
+    width: 80,
+    height: 400,
+    alignItems: "center",
+  },
+  previewMenuItem: {
+    position: "absolute",
+    zIndex: 10,
+    right: 0,
+  },
+  previewCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(17,24,39,0.95)",
+    borderWidth: 2,
+    borderColor: "#1f4b81ff",
+  },
+  previewLabel: {
+    color: "#fff",
+    fontSize: 8,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  previewFAB: {
+    position: "absolute",
+    top: 200,
+    right: 5,
+    zIndex: 11,
+  },
+  previewFABGlow: {
+  width: 58,
+  height: 58,
+  borderRadius: 29,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(22, 169, 184, 0.25)", // soft cyan aura
+  shadowColor: "#16A9B8",
+  shadowOpacity: 0.9,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 0 },
+  elevation: 12, // Android glow
+},
+  previewFABGradient: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewFABInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(147,232,233,0.95)",
   },
 });
