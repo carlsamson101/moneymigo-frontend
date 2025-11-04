@@ -188,22 +188,35 @@ const StoreDashboard = () => {
   };
 
   const saveEditItem = async () => {
-    if (!editItem) return;
-    try {
-      await api.put(`/storeItems/${editItem._id}`, {
-        itemName: editItem.itemName,
-        price: editItem.price,
-        unit: editItem.unit,
-        category: editItem.category,
-      });
-      setModalVisible(false);
-      setEditItem(null);
-      fetchItems();
-    } catch (err: any) {
-      console.error("Update item error:", err.response?.data || err.message);
-      Alert.alert("Error", "Failed to update item");
-    }
-  };
+  if (!editItem) return Alert.alert("Error", "No item selected.");
+
+  try {
+    const payload = {
+      itemName: editItem.itemName.trim(),
+      price: parseFloat(editItem.price) || 0,
+      currency: "PHP", // ✅ backend expects this
+      unit: editItem.unit,
+      category: editItem.category || "other",
+      stock: editItem.stock ?? 0, // ✅ avoid sending undefined
+    };
+
+    console.log("📝 Updating item:", editItem._id, payload);
+
+    const res = await api.put(`/storeItems/${editItem._id}`, payload);
+
+    console.log("✅ Update success:", res.data);
+    Alert.alert("✅ Success", "Item updated successfully!");
+    setModalVisible(false);
+    setEditItem(null);
+    fetchItems(); // refresh list
+  } catch (err: any) {
+    console.error("❌ Update item error:", err.response?.data || err.message);
+    Alert.alert(
+      "Error",
+      err.response?.data?.message || "Failed to update item."
+    );
+  }
+};
 
   const filteredItems = items.filter((i) => {
     const matchesSearch = i.itemName.toLowerCase().includes(searchQuery.toLowerCase());

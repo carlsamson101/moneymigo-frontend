@@ -30,6 +30,7 @@ LogBox.ignoreLogs([
 import React, { useState, useEffect, useRef } from "react";
 import NetInfo from "@react-native-community/netinfo";
 import * as Notifications from "expo-notifications";
+import { Platform, Dimensions } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { initOfflineSyncListener, syncOfflineChanges } from "../lib/offlineCache";
 import SplashScreen from "./SplashScreen";
@@ -44,6 +45,13 @@ export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
   const router = useRouter();
   const mountedRef = useRef(true);
+
+  if (Platform.OS === "web") {
+  console.log("📵 Notifications disabled on web.");
+} else {
+  // initialize expo notifications here
+}
+
   useIdleLogout();
 
   // 🕒 Hide splash after 2.8 seconds
