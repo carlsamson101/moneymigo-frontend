@@ -1,18 +1,35 @@
 import React, { useState, useEffect } from "react";
-import {
-  Wallet,
-  TrendingDown,
-  CheckCircle,
-  Calendar,
-  PieChart,
-  RefreshCw,
-  Copy,
-  Hourglass,
-  Settings,
-  ArrowLeft,
-  ArrowRight,
-  PlayCircle
-} from "lucide-react";
+
+// Dynamic import for Lucide icons based on platform
+let Wallet: any, 
+    TrendingDown: any, 
+    CheckCircle: any, 
+    Calendar: any, 
+    PieChart: any, 
+    RefreshCw: any, 
+    Copy: any, 
+    Hourglass: any, 
+    Settings: any, 
+    ArrowLeft: any, 
+    ArrowRight: any, 
+    PlayCircle: any;
+
+try {
+  // Try React Native first (for mobile)
+  const ReactNative = require("react-native");
+  if (ReactNative.Platform && ReactNative.Platform.OS !== "web") {
+    const LucideNative = require("lucide-react-native");
+    ({ Wallet, TrendingDown, CheckCircle, Calendar, PieChart, RefreshCw, Copy, Hourglass, Settings, ArrowLeft, ArrowRight, PlayCircle } = LucideNative);
+  } else {
+    // Fallback to web version
+    const LucideWeb = require("lucide-react");
+    ({ Wallet, TrendingDown, CheckCircle, Calendar, PieChart, RefreshCw, Copy, Hourglass, Settings, ArrowLeft, ArrowRight, PlayCircle } = LucideWeb);
+  }
+} catch (e) {
+  // If React Native is not available, use web version
+  const LucideWeb = require("lucide-react");
+  ({ Wallet, TrendingDown, CheckCircle, Calendar, PieChart, RefreshCw, Copy, Hourglass, Settings, ArrowLeft, ArrowRight, PlayCircle } = LucideWeb);
+}
 
 const BUDGET_TUTORIAL_STEPS = [
   {
