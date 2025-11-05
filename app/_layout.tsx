@@ -142,7 +142,7 @@ export default function RootLayout() {
   }, []);
 
   // 💫 Splashscreen render
-  if (showSplash) return <SplashScreen />;
+if (showSplash && !globalThis.__splashNavigated) return <SplashScreen />;
 
   return (
     <RecentlyViewedProvider>
