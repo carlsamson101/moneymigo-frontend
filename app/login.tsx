@@ -234,7 +234,7 @@ function AppLogin() {
     });
 
     // ✅ Redirect to index/home screen
-    router.replace('/index');
+    router.replace('/(tabs)');
   } catch (err) {
     console.error('❌ Login failed:', err);
     setError('Login failed. Please try again.');

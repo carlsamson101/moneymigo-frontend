@@ -1147,7 +1147,6 @@ return (
     <Text style={styles.secondaryActionText}>Clear All</Text>
   </TouchableOpacity>
 
- // Replace the "Copy Last Period" button section with this improved version:
 <TouchableOpacity
   style={styles.copyPeriodBtn}
   onPress={async () => {
@@ -1350,15 +1349,15 @@ return (
    
   {/* Header */}
   <LinearGradient
-       colors={['#1f4b81ff', '#7fb1d6ff']}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={styles.tableHeader}
-  >
-    <Text style={[styles.headerText, { textAlign: "left" }]}>Categories</Text>
-    <Text style={styles.headerTextBudget}>Budget</Text>
-    <Text style={[styles.headerText, { textAlign: "right" }]}>Remaining</Text>
-  </LinearGradient>
+  colors={['#1f4b81ff', '#7fb1d6ff']}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 0 }}
+  style={styles.tableHeader}
+>
+  <Text style={styles.headerTextCategories}>Categories</Text>
+  <Text style={styles.headerTextBudget}>Budget</Text>
+  <Text style={styles.headerTextRemaining}>Remaining</Text>
+</LinearGradient>
 
   {/* Categories (one single scrollview) */}
   <ScrollView
@@ -1433,12 +1432,10 @@ return (
                 {/* Category Info */}
                 <View style={styles.colCategory}>
                   <View style={[styles.categoryIcon, { backgroundColor: color }]}>{icon}</View>
-                  <View style={styles.categoryDetails}>
-                    <Text style={styles.categoryName}>{cat}</Text>
-                    {allocated > 0 && (
-                      <Text style={styles.categoryPercent}>{percent}% of budget</Text>
-                    )}
-                  </View>
+                 <View style={styles.categoryDetails}>
+                <Text style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">{cat}</Text>
+                <Text style={styles.categoryPercent}>{percent}% of budget</Text>
+              </View>
                 </View>
 
                 {/* Budget */}
@@ -1932,31 +1929,32 @@ secondaryActionText: {
   },
 
   // Categories Section
-  categoriesContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+categoriesContainer: {
+  flex: 1,
+  paddingHorizontal: 20,
+},
 
-  tableHeaderWrapper: {
+tableHeaderWrapper: {
   marginBottom: 0,
-  shadowColor: '#262e51',   // ✅ shadow hue based on your gradient
+  shadowColor: '#262e51',
   shadowOpacity: 0.5,
   shadowRadius: 6,
   shadowOffset: { width: 0, height: 3 },
-  elevation: 6,             // ✅ Android shadow
+  elevation: 6,
 },
+
 categoriesWrapper: {
-    flex: 1, 
+  flex: 1, 
   marginHorizontal: 16,
   marginBottom: 20,
   borderRadius: 16,
-  overflow: "hidden",          // ✅ rounded edges apply to children
+  overflow: "hidden",
   backgroundColor: "#fff",
-  shadowColor: "#262e51",      // ✅ matches your gradient hue
+  shadowColor: "#262e51",
   shadowOpacity: 0.25,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 4 },
-  elevation: 6,                // ✅ Android shadow
+  elevation: 6,
 },
 
 tableHeader: {
@@ -1968,47 +1966,71 @@ tableHeader: {
 
 categoriesList: {
   paddingVertical: 8,
-  backgroundColor: "#f9fafb",  // ✅ subtle background
+  backgroundColor: "#f9fafb",
 },
 
-headerText: {
+headerTextCategories: {
+  width: isMobile ? 100 : 140,
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#fff',
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  textAlign: 'left',
+},
+
+headerTextBudget: {
   flex: 1,
   fontSize: 13,
   fontWeight: '700',
   color: '#fff',
   textTransform: 'uppercase',
   letterSpacing: 0.5,
+  textAlign: 'center',
 },
 
+headerTextRemaining: {
+  width: isMobile ? 90 : 110,
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#fff',
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  textAlign: 'right',
+},
 
-  // Category Cards
-  categoryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 0,
-    marginBottom: 12,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    position: 'relative',
-  },
-  subcategoryCard: {
-    marginLeft: 20,
-    backgroundColor: '#f8fafc',
-  },
-  progressContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 16,
-  },
+// Category Cards
+categoryCard: {
+  backgroundColor: '#fff',
+  borderRadius: 0,
+  marginBottom: 12,
+  overflow: 'hidden',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  position: 'relative',
+},
+
+subcategoryCard: {
+  marginLeft: 20,
+  backgroundColor: '#f8fafc',
+},
+
+progressContainer: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+},
+
+progressBar: {
+  height: '100%',
+  borderRadius: 16,
+},
+
 categoryContent: {
   flexDirection: "row",
   alignItems: "center",
@@ -2017,13 +2039,15 @@ categoryContent: {
   paddingHorizontal: 12,
   backgroundColor: "#F9FAFB",
   borderRadius: 10,
-  flexWrap: "nowrap",       // ❗ prevent wrapping
 },
-  categoryInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+
+categoryInfo: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  width: isMobile ? 100 : 140,
+  minWidth: 0,
+},
+
 categoryIcon: {
   width: 36,
   height: 36,
@@ -2031,23 +2055,26 @@ categoryIcon: {
   marginRight: 8,
   justifyContent: "center",
   alignItems: "center",
+  flexShrink: 0,
 },
-  categoryDetails: {
-    flex: 1,
-  },
- categoryName: {
+
+categoryDetails: {
+  flex: 1,
+  minWidth: 0,
+},
+
+categoryName: {
   color: "#1E293B",
   fontSize: 13,
   fontWeight: "600",
-  flexShrink: 1,            // ✅ allow text to shrink instead of wrapping
-  flexWrap: "nowrap",       // ✅ prevent new lines
-  textAlign: "left",
+  flexShrink: 1,
 },
-  categoryPercent: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
-  },
+
+categoryPercent: {
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: '500',
+},
 
   // Budget Column
 budgetColumn: {
@@ -2347,10 +2374,11 @@ percentInputContainer: {
     fontWeight: 'bold',
   },
  colCategory: {
-  flexDirection: "row",
+ flexDirection: "row",
   alignItems: "center",
-  flex: 0.2,                // give text more horizontal space
-  minWidth: 0,              // allow shrinking
+  flex: 1,           // ✅ allow full use of row space
+  minWidth: 0,       // ✅ critical to avoid wrapping
+  overflow: 'hidden', // ✅ prevent text overflow          // allow shrinking
 },
 colBudget: {
   flex: 1,

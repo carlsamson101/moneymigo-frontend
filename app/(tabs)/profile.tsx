@@ -154,22 +154,37 @@ const fetchExpenseCount = useCallback(async () => {
     const token = await getToken();
     if (!token?.id) return;
 
+    // 📅 Wide range: fetch everything from 2000 to today
     const today = new Date().toISOString().slice(0, 10);
     const response = await api.get(
-      `/expenses/history?userId=${token.id}&start=2000-01-01&end=${today}`
-    );
+  `/auth/expenses/history?userId=${token.id}&start=2000-01-01&end=${today}`
+);
 
-    const expenses = response.data.expenses || [];
-    setTotalExpenses(expenses.length);
-    calculateStreak(expenses);
+    const rawExpenses = response.data.expenses || [];
 
+    // 🕒 Convert all to Manila-local time
+    const manilaExpenses = rawExpenses.map((e) => ({
+      ...e,
+      localDate: new Date(
+        new Date(e.date || e.createdAt).toLocaleString("en-US", {
+          timeZone: "Asia/Manila",
+        })
+      ),
+    }));
+
+    console.log("✅ Total (all-time) expenses fetched:", manilaExpenses.length);
+
+    // 🧮 Display total count
+    setTotalExpenses(manilaExpenses.length);
+
+    // 🔥 Optional: keep streak limited to current budget period
+    calculateStreak(manilaExpenses);
   } catch (error) {
-    console.error("❌ Failed to fetch expenses:", error);
-    Alert.alert("Error", "Failed to load expense history.");
+    console.error("❌ Failed to fetch expenses:", error.response?.data || error.message);
   }
-
-  
 }, [calculateStreak]);
+
+
 
 
 
@@ -703,57 +718,56 @@ const renderActionButtons = () => {
   </TouchableOpacity>
 
   {/* ✅ Total Expenses */}
-  <TouchableOpacity
-    style={styles.statItemRow}
-    onPress={() => {
-      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const exp = totalExpenses || 0;
-      const expText = exp === 0 ? "None" : `${exp} expense${exp === 1 ? "" : "s"}`;
-      Alert.alert(
-        "Expenses Tracked",
-        `You've logged ${expText} since joining. This shows your total transaction history and helps you understand your spending patterns.`,
-        [{ text: "Got it" }]
-      );
-    }}
-  >
-    <View style={styles.statIconContainer}>
-      <Ionicons name="receipt-outline" size={20} color="#3b82f6" />
-    </View>
-    <View style={styles.statTextContainer}>
-      <Text style={styles.statValue}>
-        {totalExpenses === 0 ? "None" : totalExpenses}
-      </Text>
-      <Text style={styles.statLabel}>Expenses Tracked</Text>
-    </View>
-  </TouchableOpacity>
+<TouchableOpacity
+  style={styles.statItemRow}
+  onPress={() => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const exp = totalExpenses || 0;
+    const expText = exp === 0 ? "None" : `${exp} expense${exp === 1 ? "" : "s"}`;
+    Alert.alert(
+      "Expenses Tracked",
+      `You've logged ${expText} since joining. This shows your total transaction history and helps you understand your spending patterns.`,
+      [{ text: "Got it" }]
+    );
+  }}
+>
+  <View style={styles.statIconContainer}>
+    <Ionicons name="receipt-outline" size={20} color="#3b82f6" />
+  </View>
+  <View style={styles.statTextContainer}>
+    <Text style={styles.statValue}>
+      {totalExpenses === 0 ? "None" : totalExpenses}
+    </Text>
+    <Text style={styles.statLabel}>Expenses Tracked</Text>
+  </View>
+</TouchableOpacity>
 
-  {/* ✅ Spending Streak */}
-  <TouchableOpacity
-    style={styles.statItemRow}
-    onPress={() => {
-      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const s = spendingStreak;
-      const label = s === 0 ? "None" : s === 1 ? "1 day" : `${s} days`;
-      const msg =
-        s === 0
-          ? "Start tracking expenses today to begin your streak!"
-          : s === 1
-          ? "Great start! You've tracked expenses today."
-          : `Amazing! You've tracked expenses for ${label}. Keep it going!`;
+{/* 🔥 Spending Streak */}
+<TouchableOpacity
+  style={styles.statItemRow}
+  onPress={() => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      "Spending Streak",
+      spendingStreak > 0
+        ? `You've logged expenses for ${spendingStreak} consecutive day${spendingStreak > 1 ? "s" : ""}! Keep your tracking habit going strong.`
+        : "No active streak yet — start logging expenses daily to build consistency!",
+      [{ text: "Got it" }]
+    );
+  }}
+>
+  <View style={styles.statIconContainer}>
+    <Ionicons name="flame-outline" size={20} color="#f97316" />
+  </View>
+  <View style={styles.statTextContainer}>
+    <Text style={styles.statValue}>
+      {spendingStreak > 0 ? `${spendingStreak} day${spendingStreak > 1 ? "s" : ""}` : "None"}
+    </Text>
+    <Text style={styles.statLabel}>Spending Streak</Text>
+  </View>
+</TouchableOpacity>
 
-      Alert.alert("🔥 Tracking Streak", msg, [{ text: "Keep it up!" }]);
-    }}
-  >
-    <View style={styles.statIconContainer}>
-      <Ionicons name="flame" size={20} color="#ef4444" />
-    </View>
-    <View style={styles.statTextContainer}>
-      <Text style={styles.statValue}>
-        {spendingStreak === 0 ? "None" : spendingStreak === 1 ? "1 day" : `${spendingStreak} days`}
-      </Text>
-      <Text style={styles.statLabel}>Tracking Streak</Text>
-    </View>
-  </TouchableOpacity>
+
 </View>
 
     </Animated.View>

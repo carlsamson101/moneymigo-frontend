@@ -51,55 +51,73 @@ export default function AnalyticsPage() {
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    (async () => {
-      const token = await getToken();
-      if (!token?.id) return;
+  (async () => {
+    const token = await getToken();
+    if (!token?.id) return;
 
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        // Fetch user data
-        const userRes = await api.get(`/auth/${token.id}`);
-        const user = userRes.data;
-        setUserData(user);
+      // 🧠 Fetch user info
+      const { data: user } = await api.get(`/auth/${token.id}`);
+      setUserData(user);
 
-        // Fetch all expenses (for lifetime analytics if needed later)
-        const start = "2000-01-01";
-        const end = new Date().toISOString().slice(0, 10);
-        const allExpensesRes = await api.get(
-          `/expenses/history?userId=${token.id}&start=${start}&end=${end}`
-        );
-        setExpenses(allExpensesRes.data.expenses || []);
+      // 🕒 Manila local today (YYYY-MM-DD)
+      const manilaNow = new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" });
+      const today = new Date(manilaNow).toISOString().slice(0, 10);
 
-        // Current period start and end
-        let periodStart, periodEnd;
-        if (user.budgetPeriod === 'Custom' && user.customBudgetRange) {
-          periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
-          periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
-        } else {
-          periodStart = new Date(user.budgetPeriodStart || new Date());
-          periodEnd = new Date(user.budgetPeriodEnd || new Date());
-        }
+      // ✅ 1️⃣ Fetch ALL expenses (lifetime analytics)
+      const allRes = await api.get(
+        `/auth/expenses/history?userId=${token.id}&start=2000-01-01&end=${today}`
+      );
+      const allExpenses = (allRes.data.expenses || []).map((e) => ({
+        ...e,
+        localDate: new Date(
+          new Date(e.date || e.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        ),
+      }));
+      setExpenses(allExpenses);
+      console.log("✅ All-time expenses fetched:", allExpenses.length);
 
-        const currentPeriodRes = await api.get(
-          `/expenses/history?userId=${token.id}&start=${periodStart.toISOString().slice(0, 10)}&end=${periodEnd.toISOString().slice(0, 10)}`
-        );
-        setCurrentPeriodExpenses(currentPeriodRes.data.expenses || []);
-
-        // Animate content in
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }).start();
-
-      } catch (err) {
-        console.error("❌ Analytics fetch failed:", err);
-      } finally {
-        setLoading(false);
+      // ✅ 2️⃣ Fetch CURRENT PERIOD expenses (based on user’s budget period)
+      let periodStart, periodEnd;
+      if (user.budgetPeriod === "Custom" && user.customBudgetRange) {
+        periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
+        periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
+      } else {
+        periodStart = new Date(user.budgetPeriodStart || new Date());
+        periodEnd = new Date(user.budgetPeriodEnd || new Date());
       }
-    })();
-  }, []);
+
+      const currentRes = await api.get(
+        `/auth/expenses/history?userId=${token.id}&start=${periodStart
+          .toISOString()
+          .slice(0, 10)}&end=${periodEnd.toISOString().slice(0, 10)}`
+      );
+      const currentExpenses = (currentRes.data.expenses || []).map((e) => ({
+        ...e,
+        localDate: new Date(
+          new Date(e.date || e.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        ),
+      }));
+      setCurrentPeriodExpenses(currentExpenses);
+      console.log("📊 Current period expenses fetched:", currentExpenses.length);
+
+      // ✨ Fade-in animation
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+    } catch (err) {
+      console.error("❌ Analytics fetch failed:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, []);
+
+
 
   if (loading) {
     return (
@@ -188,7 +206,9 @@ const getAnalyticsGrouping = () => {
   const grouped: { [key: string]: number } = {};
 
   currentPeriodExpenses.forEach((e) => {
-    const d = new Date(e.date);
+const d = e.localDate ? new Date(e.localDate) : new Date(
+  new Date(e.date).toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+);
     let key = "";
 
     if (budgetPeriod === "Daily" || budgetPeriod === "Weekly") {
@@ -795,13 +815,15 @@ const getSpendingHealth = () => {
     const grouped: { [key: string]: number } = {};
 
     currentPeriodExpenses.forEach((e) => {
-      const d = new Date(e.date);
+const d = e.localDate ? new Date(e.localDate) : new Date(
+  new Date(e.date).toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+);
       let key = "";
 
       if (budgetPeriod === "Daily") {
         // group by hour
         const hour = d.getHours();
-        key = `${hour.toString().padStart(2, "0")}:00`;
+        key = `${hour.toString().padStart(2, "0")}:00`; 
       } else {
         // group by day for weekly, monthly, custom
         key = d.toISOString().slice(0, 10);

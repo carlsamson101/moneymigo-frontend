@@ -113,6 +113,7 @@ const [isCompletedGoalsExpanded, setIsCompletedGoalsExpanded] = useState(false);
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
   const [lockEndDate, setLockEndDate] = useState(true);
+const [showDatePicker, setShowDatePicker] = useState(false);
 
   const router = useRouter();
 
@@ -1702,42 +1703,61 @@ const getCumulativeHistory = (goal) => {
           </View>
 
           {Platform.OS === "web" ? (
-            <input
-              type="date"
-              value={addEndDate}
-              readOnly={lockAddEndDate}
-              onChange={(e) => {
-                if (!lockAddEndDate) {
-                  setAddEndDate(e.target.value);
-                  const daysDiff = Math.ceil(
-                    (new Date(e.target.value).getTime() - new Date(addStartDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  );
-                  setDuration(daysDiff.toString());
-                }
-              }}
-              style={{
-                ...styles.webInput,
-                opacity: lockAddEndDate ? 0.6 : 1,
-              }}
-            />
-          ) : (
-            <DateTimePicker
-              value={addEndDate ? new Date(addEndDate) : new Date()}
-              mode="date"
-              display="default"
-              disabled={lockAddEndDate}
-              // @ts-ignore
-              onChange={(e, date) => {
-                if (!date || lockAddEndDate) return;
-                setAddEndDate(date.toISOString().split("T")[0]);
-                const daysDiff = Math.ceil(
-                  (date.getTime() - new Date(addStartDate).getTime()) / (1000 * 60 * 60 * 24)
-                );
-                setDuration(daysDiff.toString());
-              }}
-            />
-          )}
+  <input
+    type="date"
+    value={addEndDate}
+    readOnly={lockAddEndDate}
+    onChange={(e) => {
+      if (!lockAddEndDate) {
+        setAddEndDate(e.target.value);
+        const daysDiff = Math.ceil(
+          (new Date(e.target.value).getTime() - new Date(addStartDate).getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+        setDuration(daysDiff.toString());
+      }
+    }}
+    style={{
+      ...styles.webInput,
+      opacity: lockAddEndDate ? 0.6 : 1,
+    }}
+  />
+) : (
+  <>
+    <TouchableOpacity
+      onPress={() => {
+        if (!lockAddEndDate) setShowDatePicker(true);
+      }}
+      activeOpacity={0.7}
+      style={[
+        styles.input,
+        { backgroundColor: "#f3f4f6", justifyContent: "center" },
+      ]}
+    >
+      <Text style={{ color: "#374151" }}>
+        {addEndDate ? addEndDate : "Select End Date"}
+      </Text>
+    </TouchableOpacity>
+
+    {showDatePicker && (
+      <DateTimePicker
+        value={addEndDate ? new Date(addEndDate) : new Date()}
+        mode="date"
+        display="default"
+        onChange={(e, date) => {
+          setShowDatePicker(false); // 👈 hide picker after choosing
+          if (!date || lockAddEndDate) return;
+          setAddEndDate(date.toISOString().split("T")[0]);
+          const daysDiff = Math.ceil(
+            (date.getTime() - new Date(addStartDate).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          setDuration(daysDiff.toString());
+        }}
+      />
+    )}
+  </>
+)}
+
 
           {/* 🧭 Action Buttons */}
           <View style={[styles.buttonRow, { marginTop: 20 }]}>
@@ -1988,44 +2008,61 @@ const getCumulativeHistory = (goal) => {
           </View>
 
           {Platform.OS === "web" ? (
-            <input
-              type="date"
-              value={editEndDate}
-              disabled={lockEndDate}
-              onChange={(e) => {
-                if (!lockEndDate) {
-                  setEditEndDate(e.target.value);
-                  const daysDiff = Math.ceil(
-                    (new Date(e.target.value).getTime() -
-                      new Date(editStartDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  );
-                  setDuration(daysDiff.toString());
-                }
-              }}
-              style={{
-                ...styles.webInput,
-                opacity: lockEndDate ? 0.6 : 1,
-              }}
-            />
-          ) : (
-            <DateTimePicker
-              value={editEndDate ? new Date(editEndDate) : new Date()}
-              mode="date"
-              display="default"
-              disabled={lockEndDate}
-              // @ts-ignore
-              onChange={(e, date) => {
-                if (!date || lockEndDate) return;
-                setEditEndDate(date.toISOString().split("T")[0]);
-                const daysDiff = Math.ceil(
-                  (date.getTime() - new Date(editStartDate).getTime()) /
-                    (1000 * 60 * 60 * 24)
-                );
-                setDuration(daysDiff.toString());
-              }}
-            />
-          )}
+  <input
+    type="date"
+    value={editEndDate}
+    disabled={lockEndDate}
+    onChange={(e) => {
+      if (!lockEndDate) {
+        setEditEndDate(e.target.value);
+        const daysDiff = Math.ceil(
+          (new Date(e.target.value).getTime() - new Date(editStartDate).getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+        setDuration(daysDiff.toString());
+      }
+    }}
+    style={{
+      ...styles.webInput,
+      opacity: lockEndDate ? 0.6 : 1,
+    }}
+  />
+) : (
+  <>
+    <TouchableOpacity
+      onPress={() => {
+        if (!lockEndDate) setShowEditEndPicker(true);
+      }}
+      activeOpacity={0.7}
+      style={[
+        styles.input,
+        { backgroundColor: "#f3f4f6", justifyContent: "center" },
+      ]}
+    >
+      <Text style={{ color: "#374151" }}>
+        {editEndDate ? editEndDate : "Select End Date"}
+      </Text>
+    </TouchableOpacity>
+
+    {showEditEndPicker && (
+      <DateTimePicker
+        value={editEndDate ? new Date(editEndDate) : new Date()}
+        mode="date"
+        display="default"
+        onChange={(e, date) => {
+          setShowEditEndPicker(false);
+          if (!date || lockEndDate) return;
+          setEditEndDate(date.toISOString().split("T")[0]);
+          const daysDiff = Math.ceil(
+            (date.getTime() - new Date(editStartDate).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          setDuration(daysDiff.toString());
+        }}
+      />
+    )}
+  </>
+)}
+
 
           <View style={[styles.buttonRow, { marginTop: 20 }]}>
             <TouchableOpacity

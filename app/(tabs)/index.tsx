@@ -161,43 +161,25 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
 <TouchableOpacity
   activeOpacity={0.9}
   onPress={() => setIsExpanded(!isExpanded)}
-  style={{
-    position: 'absolute',
-    top: isMobile ? 4 : 6,
-    right: isMobile ? 4 : 6,
-    backgroundColor: '#F0F9FF',
-    paddingHorizontal: isMobile ? 1 : 10,
-    paddingVertical: isMobile ? 1 : 5,
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: isLocked ? '#1f4b81ff' : '#FDE68A',
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 1001,
-    gap: 2,
-    maxWidth: isMobile ? '70%' : '80%',
-  }}
+  style={styles.lockBadgeFloating}
 >
-  <Ionicons
-    name={isLocked ? "lock-closed" : "time-outline"}
-    size={isMobile ? 8 : 14}
-    color={isLocked ? "#1f4b81ff" : "#D97706"}
-  />
+ <Ionicons
+  name={isLocked ? "lock-closed" : "time-outline"}
+  size={width < 360 ? 8 : (isMobile ? 10 : 14)}
+  color={isLocked ? "#1f4b81ff" : "#D97706"}
+/>
   <Text
-    style={{
-      color: isLocked ? "#1f4b81ff" : "#D97706",
-      fontSize: isMobile ? 7 : 10,
-      fontWeight: '700',
-    }}
-    numberOfLines={1}
-  >
+  style={[styles.lockBadgeText, { color: isLocked ? "#1f4b81ff" : "#D97706" }]}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+>
     {message}
   </Text>
-  <Ionicons
-    name={isExpanded ? "chevron-up" : "chevron-down"}
-    size={isMobile ? 8 : 12}
-    color={isLocked ? "#1f4b81ff" : "#D97706"}
-  />
+<Ionicons
+  name={isExpanded ? "chevron-up" : "chevron-down"}
+  size={width < 360 ? 7 : (isMobile ? 8 : 12)}
+  color={isLocked ? "#1f4b81ff" : "#D97706"}
+/>
 </TouchableOpacity>
 
       {/* Expanded Popout as Modal - Renders at top level */}
@@ -3400,6 +3382,30 @@ setShowSetBudgetModal(true);
       paddingTop: Platform.OS === 'web' ? 10 : 40,
       paddingHorizontal: 20,
     },
+
+   lockBadgeFloating: {
+  position: 'absolute',
+  top: width < 360 ? 4 : (isMobile ? 6 : 8),
+  right: width < 360 ? 4 : (isMobile ? 6 : 8),
+  backgroundColor: '#F0F9FF',
+  paddingHorizontal: width < 360 ? 4 : (isMobile ? 6 : 10),
+  paddingVertical: width < 360 ? 2 : (isMobile ? 3 : 5),
+  borderRadius: isMobile ? 6 : 8,
+  borderWidth: 0.5,
+  borderColor: '#1f4b81ff',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: width < 360 ? 2 : (isMobile ? 3 : 4),
+  zIndex: 1001,
+  maxWidth: width < 360 ? '45%' : (isMobile ? '50%' : '70%'),
+  transform: width < 360 ? [{ scale: 0.75 }] : (isMobile ? [{ scale: 0.85 }] : [{ scale: 1 }]),
+},
+
+lockBadgeText: {
+  fontSize: width < 360 ? 7 : (isMobile ? 8 : 10),
+  fontWeight: '700',
+  flexShrink: 1,
+},
     profileHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -5127,6 +5133,8 @@ overspendText: {
   fontWeight: "600",
   color: "#B91C1C",}
   });
+
+  
 }
 
 
