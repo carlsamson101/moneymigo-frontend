@@ -114,9 +114,11 @@ const [isCompletedGoalsExpanded, setIsCompletedGoalsExpanded] = useState(false);
   const [editEndDate, setEditEndDate] = useState("");
   const [lockEndDate, setLockEndDate] = useState(true);
 const [showDatePicker, setShowDatePicker] = useState(false);
+const [showEditEndPicker, setShowEditEndPicker] = useState(false);
+
 
   const router = useRouter();
-
+  
   // Form states
   const [goalName, setGoalName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");

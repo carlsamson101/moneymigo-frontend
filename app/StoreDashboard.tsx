@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
 import {
@@ -17,13 +17,19 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import api from "../lib/api";
 import UniversalMap from "../components/UniversalMap";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { checkStoreAuth } from "../lib/checkStoreAuth";
+import { Platform } from 'react-native';
 
 
+let DateTimePicker: any = () => null;
+if (Platform.OS !== 'web') {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+}
 const { width } = Dimensions.get('window');
 const numColumns = width > 768 ? 5 : width > 480 ? 3 : 2;
 
@@ -53,9 +59,21 @@ const StoreDashboard = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  
+ const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+const [deleteDealConfirmVisible, setDeleteDealConfirmVisible] = useState(false);
+const [deleteDealTargetId, setDeleteDealTargetId] = useState<string | null>(null);
+
+const [addDealModalVisible, setAddDealModalVisible] = useState(false);
+const [dealMessage, setDealMessage] = useState("");
+const [dealDiscount, setDealDiscount] = useState("");
+// Remove: dealItemName and dealPrice (we'll use selectedDealItem instead)  
+const [deals, setDeals] = useState([]);
+const [selectedDealItem, setSelectedDealItem] = useState<Item | null>(null);
+const [showItemPicker, setShowItemPicker] = useState(false);
+const [dealStartDate, setDealStartDate] = useState("");
+const [dealEndDate, setDealEndDate] = useState("");
+const [dealItemSearch, setDealItemSearch] = useState("");
   // Form state
   const [itemName, setItemName] = useState("");
   const [price, setPrice] = useState("");
@@ -63,6 +81,11 @@ const StoreDashboard = () => {
   const [category, setCategory] = useState("other");
   const [location, setLocation] = useState<StoreLocation | null>(null);
   const [locationVisible, setLocationVisible] = useState(false);
+
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+const [startDate, setStartDate] = useState(new Date());
+const [endDate, setEndDate] = useState(new Date());
 
   // Filter state
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
@@ -99,9 +122,27 @@ const StoreDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
+  // Fetch deals
+const fetchDeals = async () => {
+  if (!storeName) return;
+  try {
+    const res = await api.get(`/deals/store/${storeName}`);
+    setDeals(res.data);
+  } catch (err) {
+    console.error("Fetch deals error:", err);
+  }
+};
+
+useEffect(() => {
+  fetchItems();
+}, []);
+
+useEffect(() => {
+  if (storeName) {
+    fetchDeals(); // ✅ Runs again once storeName is loaded
+  }
+}, [storeName]);
+
 
   // Fetch current store location on mount
   useEffect(() => {
@@ -132,6 +173,62 @@ const StoreDashboard = () => {
       Alert.alert("Error", "Failed to update location");
     }
   };
+
+const addDealHandler = async () => {
+  if (!storeName || !selectedDealItem || !dealMessage || !dealDiscount || !dealStartDate || !dealEndDate)
+    return Alert.alert("Error", "Please complete all fields.");
+
+  const discountValue = parseFloat(dealDiscount);
+  if (isNaN(discountValue) || discountValue <= 0 || discountValue > 100)
+    return Alert.alert("Error", "Please enter a valid discount (1-100%)");
+
+  const originalPrice = selectedDealItem.price;
+  const discountedPrice = originalPrice - (originalPrice * (discountValue / 100));
+
+  try {
+    await api.post("/deals/add", {
+      storeName,
+      itemName: selectedDealItem.itemName,
+      message: dealMessage,
+      price: discountedPrice,
+      originalPrice: originalPrice,
+      discount: discountValue,
+      startDate: dealStartDate,
+      endDate: dealEndDate,
+    });
+
+    Alert.alert("✅ Success", "Deal added and users notified!");
+    setAddDealModalVisible(false);
+    setSelectedDealItem(null);
+    setDealMessage("");
+    setDealDiscount("");
+    setDealStartDate("");
+    setDealEndDate("");
+    fetchDeals(); // Refresh deals list
+  } catch (err: any) {
+    console.error("Add deal error:", err.response?.data || err.message);
+    Alert.alert("Error", "Failed to post deal. Please try again.");
+  }
+};
+
+const deleteDealHandler = async (dealId: string) => {
+  try {
+    console.log("🗑️ Attempting to delete deal:", dealId);
+    
+    const res = await api.delete(`/deals/${dealId}`);
+    console.log("✅ Delete response:", res.status, res.data);
+    
+    // Refresh deals list after successful deletion
+    fetchDeals();
+  } catch (err: any) {
+    console.error(
+      "❌ Delete deal error:",
+      err?.response?.status,
+      err?.response?.data || err?.message
+    );
+  }
+};
+
 
   const addItemHandler = async () => {
     const parsedPrice = parseFloat(price);
@@ -405,31 +502,146 @@ const StoreDashboard = () => {
 
         {/* Action Buttons Row */}
         <View style={styles.actionRow}>
-          <TouchableOpacity
-            onPress={() => setLocationVisible(true)}
-            style={styles.actionButton}
-          >
-            <Ionicons name="map" size={20} color="#16A9B8" />
-            <Text style={styles.actionButtonText}>
-              {location ? "Update Location" : "Set Location"}
-            </Text>
-          </TouchableOpacity>
+  <TouchableOpacity
+    onPress={() => setLocationVisible(true)}
+    style={styles.actionButton}
+  >
+    <Ionicons name="map" size={20} color="#16A9B8" />
+    <Text style={styles.actionButtonText}>
+      {location ? "Update Location" : "Set Location"}
+    </Text>
+  </TouchableOpacity>
 
+  {/* 🔹 Add Deal Button */}
+  <LinearGradient
+    colors={['#0D7C8A', '#16A9B8']}
+    style={styles.actionButtonPrimary}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+  >
+    <TouchableOpacity
+      onPress={() => setAddDealModalVisible(true)}
+      style={styles.actionButtonTouchable}
+    >
+      <Ionicons name="pricetag" size={20} color="white" />
+      <Text style={styles.actionButtonTextPrimary}>Add Deal</Text>
+    </TouchableOpacity>
+  </LinearGradient>
+
+  <LinearGradient
+    colors={['#16A9B8', '#0D7C8A']}
+    style={styles.actionButtonPrimary}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+  >
+    <TouchableOpacity
+      onPress={() => setAddItemModalVisible(true)}
+      style={styles.actionButtonTouchable}
+    >
+      <Ionicons name="add" size={20} color="white" />
+      <Text style={styles.actionButtonTextPrimary}>Add Item</Text>
+    </TouchableOpacity>
+  </LinearGradient>
+</View>
+
+{/* Active Deals Section */}
+{deals.length > 0 && (
+  <View style={styles.dealsSection}>
+    <View style={styles.dealsSectionHeader}>
+      <View style={styles.dealsSectionTitleRow}>
+        <Ionicons name="pricetag" size={24} color="#16A9B8" />
+        <Text style={styles.dealsSectionTitle}>Active Deals ({deals.length})</Text>
+      </View>
+    </View>
+
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dealsScrollContent}>
+      {deals.map((deal) => (
+        <View key={deal._id} style={styles.dealCard}>
           <LinearGradient
             colors={['#16A9B8', '#0D7C8A']}
-            style={styles.actionButtonPrimary}
+            style={styles.dealCardGradient}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <TouchableOpacity
-              onPress={() => setAddItemModalVisible(true)}
-              style={styles.actionButtonTouchable}
-            >
-              <Ionicons name="add" size={20} color="white" />
-              <Text style={styles.actionButtonTextPrimary}>Add Item</Text>
-            </TouchableOpacity>
+            <View style={styles.dealBadge}>
+              <Text style={styles.dealBadgeText}>{deal.discount}% OFF</Text>
+            </View>
+
+            <Text style={styles.dealItemName} numberOfLines={2}>{deal.itemName}</Text>
+            <Text style={styles.dealMessage} numberOfLines={2}>{deal.message}</Text>
+
+            <View style={styles.dealPriceRow}>
+              <Text style={styles.dealOriginalPrice}>₱{deal.originalPrice?.toFixed(2)}</Text>
+              <Text style={styles.dealPrice}>₱{deal.price.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.dealDateRow}>
+              <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.dealDateText}>
+                {new Date(deal.startDate).toLocaleDateString()} - {new Date(deal.endDate).toLocaleDateString()}
+              </Text>
+            </View>
+
+          <TouchableOpacity
+  onPress={() => {
+    console.log("🗑️ Delete button pressed for deal:", deal._id);
+    setDeleteDealTargetId(deal._id);
+    setDeleteDealConfirmVisible(true);
+  }}
+  style={styles.dealDeleteBtn}
+  activeOpacity={0.7}
+>
+  <Ionicons name="trash-outline" size={16} color="white" />
+</TouchableOpacity>
+
+{/* Delete Deal Confirmation Modal */}
+<Modal
+  visible={deleteDealConfirmVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setDeleteDealConfirmVisible(false)}
+>
+  <Pressable style={styles.modalOverlay} onPress={() => setDeleteDealConfirmVisible(false)}>
+    <View style={styles.dialogBox}>
+      <View style={styles.dialogIconWrapper}>
+        <Ionicons name="trash-outline" size={32} color="#EF4444" />
+      </View>
+      <Text style={styles.dialogTitle}>Delete Deal</Text>
+      <Text style={styles.dialogMessage}>
+        Are you sure you want to delete this deal? This action cannot be undone.
+      </Text>
+
+      <View style={styles.dialogActions}>
+        <TouchableOpacity 
+          style={styles.dialogCancelBtn}
+          onPress={() => setDeleteDealConfirmVisible(false)}
+        >
+          <Text style={styles.dialogCancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.dialogConfirmBtn}
+          onPress={() => {
+            if (deleteDealTargetId) {
+              console.log("✅ User confirmed deletion of deal:", deleteDealTargetId);
+              deleteDealHandler(deleteDealTargetId);
+              setDeleteDealConfirmVisible(false);
+              setDeleteDealTargetId(null);
+            }
+          }}
+        >
+          <Text style={styles.dialogConfirmText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Pressable>
+</Modal>
+
           </LinearGradient>
         </View>
+      ))}
+    </ScrollView>
+  </View>
+)}
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -741,6 +953,237 @@ const StoreDashboard = () => {
             </Pressable>
           </Pressable>
         </Modal>
+
+        {/* ADD DEAL MODAL */}
+{/* ADD DEAL MODAL - IMPROVED */}
+<Modal
+  visible={addDealModalVisible}
+  animationType="fade"
+  transparent
+  onRequestClose={() => setAddDealModalVisible(false)}
+>
+  <Pressable style={styles.modalOverlay} onPress={() => setAddDealModalVisible(false)}>
+    <Pressable style={styles.addItemModal} onPress={() => {}}>
+      <View style={styles.modalHeader}>
+        <View style={styles.modalIconWrapper}>
+          <Ionicons name="pricetag" size={28} color="#16A9B8" />
+        </View>
+        <Text style={styles.modalTitle}>Add New Deal</Text>
+        <Text style={styles.modalSubtitle}>Create a promotional offer</Text>
+      </View>
+
+      <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+       {/* Select Item */}
+<View style={styles.inputGroup}>
+  <Text style={styles.inputLabel}>Select Product</Text>
+  
+  {/* Search Input */}
+  <View style={styles.inputWithIcon}>
+    <Ionicons name="search" size={18} color="#64748B" />
+    <TextInput
+      placeholder="Search for a product..."
+      value={dealItemSearch}
+      onChangeText={setDealItemSearch}
+      style={styles.formInput}
+      placeholderTextColor="#94A3B8"
+      onFocus={() => setShowItemPicker(true)}
+    />
+    {dealItemSearch.length > 0 && (
+      <TouchableOpacity onPress={() => setDealItemSearch("")}>
+        <Ionicons name="close-circle" size={18} color="#94A3B8" />
+      </TouchableOpacity>
+    )}
+  </View>
+
+  {/* Selected Item Display */}
+  {selectedDealItem && !showItemPicker && (
+    <TouchableOpacity
+      onPress={() => setShowItemPicker(true)}
+      style={styles.selectedItemBox}
+    >
+      <View style={styles.dropdownButtonContent}>
+        <Ionicons name={getCategoryIcon(selectedDealItem.category)} size={18} color="#16A9B8" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.selectedItemName}>{selectedDealItem.itemName}</Text>
+          <Text style={styles.itemPriceHint}>₱{selectedDealItem.price.toFixed(2)}</Text>
+        </View>
+      </View>
+      <Ionicons name="create-outline" size={18} color="#16A9B8" />
+    </TouchableOpacity>
+  )}
+
+  {/* Item Picker Dropdown */}
+  {showItemPicker && (
+    <ScrollView 
+      style={styles.categoryDropdownScroll}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled={true}
+    >
+      {items
+        .filter(item => 
+          item.itemName.toLowerCase().includes(dealItemSearch.toLowerCase())
+        )
+        .map((item) => (
+          <TouchableOpacity
+            key={item._id}
+            onPress={() => {
+              setSelectedDealItem(item);
+              setShowItemPicker(false);
+              setDealItemSearch(item.itemName);
+            }}
+            style={[
+              styles.dropdownOption,
+              selectedDealItem?._id === item._id && styles.dropdownOptionActive
+            ]}
+          >
+            <View style={styles.dropdownOptionContent}>
+              <Ionicons name={getCategoryIcon(item.category)} size={18} color={selectedDealItem?._id === item._id ? "#16A9B8" : "#64748B"} />
+              <View style={{ flex: 1 }}>
+                <Text style={[
+                  styles.dropdownOptionText,
+                  selectedDealItem?._id === item._id && styles.dropdownOptionTextActive
+                ]}>
+                  {item.itemName}
+                </Text>
+                <Text style={styles.itemPriceHint}>₱{item.price.toFixed(2)}</Text>
+              </View>
+            </View>
+            {selectedDealItem?._id === item._id && (
+              <Ionicons name="checkmark-circle" size={18} color="#16A9B8" />
+            )}
+          </TouchableOpacity>
+        ))}
+      {items.filter(item => 
+        item.itemName.toLowerCase().includes(dealItemSearch.toLowerCase())
+      ).length === 0 && (
+        <View style={styles.noResultsBox}>
+          <Ionicons name="search-outline" size={32} color="#94A3B8" />
+          <Text style={styles.noResultsText}>No items found</Text>
+        </View>
+      )}
+    </ScrollView>
+  )}
+</View>
+
+        {/* Show Original Price */}
+        {selectedDealItem && (
+          <View style={styles.priceInfoBox}>
+            <Text style={styles.priceInfoLabel}>Original Price:</Text>
+            <Text style={styles.priceInfoValue}>₱{selectedDealItem.price.toFixed(2)}</Text>
+          </View>
+        )}
+
+        {/* Discount Percentage */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Discount Percentage (%)</Text>
+          <View style={styles.inputWithIcon}>
+            <Ionicons name="percent-outline" size={18} color="#64748B" />
+            <TextInput
+              placeholder="e.g. 20"
+              keyboardType="numeric"
+              value={dealDiscount}
+              onChangeText={setDealDiscount}
+              style={styles.formInput}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
+          {selectedDealItem && dealDiscount && parseFloat(dealDiscount) > 0 && (
+            <Text style={styles.calculatedPrice}>
+              New Price: ₱{(selectedDealItem.price - (selectedDealItem.price * parseFloat(dealDiscount) / 100)).toFixed(2)}
+            </Text>
+          )}
+        </View>
+
+        {/* Deal Message */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Promo Message</Text>
+          <View style={styles.inputWithIcon}>
+            <Ionicons name="chatbubble-outline" size={18} color="#64748B" />
+            <TextInput
+              placeholder="e.g. Limited time offer!"
+              value={dealMessage}
+              onChangeText={setDealMessage}
+              style={styles.formInput}
+              placeholderTextColor="#94A3B8"
+              multiline
+            />
+          </View>
+        </View>
+
+       {/* Date Range */}
+<View style={styles.inputRow}>
+  <View style={[styles.inputGroup, { flex: 1 }]}>
+    <Text style={styles.inputLabel}>Start Date</Text>
+    <View style={styles.inputWithIcon}>
+      <Ionicons name="calendar-outline" size={18} color="#64748B" />
+      <TextInput
+        placeholder="YYYY-MM-DD"
+        value={dealStartDate}
+        onChangeText={setDealStartDate}
+        style={styles.formInput}
+        placeholderTextColor="#94A3B8"
+        // @ts-ignore - type prop works on web
+        type="date"
+      />
+    </View>
+  </View>
+
+  <View style={[styles.inputGroup, { flex: 1 }]}>
+    <Text style={styles.inputLabel}>End Date</Text>
+    <View style={styles.inputWithIcon}>
+      <Ionicons name="calendar-outline" size={18} color="#64748B" />
+      <TextInput
+        placeholder="YYYY-MM-DD"
+        value={dealEndDate}
+        onChangeText={setDealEndDate}
+        style={styles.formInput}
+        placeholderTextColor="#94A3B8"
+        // @ts-ignore - type prop works on web
+        type="date"
+      />
+    </View>
+  </View>
+</View>
+      </ScrollView>
+
+      <View style={styles.modalActions}>
+       <TouchableOpacity
+  onPress={() => {
+    setAddDealModalVisible(false);
+    setSelectedDealItem(null);
+    setDealMessage("");
+    setDealDiscount("");
+    setDealStartDate("");
+    setDealEndDate("");
+    setShowItemPicker(false);
+    setDealItemSearch("");
+    setShowStartDatePicker(false);  // Add this
+    setShowEndDatePicker(false);     // Add this
+  }}
+  style={styles.modalCancelBtn}
+>
+  <Text style={styles.modalCancelText}>Cancel</Text>
+</TouchableOpacity>
+
+        <LinearGradient
+          colors={['#16A9B8', '#0D7C8A']}
+          style={styles.modalSaveBtn}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <TouchableOpacity
+            onPress={addDealHandler}
+            style={styles.modalSaveTouchable}
+          >
+            <Ionicons name="checkmark" size={20} color="white" />
+            <Text style={styles.modalSaveText}>Post Deal</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+    </Pressable>
+  </Pressable>
+</Modal>
+
 
         {/* Location Modal */}
         <Modal visible={locationVisible} transparent animationType="fade">
@@ -1580,13 +2023,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0, 0, 0, 0.2)",
+  justifyContent: "center",
+  alignItems: "center",
+},
 
   addItemModal: {
     width: "90%",
@@ -1798,19 +2240,7 @@ const styles = StyleSheet.create({
     color: "white",
   },
 
-  productCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
+
   
   
   
@@ -1838,88 +2268,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   
-  productInfo: {
-    padding: 6,
-    gap: 2,
-  },
-  
-  productName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-    lineHeight: 14,
-    marginBottom: 1,
-  },
   
   priceUnitRow: {
     flexDirection: "row",
     alignItems: "baseline",
     gap: 2,
   },
-  
-  productPrice: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#16A9B8",
-    letterSpacing: -0.2,
-  },
-  
-  productUnit: {
-    fontSize: 10,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  
-  productActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 4,
-    padding: 5,
-    paddingTop: 3,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  
-  editButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
-    backgroundColor: "#FFFBEB",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-  },
-  
-  deleteButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
-    backgroundColor: "#FEF2F2",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-  },
-  
-  columnWrapper: {
-    justifyContent: "flex-start",
-    gap: 6,
-    paddingHorizontal: 10,
-  },
-  
-  gridContent: {
-    paddingBottom: 10,
-    paddingTop: 4,
-  },
 
-
-modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-},
 modalContainer: {
   width: "85%",
   backgroundColor: "#fff",
@@ -1927,24 +2282,14 @@ modalContainer: {
   padding: 20,
   alignItems: "center",
 },
-modalTitle: {
-  fontSize: 20,
-  fontWeight: "700",
-  color: "#1E293B",
-  marginBottom: 8,
-},
+
 modalMessage: {
   fontSize: 15,
   color: "#475569",
   textAlign: "center",
   marginBottom: 20,
 },
-modalActions: {
-  flexDirection: "row",
-  justifyContent: "flex-end",
-  width: "100%",
-  gap: 12,
-},
+
 modalButton: {
   flex: 1,
   paddingVertical: 10,
@@ -1955,4 +2300,179 @@ cancelBtn: { backgroundColor: "#E2E8F0" },
 modalCancelText: { color: "#1E293B", fontWeight: "600" },
 modalDeleteText: { color: "#fff", fontWeight: "600" },
 
+// Add these to your existing styles object
+dealsSection: {
+  padding: 16,
+  backgroundColor: "#F8FAFC",
+},
+dealsSectionHeader: {
+  marginBottom: 16,
+},
+dealsSectionTitleRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+},
+dealsSectionTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  color: "#1E293B",
+},
+dealsScrollContent: {
+  paddingRight: 16,
+},
+dealCard: {
+  width: 280,
+  marginRight: 12,
+  borderRadius: 16,
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.15,
+  shadowRadius: 8,
+  elevation: 4,
+},
+dealCardGradient: {
+  padding: 16,
+  minHeight: 180,
+},
+dealBadge: {
+  position: "absolute",
+  top: 12,
+  right: 12,
+  backgroundColor: "#EF4444",
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 20,
+},
+dealBadgeText: {
+  color: "white",
+  fontSize: 14,
+  fontWeight: "800",
+},
+dealItemName: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "white",
+  marginBottom: 8,
+  marginTop: 8,
+},
+dealMessage: {
+  fontSize: 14,
+  color: "rgba(255, 255, 255, 0.9)",
+  marginBottom: 12,
+},
+dealPriceRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  marginBottom: 12,
+},
+dealOriginalPrice: {
+  fontSize: 16,
+  color: "rgba(255, 255, 255, 0.7)",
+  textDecorationLine: "line-through",
+},
+dealPrice: {
+  fontSize: 24,
+  fontWeight: "800",
+  color: "white",
+},
+dealDateRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  marginTop: 8,
+},
+dealDateText: {
+  fontSize: 12,
+  color: "rgba(255, 255, 255, 0.9)",
+  fontWeight: "500",
+},
+dealDeleteBtn: {
+  position: "absolute",
+  bottom: 12,
+  right: 12,
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: "rgba(0, 0, 0, 0.3)",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 999,
+  elevation: 5,
+},
+priceInfoBox: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  backgroundColor: "#E0F2F4",
+  padding: 12,
+  borderRadius: 10,
+  marginBottom: 16,
+},
+priceInfoLabel: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#64748B",
+},
+priceInfoValue: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#16A9B8",
+},
+calculatedPrice: {
+  marginTop: 8,
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#16A9B8",
+},
+itemPriceHint: {
+  fontSize: 12,
+  color: "#94A3B8",
+  marginTop: 2,
+},
+selectedItemBox: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  backgroundColor: "#E0F2F4",
+  borderRadius: 10,
+  padding: 12,
+  marginTop: 8,
+  borderWidth: 1.5,
+  borderColor: "#16A9B8",
+},
+selectedItemName: {
+  fontSize: 15,
+  fontWeight: "600",
+  color: "#1E293B",
+},
+noResultsBox: {
+  padding: 32,
+  alignItems: "center",
+  justifyContent: "center",
+},
+noResultsText: {
+  fontSize: 14,
+  color: "#94A3B8",
+  marginTop: 8,
+  fontWeight: "500",
+},
+datePickerButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  borderRadius: 10,
+  borderWidth: 1.5,
+  borderColor: "#E2E8F0",
+  backgroundColor: "#F8FAFC",
+  paddingHorizontal: 12,
+  paddingVertical: 12,
+  gap: 8,
+},
+datePickerText: {
+  fontSize: 15,
+  color: "#1E293B",
+  fontWeight: "500",
+},
 });

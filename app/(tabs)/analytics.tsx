@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +43,25 @@ type UserData = {
   };
 };
 
+// ✅ Safe date converter (prevents "Date value out of bounds" in Expo Go)
+const safeToLocalDate = (input: any) => {
+  try {
+    if (!input) return new Date(); // fallback to today
+    const parsed = new Date(input);
+    if (isNaN(parsed.getTime())) return new Date(); // invalid → today
+    const local = new Date(parsed.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    return isNaN(local.getTime()) ? new Date() : local;
+  } catch (err) {
+    console.warn("⚠️ Invalid date value:", input);
+    return new Date();
+  }
+};
+
+
+
+
+
+
 export default function AnalyticsPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -50,6 +69,8 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
 
+
+  
   useEffect(() => {
   (async () => {
     const token = await getToken();
@@ -72,36 +93,68 @@ export default function AnalyticsPage() {
       );
       const allExpenses = (allRes.data.expenses || []).map((e) => ({
         ...e,
-        localDate: new Date(
-          new Date(e.date || e.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
-        ),
+        localDate: safeToLocalDate(e.date || e.createdAt),
+
       }));
       setExpenses(allExpenses);
       console.log("✅ All-time expenses fetched:", allExpenses.length);
 
-      // ✅ 2️⃣ Fetch CURRENT PERIOD expenses (based on user’s budget period)
-      let periodStart, periodEnd;
-      if (user.budgetPeriod === "Custom" && user.customBudgetRange) {
-        periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
-        periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
-      } else {
-        periodStart = new Date(user.budgetPeriodStart || new Date());
-        periodEnd = new Date(user.budgetPeriodEnd || new Date());
-      }
 
-      const currentRes = await api.get(
-        `/auth/expenses/history?userId=${token.id}&start=${periodStart
-          .toISOString()
-          .slice(0, 10)}&end=${periodEnd.toISOString().slice(0, 10)}`
-      );
-      const currentExpenses = (currentRes.data.expenses || []).map((e) => ({
-        ...e,
-        localDate: new Date(
-          new Date(e.date || e.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
-        ),
-      }));
-      setCurrentPeriodExpenses(currentExpenses);
-      console.log("📊 Current period expenses fetched:", currentExpenses.length);
+      // ✅ 2️⃣ Fetch CURRENT PERIOD expenses (based on user’s budget period)
+     
+// ✅ Handle budget period ranges more intelligently
+let periodStart, periodEnd;
+const now = new Date();
+
+// Determine based on user settings
+if (user.budgetPeriod === "Custom" && user.customBudgetRange) {
+  periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
+  periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
+} else if (user.budgetPeriod === "Weekly") {
+  // 🗓 Weekly period — show last 7 days including today
+  periodEnd = new Date();
+  periodStart = new Date();
+  periodStart.setDate(periodEnd.getDate() - 6);
+} else if (user.budgetPeriod === "Monthly") {
+  // 🗓 Monthly period — start of month → today
+  periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  periodEnd = now;
+} else {
+  // Fallback — default to current day
+  periodStart = new Date(now);
+  periodEnd = new Date(now);
+}
+
+// 🧠 Sanitize any weird values
+if (periodStart > periodEnd) {
+  [periodStart, periodEnd] = [periodEnd, periodStart];
+}
+if (isNaN(periodStart) || isNaN(periodEnd)) {
+  console.warn("⚠️ Invalid analytics range, defaulting to today");
+  periodStart = new Date();
+  periodEnd = new Date();
+}
+
+
+const startISO = periodStart.toISOString().slice(0, 10);
+const endISO = periodEnd.toISOString().slice(0, 10);
+console.log("📅 Final Analytics Range:", startISO, "→", endISO);
+
+// ✅ Fetch analytics safely
+const currentRes = await api.get(
+  `/auth/expenses/history?userId=${token.id}&start=${startISO}&end=${endISO}`
+);
+
+
+
+const currentExpenses = (currentRes.data.expenses || []).map((e) => ({
+  ...e,
+  localDate: safeToLocalDate(e.date || e.createdAt),
+
+}));
+setCurrentPeriodExpenses(currentExpenses);
+console.log("📊 Current period expenses fetched:", currentExpenses.length);
+
 
       // ✨ Fade-in animation
       Animated.timing(fadeAnim, {

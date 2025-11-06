@@ -3413,8 +3413,8 @@ setShowSetBudgetModal(true);
 
    lockBadgeFloating: {
   position: 'absolute',
-  top: width < 360 ? 4 : (isMobile ? 6 : 8),
-  right: width < 360 ? 4 : (isMobile ? 6 : 8),
+  top: width < 360 ? 4 : (isMobile ? 0 : 0.5),
+  right: width < 360 ? 4 : (isMobile ? 0 : 0.5),
   backgroundColor: '#F0F9FF',
   paddingHorizontal: width < 360 ? 4 : (isMobile ? 6 : 10),
   paddingVertical: width < 360 ? 2 : (isMobile ? 3 : 5),

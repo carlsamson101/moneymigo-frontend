@@ -363,113 +363,124 @@ const onRefresh = () => {
         </ScrollView>
       )}
 
-      {/* List - Product Cards */}
-      {!loading && deals.length > 0 && (
-        <FlatList
-          data={deals}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
-          }
-          renderItem={({ item, index }) => {
-            const distanceKm = item.distance ? (item.distance / 1000).toFixed(2) : '';
-            const isCheapest = cheapestPrice !== null && item.price === cheapestPrice;
-            const [lng, lat] = item.location?.coordinates || [null, null];
-            const categoryInfo = getCategoryInfo(item.category);
+     {/* List - Product Cards */}
+{!loading && deals.length > 0 && (
+  <FlatList
+    data={deals}
+    keyExtractor={(item) => item._id}
+    contentContainerStyle={styles.listContainer}
+    showsVerticalScrollIndicator={false}
+    nestedScrollEnabled // ✅ allow inner list inside ScrollView
+    scrollEnabled={false} // ✅ disable FlatList’s own scrolling to avoid conflict
+    refreshControl={
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        colors={['#3B82F6']}
+      />
+    }
+    renderItem={({ item }) => {
+      const distanceKm = item.distance ? (item.distance / 1000).toFixed(2) : '';
+      const isCheapest = cheapestPrice !== null && item.price === cheapestPrice;
+      const [lng, lat] = item.location?.coordinates || [null, null];
+      const categoryInfo = getCategoryInfo(item.category);
 
-            return (
-              <View style={[
-                styles.dealCard,
-                isCheapest && styles.cheapestCard,
-              ]}>
-                {isCheapest && (
-                  <View style={styles.cheapestBadge}>
-                    <Ionicons name="star" size={10} color="white" />
-                    <Text style={styles.cheapestBadgeText}>Lowest Price</Text>
-                  </View>
-                )}
-                
-                <View style={styles.dealInfo}>
-                  {/* Item name */}
-                  <Text style={styles.itemName} numberOfLines={1}>{item.itemName}</Text>
-          
-                  {/* Category Badge - Below name */}
-                  <View style={[
-                    styles.categoryBadge, 
-                    { backgroundColor: categoryInfo.bgColor, alignSelf: 'flex-start' }
-                  ]}>
-                    <Ionicons 
-                      name={categoryInfo.icon as any} 
-                      size={9} 
-                      color={categoryInfo.color} 
-                    />
-                    <Text style={[
-                      styles.categoryBadgeText,
-                      { color: categoryInfo.color }
-                    ]}>
-                      {categoryInfo.label}
-                    </Text>
-                  </View>
+      return (
+        <View
+          style={[
+            styles.dealCard,
+            isCheapest && styles.cheapestCard,
+          ]}
+        >
+          {isCheapest && (
+            <View style={styles.cheapestBadge}>
+              <Ionicons name="star" size={10} color="white" />
+              <Text style={styles.cheapestBadgeText}>Lowest Price</Text>
+            </View>
+          )}
 
-                  <View style={styles.storeInfo}>
-                    <Ionicons name="storefront-outline" size={12} color="#6B7280" />
-                    <Text style={styles.storeName} numberOfLines={1}>{item.storeName}</Text>
-                    {item.unit && (
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <Text style={styles.separator}>•</Text>
-                      <Text style={styles.unit}>{item.unit}</Text>
-                    </View>
-                  )}
+          <View style={styles.dealInfo}>
+            <Text style={styles.itemName} numberOfLines={1}>{item.itemName}</Text>
 
-                  </View>
-                  
-                  {distanceKm && (
-                    <View style={styles.distanceInfo}>
-                      <Ionicons name="location-outline" size={12} color="#9CA3AF" />
-                      <Text style={styles.distance}>{distanceKm} km</Text>
-                    </View>
-                  )}
+            {/* Category Badge */}
+            <View
+              style={[
+                styles.categoryBadge,
+                { backgroundColor: categoryInfo.bgColor, alignSelf: 'flex-start' },
+              ]}
+            >
+              <Ionicons name={categoryInfo.icon as any} size={9} color={categoryInfo.color} />
+              <Text
+                style={[
+                  styles.categoryBadgeText,
+                  { color: categoryInfo.color },
+                ]}
+              >
+                {categoryInfo.label}
+              </Text>
+            </View>
+
+            <View style={styles.storeInfo}>
+              <Ionicons name="storefront-outline" size={12} color="#6B7280" />
+              <Text style={styles.storeName} numberOfLines={1}>
+                {item.storeName}
+              </Text>
+              {item.unit && (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.separator}>•</Text>
+                  <Text style={styles.unit}>{item.unit}</Text>
                 </View>
-                    {/* 🧮 Stock Info */}
-                {item.stock === 0 ? (
-                  <View style={styles.outOfStockContainer}>
-                    <Text style={styles.outOfStockText}>No stock available</Text>
-                  </View>
-                ) : (
-                  <View style={styles.stockContainer}>
-                    <Ionicons name="cube-outline" size={12} color="#059669" />
-                  <Text style={styles.stockText}>
-                    {typeof item.stock === "number" ? `${item.stock} in stock` : "Stock unavailable"}
-                  </Text>
-                  </View>
-                )}
+              )}
+            </View>
 
-                <View style={styles.priceSection}>
-                  <Text style={[styles.price, isCheapest && styles.cheapestPrice]}>
-                    ₱{item.price}
-                  </Text>
-
-                  {lat && lng && (
-                    <TouchableOpacity
-                      onPress={() =>
-                        router.push(
-                          `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-                        )
-                      }
-                      style={styles.directionsButton}
-                    >
-                      <Ionicons name="navigate" size={12} color="#2563EB" />
-                      <Text style={styles.directionsText}>Directions</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+            {distanceKm && (
+              <View style={styles.distanceInfo}>
+                <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                <Text style={styles.distance}>{distanceKm} km</Text>
               </View>
-            );
-          }}
-        />
-      )}
+            )}
+          </View>
+
+          {/* 🧮 Stock Info */}
+          {item.stock === 0 ? (
+            <View style={styles.outOfStockContainer}>
+              <Text style={styles.outOfStockText}>No stock available</Text>
+            </View>
+          ) : (
+            <View style={styles.stockContainer}>
+              <Ionicons name="cube-outline" size={12} color="#059669" />
+              <Text style={styles.stockText}>
+                {typeof item.stock === 'number'
+                  ? `${item.stock} in stock`
+                  : 'Stock unavailable'}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.priceSection}>
+            <Text style={[styles.price, isCheapest && styles.cheapestPrice]}>
+              ₱{item.price}
+            </Text>
+
+            {lat && lng && (
+              <TouchableOpacity
+                onPress={() =>
+                  router.push(
+                    `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                  )
+                }
+                style={styles.directionsButton}
+              >
+                <Ionicons name="navigate" size={12} color="#2563EB" />
+                <Text style={styles.directionsText}>Directions</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      );
+    }}
+  />
+)}
   </ScrollView>
   );
 }
