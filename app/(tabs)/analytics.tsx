@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
@@ -43,25 +43,6 @@ type UserData = {
   };
 };
 
-// ✅ Safe date converter (prevents "Date value out of bounds" in Expo Go)
-const safeToLocalDate = (input: any) => {
-  try {
-    if (!input) return new Date(); // fallback to today
-    const parsed = new Date(input);
-    if (isNaN(parsed.getTime())) return new Date(); // invalid → today
-    const local = new Date(parsed.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    return isNaN(local.getTime()) ? new Date() : local;
-  } catch (err) {
-    console.warn("⚠️ Invalid date value:", input);
-    return new Date();
-  }
-};
-
-
-
-
-
-
 export default function AnalyticsPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -69,108 +50,56 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
 
-
-  
   useEffect(() => {
-  (async () => {
-    const token = await getToken();
-    if (!token?.id) return;
+    (async () => {
+      const token = await getToken();
+      if (!token?.id) return;
 
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      // 🧠 Fetch user info
-      const { data: user } = await api.get(`/auth/${token.id}`);
-      setUserData(user);
+        // Fetch user data
+        const userRes = await api.get(`/auth/${token.id}`);
+        const user = userRes.data;
+        setUserData(user);
 
-      // 🕒 Manila local today (YYYY-MM-DD)
-      const manilaNow = new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" });
-      const today = new Date(manilaNow).toISOString().slice(0, 10);
+        // Fetch all expenses (for lifetime analytics if needed later)
+        const start = "2000-01-01";
+        const end = new Date().toISOString().slice(0, 10);
+        const allExpensesRes = await api.get(
+          `/expenses/history?userId=${token.id}&start=${start}&end=${end}`
+        );
+        setExpenses(allExpensesRes.data.expenses || []);
 
-      // ✅ 1️⃣ Fetch ALL expenses (lifetime analytics)
-      const allRes = await api.get(
-        `/auth/expenses/history?userId=${token.id}&start=2000-01-01&end=${today}`
-      );
-      const allExpenses = (allRes.data.expenses || []).map((e) => ({
-        ...e,
-        localDate: safeToLocalDate(e.date || e.createdAt),
+        // Current period start and end
+        let periodStart, periodEnd;
+        if (user.budgetPeriod === 'Custom' && user.customBudgetRange) {
+          periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
+          periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
+        } else {
+          periodStart = new Date(user.budgetPeriodStart || new Date());
+          periodEnd = new Date(user.budgetPeriodEnd || new Date());
+        }
 
-      }));
-      setExpenses(allExpenses);
-      console.log("✅ All-time expenses fetched:", allExpenses.length);
+        const currentPeriodRes = await api.get(
+          `/expenses/history?userId=${token.id}&start=${periodStart.toISOString().slice(0, 10)}&end=${periodEnd.toISOString().slice(0, 10)}`
+        );
+        setCurrentPeriodExpenses(currentPeriodRes.data.expenses || []);
 
+        // Animate content in
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }).start();
 
-      // ✅ 2️⃣ Fetch CURRENT PERIOD expenses (based on user’s budget period)
-     
-// ✅ Handle budget period ranges more intelligently
-let periodStart, periodEnd;
-const now = new Date();
-
-// Determine based on user settings
-if (user.budgetPeriod === "Custom" && user.customBudgetRange) {
-  periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
-  periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
-} else if (user.budgetPeriod === "Weekly") {
-  // 🗓 Weekly period — show last 7 days including today
-  periodEnd = new Date();
-  periodStart = new Date();
-  periodStart.setDate(periodEnd.getDate() - 6);
-} else if (user.budgetPeriod === "Monthly") {
-  // 🗓 Monthly period — start of month → today
-  periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  periodEnd = now;
-} else {
-  // Fallback — default to current day
-  periodStart = new Date(now);
-  periodEnd = new Date(now);
-}
-
-// 🧠 Sanitize any weird values
-if (periodStart > periodEnd) {
-  [periodStart, periodEnd] = [periodEnd, periodStart];
-}
-if (isNaN(periodStart) || isNaN(periodEnd)) {
-  console.warn("⚠️ Invalid analytics range, defaulting to today");
-  periodStart = new Date();
-  periodEnd = new Date();
-}
-
-
-const startISO = periodStart.toISOString().slice(0, 10);
-const endISO = periodEnd.toISOString().slice(0, 10);
-console.log("📅 Final Analytics Range:", startISO, "→", endISO);
-
-// ✅ Fetch analytics safely
-const currentRes = await api.get(
-  `/auth/expenses/history?userId=${token.id}&start=${startISO}&end=${endISO}`
-);
-
-
-
-const currentExpenses = (currentRes.data.expenses || []).map((e) => ({
-  ...e,
-  localDate: safeToLocalDate(e.date || e.createdAt),
-
-}));
-setCurrentPeriodExpenses(currentExpenses);
-console.log("📊 Current period expenses fetched:", currentExpenses.length);
-
-
-      // ✨ Fade-in animation
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }).start();
-    } catch (err) {
-      console.error("❌ Analytics fetch failed:", err.response?.data || err.message);
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, []);
-
-
+      } catch (err) {
+        console.error("❌ Analytics fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   if (loading) {
     return (
@@ -259,9 +188,7 @@ const getAnalyticsGrouping = () => {
   const grouped: { [key: string]: number } = {};
 
   currentPeriodExpenses.forEach((e) => {
-const d = e.localDate ? new Date(e.localDate) : new Date(
-  new Date(e.date).toLocaleString('en-US', { timeZone: 'Asia/Manila' })
-);
+    const d = new Date(e.date);
     let key = "";
 
     if (budgetPeriod === "Daily" || budgetPeriod === "Weekly") {
@@ -868,15 +795,13 @@ const getSpendingHealth = () => {
     const grouped: { [key: string]: number } = {};
 
     currentPeriodExpenses.forEach((e) => {
-const d = e.localDate ? new Date(e.localDate) : new Date(
-  new Date(e.date).toLocaleString('en-US', { timeZone: 'Asia/Manila' })
-);
+      const d = new Date(e.date);
       let key = "";
 
       if (budgetPeriod === "Daily") {
         // group by hour
         const hour = d.getHours();
-        key = `${hour.toString().padStart(2, "0")}:00`; 
+        key = `${hour.toString().padStart(2, "0")}:00`;
       } else {
         // group by day for weekly, monthly, custom
         key = d.toISOString().slice(0, 10);

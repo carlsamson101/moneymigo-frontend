@@ -2486,27 +2486,39 @@ useEffect(() => {
           <Text style={styles.tutorialStep}>🎯 Start saving smarter</Text>
         </View>
 
-        {/* 🚀 Button */}
-        <TouchableOpacity
-          style={styles.tutorialButton}
-          onPress={async () => {
-            const token = await getToken();
-            const userId = token.userId || token._id || token.id;
-            const keys = [
-              [`hasSeenBudgetPeriodNotice_${userId}`, "true"],
-              [`hasSeenGettingStarted_${userId}`, "true"],
-            ];
-            await AsyncStorage.multiSet(keys);
-            setShowGettingStarted(false);
-            router.push("/gettingStarted");
-          }}
-        >
-          <Text style={styles.tutorialButtonText}>Start Tutorial</Text>
-        </TouchableOpacity>
+        {/* 🚀 Buttons Row */}
+        <View style={styles.tutorialButtonsRow}>
+          {/* Start Tutorial */}
+          <TouchableOpacity
+            style={[styles.tutorialButton, { flex: 1, marginRight: 6 }]}
+            onPress={async () => {
+              const token = await getToken();
+              const userId = token.userId || token._id || token.id;
+              const keys = [
+                [`hasSeenBudgetPeriodNotice_${userId}`, "true"],
+                [`hasSeenGettingStarted_${userId}`, "true"],
+              ];
+              await AsyncStorage.multiSet(keys);
+              setShowGettingStarted(false);
+              router.push("/gettingStarted");
+            }}
+          >
+            <Text style={styles.tutorialButtonText}>Start Tutorial</Text>
+          </TouchableOpacity>
+
+          {/* Close */}
+          <TouchableOpacity
+            style={[styles.tutorialButton, { backgroundColor: "#9CA3AF", flex: 1 }]}
+            onPress={() => setShowGettingStarted(false)}
+          >
+            <Text style={styles.tutorialButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   </Modal>
 )}
+
 
 
 
