@@ -2458,7 +2458,7 @@ useEffect(() => {
 </View>
 </View>
 
-/* ==================== GETTING STARTED (COMBINED MODAL) ==================== */
+{/* ==================== GETTING STARTED (COMBINED MODAL) ==================== */}
 {showGettingStarted && (
   <Modal
     visible={showGettingStarted}
