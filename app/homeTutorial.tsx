@@ -134,7 +134,7 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
           ]}
         >
           <LinearGradient
-            colors={["#1f4b81", "#2d5f9f"]}
+            colors={["#1F2937", "#374151"]}
             style={styles.cardGradient}
           >
             {/* Icon */}

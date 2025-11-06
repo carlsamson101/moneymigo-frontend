@@ -4011,6 +4011,62 @@ logsSection: {
     color: '#64748B',
   },
 
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  tutorialBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  tutorialTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  tutorialText: {
+    fontSize: 16,
+    color: '#4B5563',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  tutorialButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#2563eb',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  tutorialButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   // Budget History Card Styles
   historyCard: {
     backgroundColor: '#F8FAFC',
@@ -5072,61 +5128,6 @@ progressLabel: {
   color: "#92400E",
 },
 
-ooverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(31, 75, 129, 0.85)', // Darker overlay using #1f4b81
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  tutorialBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#1f4b81',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tutorialTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f4b81', // Primary color
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  tutorialText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#4a4a4a',
-    marginBottom: 24,
-  },
-  tutorialButton: {
-    backgroundColor: '#1f4b81', // Primary button color
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    shadowColor: '#1f4b81',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  tutorialButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
 
 overspendText: {
   fontSize: 12,
