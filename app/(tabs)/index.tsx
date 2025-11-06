@@ -3,6 +3,7 @@
   import { Button } from 'react-native';
   import { getCachedData, queueOfflineAction } from "../../lib/offlineCache";
 import { LogBox } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 
 LogBox.ignoreLogs([
   "Unexpected text node",                     // 🧘 hides RN-Web text node spam
@@ -447,48 +448,49 @@ const saveCustomCategories = async (categories: string[]) => {
   }
 };
 
-// --- fetch first-time alert logic remains mostly the same ---
-// just protect the backend calls with cache fallback
+// ==================== FIRST-TIME ONBOARDING (MODAL VERSION) ====================
 useEffect(() => {
-  const showFirstTimeBudgetAlert = async () => {
+  const runFirstTimeOnboarding = async () => {
     try {
       const token = await getToken();
-      if (!token?.id) return;
+      if (!token) return;
 
       const userId = token.userId || token._id || token.id || "guest";
-      const key = `hasSeenBudgetPeriodNotice_${userId}`;
-      const hasSeen = await AsyncStorage.getItem(key);
-      if (hasSeen === "true") return;
 
-      // ✅ try cached profile first
-      const user = await getCachedData(
-        `/auth/${token.id}`,
-        `user_${token.id}`
-      );
+      const budgetKey = `hasSeenBudgetPeriodNotice_${userId}`;
+      const tutorialKey = `hasSeenGettingStarted_${userId}`;
 
-      // ✅ try cached history first
+      // Skip if already seen
+      const [hasSeenBudget, hasSeenTutorial] = await Promise.all([
+        AsyncStorage.getItem(budgetKey),
+        AsyncStorage.getItem(tutorialKey),
+      ]);
+      if (hasSeenBudget === "true" && hasSeenTutorial === "true") return;
+
+      // ✅ Try cached profile & history
+      const user = await getCachedData(`/auth/${userId}`, `user_${userId}`);
       const history = await getCachedData(
-        `/budget-history/${token.id}`,
-        `budgetHistory_${token.id}`
+        `/budget-history/${userId}`,
+        `budgetHistory_${userId}`
       );
 
+      // 📊 If user already has data → skip onboarding
       if (history?.length > 0) {
-        await AsyncStorage.setItem(key, "true");
+        await AsyncStorage.multiSet([
+          [budgetKey, "true"],
+          [tutorialKey, "true"],
+        ]);
         return;
       }
 
-      await showAlert(
-        "Welcome to MoneyMigo 🎉",
-        `Your default budget period is set to ${user.budgetPeriod || "Weekly"}.\nStart by setting your first budget amount!`,
-        async () => await AsyncStorage.setItem(key, "true")
-      );
-
-      await AsyncStorage.setItem(key, "true");
-    } catch {
-      console.log("⚠️ Offline: skipping welcome notice");
+      // 🎯 Show the unified modal
+      setShowGettingStarted(true);
+    } catch (err) {
+      console.log("⚠️ Offline or onboarding skipped:", err);
     }
   };
-  showFirstTimeBudgetAlert();
+
+  runFirstTimeOnboarding();
 }, []);
 
 useEffect(() => {
@@ -1944,8 +1946,8 @@ useEffect(() => {
 
 </View>
 
-          {/* Dropdown Menu */}
-        <Modal
+         {/* Dropdown Menu */}
+<Modal
   visible={menuVisible}
   transparent
   animationType="fade"
@@ -1963,13 +1965,22 @@ useEffect(() => {
       </TouchableOpacity>
 
       <TouchableOpacity
-  style={styles.menuItemContainer}
-  onPress={() => { router.push("/gettingStarted"); setMenuVisible(false); }}
-  activeOpacity={0.7}
->
-  <Text style={styles.menuIcon}>✨</Text>
-  <Text style={styles.menuItemText}>Getting Started</Text>
-</TouchableOpacity>
+        style={styles.menuItemContainer}
+        onPress={() => { router.push("/gettingStarted"); setMenuVisible(false); }}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.menuIcon}>✨</Text>
+        <Text style={styles.menuItemText}>Getting Started</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItemContainer}
+        onPress={() => { router.push("/feedbacksurvey"); setMenuVisible(false); }}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.menuIcon}>📝</Text>
+        <Text style={styles.menuItemText}> Feedback & Survey</Text>
+      </TouchableOpacity>
       
       <View style={styles.menuDivider} />
       
@@ -2447,7 +2458,7 @@ useEffect(() => {
 </View>
 </View>
 
-{/* ==================== GETTING STARTED CARD (only first time) ==================== */}
+/* ==================== GETTING STARTED (COMBINED MODAL) ==================== */
 {showGettingStarted && (
   <Modal
     visible={showGettingStarted}
@@ -2457,19 +2468,35 @@ useEffect(() => {
   >
     <View style={styles.overlay}>
       <View style={styles.tutorialBox}>
-        <Text style={styles.tutorialTitle}>Getting Started 🎯</Text>
+        {/* 🎉 Welcome Section */}
+        <Text style={styles.tutorialTitle}>Welcome to MoneyMigo 🎉</Text>
         <Text style={styles.tutorialText}>
-          Welcome to MoneyMigo!{"\n"}{"\n"}
-          💰 Set your first budget{"\n"}
-          🛍️ Track your expenses{"\n"}
-          🎯 Start saving smarter
+          Your default budget period is set to{" "}
+          <Text style={{ fontWeight: "bold", color: "#2563eb" }}>
+            Weekly
+          </Text>.
+          {"\n\n"}
+          Let’s get started with a quick guide:
         </Text>
+
+        {/* 🎯 Steps Section */}
+        <View style={{ marginTop: 10 }}>
+          <Text style={styles.tutorialStep}>💰 Set your first budget</Text>
+          <Text style={styles.tutorialStep}>🛍️ Track your expenses</Text>
+          <Text style={styles.tutorialStep}>🎯 Start saving smarter</Text>
+        </View>
+
+        {/* 🚀 Button */}
         <TouchableOpacity
           style={styles.tutorialButton}
           onPress={async () => {
             const token = await getToken();
-            const key = `hasSeenGettingStarted_${token.id}`;
-            await AsyncStorage.setItem(key, "true");
+            const userId = token.userId || token._id || token.id;
+            const keys = [
+              [`hasSeenBudgetPeriodNotice_${userId}`, "true"],
+              [`hasSeenGettingStarted_${userId}`, "true"],
+            ];
+            await AsyncStorage.multiSet(keys);
             setShowGettingStarted(false);
             router.push("/gettingStarted");
           }}
@@ -2480,6 +2507,7 @@ useEffect(() => {
     </View>
   </Modal>
 )}
+
 
 
 {/* ==================== PERIOD MODAL ==================== */}
@@ -4012,60 +4040,54 @@ logsSection: {
   },
 
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  tutorialBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    width: '90%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  tutorialTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  tutorialText: {
-    fontSize: 16,
-    color: '#4B5563',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  tutorialButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    shadowColor: '#2563eb',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  tutorialButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.6)",
+  alignItems: "center",
+  justifyContent: "center",
+},
+tutorialBox: {
+  backgroundColor: "#fff",
+  padding: 24,
+  borderRadius: 16,
+  width: "85%",
+  maxWidth: 380,
+  elevation: 8,
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+},
+tutorialTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  color: "#1f4b81ff",
+  textAlign: "center",
+  marginBottom: 10,
+},
+tutorialText: {
+  fontSize: 14,
+  color: "#334155",
+  textAlign: "center",
+  lineHeight: 20,
+},
+tutorialStep: {
+  fontSize: 14,
+  color: "#1e293b",
+  marginVertical: 2,
+  textAlign: "center",
+},
+tutorialButton: {
+  marginTop: 20,
+  backgroundColor: "#1f4b81ff",
+  paddingVertical: 12,
+  borderRadius: 10,
+  alignItems: "center",
+},
+tutorialButtonText: {
+  color: "#fff",
+  fontWeight: "600",
+  fontSize: 15,
+},
 
   // Budget History Card Styles
   historyCard: {

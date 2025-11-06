@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Dimensions, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Dimensions, ScrollView, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../lib/api';
 import { Alert } from 'react-native'; // ✅ Add this import
@@ -24,7 +24,7 @@ export default function Register() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const lastNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const pinRef = useRef<TextInput>(null);
@@ -40,44 +40,37 @@ export default function Register() {
     return;
   }
 
-  if (loading) return; // prevent double click
+  if (loading) return;
   setLoading(true);
 
-try {
+  try {
     const res = await api.post('/auth/register', {
-    firstName,
-    lastName,
-    email,
-    pin,
-  });
+      firstName,
+      lastName,
+      email,
+      pin,
+    });
 
-  console.log('✅ Registration response:', res.data);
+    console.log('✅ Registration response:', res.data);
 
-  if (res.data.success) {
-    await AsyncStorage.setItem('migo-email', email);
-    setError('');
-
-    showAlert(
-      'Account Created 🎉',
-      'Your account has been created successfully. Proceed to login?',
-      () => router.push('/login')
-    );
-  } else {
-    const msg = res.data.error || 'Registration failed';
+    if (res.data.success) {
+      await AsyncStorage.setItem('migo-email', email);
+      setError('');
+      setShowSuccessModal(true); // ✅ Show modal instead of alert
+    } else {
+      const msg = res.data.error || 'Registration failed';
+      setError(msg);
+    }
+  } catch (err: any) {
+    console.error('❌ Registration error:', err.response?.data || err.message);
+    const msg =
+      err.message?.includes('Network Error')
+        ? 'Please check your internet connection.'
+        : err.response?.data?.error || 'Server error';
     setError(msg);
-    showAlert('Registration Failed', msg);
+  } finally {
+    setLoading(false);
   }
-} catch (err: any) {
-  console.error('❌ Registration error:', err.response?.data || err.message);
-  const msg =
-    err.message?.includes('Network Error')
-      ? 'Please check your internet connection.'
-      : err.response?.data?.error || 'Server error';
-  setError(msg);
-  showAlert('Error', msg);
-} finally {
-  setLoading(false);
-}
 };
 
   return (
@@ -209,6 +202,36 @@ try {
           <Text style={styles.footerLink}>Terms of Service</Text> and <Text style={styles.footerLink}>Privacy Policy</Text>
         </Text>
       </ScrollView>
+
+       {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowSuccessModal(false);
+          router.push('/login');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalEmoji}>🎉</Text>
+            <Text style={styles.modalTitle}>Account Created!</Text>
+            <Text style={styles.modalMessage}>
+              Your account has been created successfully.{'\n'}Ready to start your savings journey?
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.push('/login');
+              }}
+            >
+              <Text style={styles.modalButtonText}>Proceed to Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -393,5 +416,62 @@ const styles = StyleSheet.create({
   footerLink: {
     color: '#2563eb',
     fontWeight: '600',
+  },
+  odalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 32,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

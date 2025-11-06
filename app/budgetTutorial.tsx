@@ -1,35 +1,26 @@
 import React, { useState, useEffect } from "react";
-
-// Dynamic import for Lucide icons based on platform
-let Wallet: any, 
-    TrendingDown: any, 
-    CheckCircle: any, 
-    Calendar: any, 
-    PieChart: any, 
-    RefreshCw: any, 
-    Copy: any, 
-    Hourglass: any, 
-    Settings: any, 
-    ArrowLeft: any, 
-    ArrowRight: any, 
-    PlayCircle: any;
-
-try {
-  // Try React Native first (for mobile)
-  const ReactNative = require("react-native");
-  if (ReactNative.Platform && ReactNative.Platform.OS !== "web") {
-    const LucideNative = require("lucide-react-native");
-    ({ Wallet, TrendingDown, CheckCircle, Calendar, PieChart, RefreshCw, Copy, Hourglass, Settings, ArrowLeft, ArrowRight, PlayCircle } = LucideNative);
-  } else {
-    // Fallback to web version
-    const LucideWeb = require("lucide-react");
-    ({ Wallet, TrendingDown, CheckCircle, Calendar, PieChart, RefreshCw, Copy, Hourglass, Settings, ArrowLeft, ArrowRight, PlayCircle } = LucideWeb);
-  }
-} catch (e) {
-  // If React Native is not available, use web version
-  const LucideWeb = require("lucide-react");
-  ({ Wallet, TrendingDown, CheckCircle, Calendar, PieChart, RefreshCw, Copy, Hourglass, Settings, ArrowLeft, ArrowRight, PlayCircle } = LucideWeb);
-}
+import { 
+  Calendar, 
+  PlusCircle, 
+  RefreshCw, 
+  Menu, 
+  ArrowLeft, 
+  ArrowRight, 
+  HelpCircle, 
+  ChevronDown, 
+  ChevronLeft, 
+  Wallet, 
+  Receipt, 
+  BarChart, 
+  Edit, 
+  Plus,
+  PieChart,
+  Copy,
+  Hourglass,
+  Settings,
+  TrendingDown,
+  CheckCircle
+} from "lucide-react";
 
 const BUDGET_TUTORIAL_STEPS = [
   {
@@ -96,21 +87,34 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
   useEffect(() => {
     if (!visible) return;
     const step = BUDGET_TUTORIAL_STEPS[currentStep];
+    
     const updateHighlight = () => {
       const el = document.querySelector(step.highlightSelector);
       if (el) {
-        const rect = el.getBoundingClientRect();
-        setHighlightRect({
-          top: rect.top + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-          height: rect.height,
+        // Scroll to the element smoothly
+        el.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
         });
+
+        // Wait for scroll to complete before updating highlight
+        setTimeout(() => {
+          const rect = el.getBoundingClientRect();
+          setHighlightRect({
+            top: rect.top + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width,
+            height: rect.height,
+          });
+        }, 500);
       }
     };
+    
     updateHighlight();
     window.addEventListener("resize", updateHighlight);
     window.addEventListener("scroll", updateHighlight);
+    
     return () => {
       window.removeEventListener("resize", updateHighlight);
       window.removeEventListener("scroll", updateHighlight);
@@ -376,7 +380,10 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                   fontWeight: 700,
                   border: "1px solid #E5E7EB",
                   cursor: "pointer",
+                  transition: "background-color 0.2s ease",
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E7EB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
               >
                 <ArrowLeft size={18} />
                 Back
@@ -394,7 +401,10 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                 border: "none",
                 fontWeight: 700,
                 cursor: "pointer",
+                transition: "color 0.2s ease",
               }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#374151'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#6B7280'}
             >
               Skip
             </button>
@@ -417,7 +427,10 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                 border: "none",
                 cursor: "pointer",
                 boxShadow: `0 6px 16px rgba(31, 75, 129, 0.3)`,
+                transition: "transform 0.2s ease",
               }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               {currentStep === BUDGET_TUTORIAL_STEPS.length - 1 ? "Got it!" : "Next"}
               <ArrowRight size={18} />
@@ -433,6 +446,12 @@ export default function BudgetTutorialScreen() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+    }
+  };
+
   return (
     <div
       style={{
@@ -447,6 +466,9 @@ export default function BudgetTutorialScreen() {
           color: "white",
           padding: "1rem",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
         }}
       >
         <div
@@ -459,6 +481,7 @@ export default function BudgetTutorialScreen() {
           }}
         >
           <button
+            onClick={handleBack}
             style={{
               padding: "0.5rem",
               background: "none",
@@ -467,7 +490,10 @@ export default function BudgetTutorialScreen() {
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
+              transition: "opacity 0.2s ease",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
           >
             <ArrowLeft size={24} />
           </button>
@@ -590,7 +616,7 @@ export default function BudgetTutorialScreen() {
         </div>
       </div>
 
-      <div style={{ padding: "2rem 1rem", backgroundColor: "white" }}>
+      <div style={{ padding: "2rem 1rem", backgroundColor: "white", minHeight: "60vh" }}>
         <div
           style={{
             maxWidth: "28rem",
@@ -618,6 +644,8 @@ export default function BudgetTutorialScreen() {
               boxShadow: "0 4px 12px rgba(31, 75, 129, 0.3)",
               transition: "all 0.2s ease",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             <Settings size={20} />
             Set Allocation
@@ -639,6 +667,14 @@ export default function BudgetTutorialScreen() {
               justifyContent: "center",
               gap: "0.625rem",
               transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.02)';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.borderColor = '#e5e7eb';
             }}
           >
             <RefreshCw size={20} />
@@ -663,6 +699,8 @@ export default function BudgetTutorialScreen() {
               boxShadow: "0 4px 12px rgba(127, 177, 214, 0.3)",
               transition: "all 0.2s ease",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             <Copy size={20} />
             Copy Last Period
@@ -691,7 +729,10 @@ export default function BudgetTutorialScreen() {
           boxShadow: "0 0 20px #1f4b81CC, 0 0 40px #7fb1d6AA, 0 0 80px #7fb1d688",
           animation: "pulseQ 2s infinite ease-in-out",
           zIndex: 9800,
+          transition: "transform 0.2s ease",
         }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         aria-label="Show tutorial"
         title="Show tutorial"
       >
