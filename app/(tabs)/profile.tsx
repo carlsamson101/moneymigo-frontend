@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { router } from "expo-router";
 import { RefreshControl } from 'react-native';
@@ -18,7 +17,6 @@ import {
   Dimensions,
   StatusBar,
   KeyboardAvoidingView,
-  ActionSheetIOS,
   Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -39,12 +37,23 @@ const InfoModal = ({ visible, title, message, onClose }) => {
   return (
     <View style={styles.modalOverlay}>
       <BlurView intensity={80} tint="light" style={styles.modalContainer}>
+        <View style={styles.modalIconWrapper}>
+          <LinearGradient
+            colors={['#1f4b81ff', '#7fb1d6ff']}
+            style={styles.modalIconGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="information-circle" size={32} color="#fff" />
+          </LinearGradient>
+        </View>
+        
         <Text style={styles.modalTitle}>{title}</Text>
         <Text style={styles.modalMessage}>{message}</Text>
 
-        <TouchableOpacity style={styles.modalButton} onPress={onClose}>
+        <TouchableOpacity style={styles.modalButton} onPress={onClose} activeOpacity={0.8}>
           <LinearGradient
-            colors={['#1f4b81', '#7fb1d6']}
+            colors={['#1f4b81ff', '#7fb1d6ff']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.modalButtonGradient}
@@ -62,20 +71,47 @@ const ChoiceModal = ({ visible, title, message, onCamera, onGallery, onCancel })
   return (
     <View style={styles.modalOverlay}>
       <BlurView intensity={80} tint="light" style={styles.modalContainer}>
+        <View style={styles.modalIconWrapper}>
+          <LinearGradient
+            colors={['#1f4b81ff', '#7fb1d6ff']}
+            style={styles.modalIconGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="camera" size={32} color="#fff" />
+          </LinearGradient>
+        </View>
+        
         <Text style={styles.modalTitle}>{title}</Text>
         <Text style={styles.modalMessage}>{message}</Text>
 
-        <TouchableOpacity style={styles.modalOption} onPress={onCamera}>
-          <Ionicons name="camera" size={18} color="#fff" />
-          <Text style={styles.modalOptionText}>Take Photo</Text>
-        </TouchableOpacity>
+        <View style={styles.modalOptionsContainer}>
+          <TouchableOpacity style={styles.modalOption} onPress={onCamera} activeOpacity={0.8}>
+            <LinearGradient
+              colors={['#1f4b81ff', '#7fb1d6ff']}
+              style={styles.modalOptionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="camera" size={20} color="#fff" />
+              <Text style={styles.modalOptionText}>Take Photo</Text>
+            </LinearGradient>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.modalOption} onPress={onGallery}>
-          <Ionicons name="images-outline" size={18} color="#fff" />
-          <Text style={styles.modalOptionText}>Choose from Gallery</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.modalOption} onPress={onGallery} activeOpacity={0.8}>
+            <LinearGradient
+              colors={['#1f4b81ff', '#7fb1d6ff']}
+              style={styles.modalOptionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="images-outline" size={20} color="#fff" />
+              <Text style={styles.modalOptionText}>Choose from Gallery</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={styles.modalCancelButton} onPress={onCancel}>
+        <TouchableOpacity style={styles.modalCancelButton} onPress={onCancel} activeOpacity={0.8}>
           <Text style={styles.modalCancelText}>Cancel</Text>
         </TouchableOpacity>
       </BlurView>
@@ -116,17 +152,18 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [changingPin, setChangingPin] = useState(false);
   const [totalExpenses, setTotalExpenses] = useState(0);
-const [choiceVisible, setChoiceVisible] = useState(false);
+  const [choiceVisible, setChoiceVisible] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
-const [modalTitle, setModalTitle] = useState("");
-const [modalMessage, setModalMessage] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
 
-const showModal = (title, message) => {
-  setModalTitle(title);
-  setModalMessage(message);
-  setModalVisible(true);
-};
+  const showModal = (title, message) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
+  
   const [formData, setFormData] = useState<ProfileFormData>({
     firstName: "",
     lastName: "",
@@ -141,253 +178,201 @@ const showModal = (title, message) => {
   const [saving, setSaving] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
-const [refreshing, setRefreshing] = useState(false);
-const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-// === Avatar Handling ===
-const handleAvatarPress = () => {
-  if (Platform.OS === "web") {
-    // ✅ On web, open hidden file input directly
-    fileInputRef.current?.click();
-  } else {
-    // ✅ On mobile, show your custom choice modal instead of alert
-    setChoiceVisible(true);
-  }
-};
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  
+  const handleAvatarPress = () => {
+    if (Platform.OS === "web") {
+      fileInputRef.current?.click();
+    } else {
+      setChoiceVisible(true);
+    }
+  };
 
+  const [spendingStreak, setSpendingStreak] = useState(0);
 
-const [spendingStreak, setSpendingStreak] = useState(0);
+  const calculateStreak = useCallback((expenses) => {
+    if (!expenses || expenses.length === 0) {
+      setSpendingStreak(0);
+      return;
+    }
 
-const calculateStreak = useCallback((expenses) => {
-  if (!expenses || expenses.length === 0) {
-    setSpendingStreak(0);
-    return;
-  }
+    const dateSet = new Set(
+      expenses.map(e => {
+        const d = new Date(e.date || e.createdAt);
+        const local = new Date(d.getTime() + (d.getTimezoneOffset() * -60000));
+        local.setHours(0, 0, 0, 0);
+        return local.toLocaleDateString("en-CA");
+      })
+    );
 
-  // 🔧 Normalize all expense dates to LOCAL YYYY-MM-DD (Philippines)
-  const dateSet = new Set(
-    expenses.map(e => {
-      const d = new Date(e.date || e.createdAt);
-      // convert to local midnight (adds your +8h offset)
-      const local = new Date(d.getTime() + (d.getTimezoneOffset() * -60000));
-      local.setHours(0, 0, 0, 0);
-      return local.toLocaleDateString("en-CA"); // e.g., 2025-10-29
-    })
-  );
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    let streak = 0;
+    const current = new Date(today);
 
-  let streak = 0;
-  const current = new Date(today);
+    while (dateSet.has(current.toLocaleDateString("en-CA"))) {
+      streak++;
+      current.setDate(current.getDate() - 1);
+    }
 
-  // Walk backwards through consecutive local days
-  while (dateSet.has(current.toLocaleDateString("en-CA"))) {
-    streak++;
-    current.setDate(current.getDate() - 1);
-  }
+    setSpendingStreak(streak);
+  }, []);
 
-  console.log("🔥 Local dateSet", [...dateSet]);
-  console.log("✅ Final streak:", streak);
-
-  setSpendingStreak(streak);
-}, []);
-
-
-
-// Make sure this is AFTER calculateStreak function
-const fetchExpenseCount = useCallback(async () => {
-  try {
-    const token = await getToken();
-    if (!token?.id) return;
-
-    // 📅 Wide range: fetch everything from 2000 to today
-    const today = new Date().toISOString().slice(0, 10);
-    const response = await api.get(
-  `/auth/expenses/history?userId=${token.id}&start=2000-01-01&end=${today}`
-);
-
-    const rawExpenses = response.data.expenses || [];
-
-    // 🕒 Convert all to Manila-local time
-    const manilaExpenses = rawExpenses.map((e) => ({
-      ...e,
-      localDate: new Date(
-        new Date(e.date || e.createdAt).toLocaleString("en-US", {
-          timeZone: "Asia/Manila",
-        })
-      ),
-    }));
-
-    console.log("✅ Total (all-time) expenses fetched:", manilaExpenses.length);
-
-    // 🧮 Display total count
-    setTotalExpenses(manilaExpenses.length);
-
-    // 🔥 Optional: keep streak limited to current budget period
-    calculateStreak(manilaExpenses);
-  } catch (error) {
-    console.error("❌ Failed to fetch expenses:", error.response?.data || error.message);
-  }
-}, [calculateStreak]);
-
-
-
-
-
-
-// Auto-refresh whenever token or stored data changes
-useEffect(() => {
-  const syncProfile = async () => {
+  const fetchExpenseCount = useCallback(async () => {
     try {
       const token = await getToken();
       if (!token?.id) return;
 
-      const response = await api.get(`/auth/${token.id}`);
-      const updatedUser = response.data;
+      const today = new Date().toISOString().slice(0, 10);
+      const response = await api.get(
+        `/auth/expenses/history?userId=${token.id}&start=2000-01-01&end=${today}`
+      );
 
-      setUser(updatedUser);
+      const rawExpenses = response.data.expenses || [];
 
-      // 🧠 Only update formData if not editing or changing PIN
-      if (!editing && !changingPin) {
-        setFormData({
-          firstName: updatedUser.firstName || "",
-          lastName: updatedUser.lastName || "",
-          username: updatedUser.username || "",
-          avatarUrl: updatedUser.avatarUrl || "",
-        });
-      }
+      const manilaExpenses = rawExpenses.map((e) => ({
+        ...e,
+        localDate: new Date(
+          new Date(e.date || e.createdAt).toLocaleString("en-US", {
+            timeZone: "Asia/Manila",
+          })
+        ),
+      }));
+
+      setTotalExpenses(manilaExpenses.length);
+      calculateStreak(manilaExpenses);
     } catch (error) {
-      console.error("⚠️ Auto profile sync failed:", error);
+      console.error("❌ Failed to fetch expenses:", error.response?.data || error.message);
+    }
+  }, [calculateStreak]);
+
+  useEffect(() => {
+    const syncProfile = async () => {
+      try {
+        const token = await getToken();
+        if (!token?.id) return;
+
+        const response = await api.get(`/auth/${token.id}`);
+        const updatedUser = response.data;
+
+        setUser(updatedUser);
+
+        if (!editing && !changingPin) {
+          setFormData({
+            firstName: updatedUser.firstName || "",
+            lastName: updatedUser.lastName || "",
+            username: updatedUser.username || "",
+            avatarUrl: updatedUser.avatarUrl || "",
+          });
+        }
+      } catch (error) {
+        console.error("⚠️ Auto profile sync failed:", error);
+      }
+    };
+
+    syncProfile();
+    const interval = setInterval(syncProfile, 5000);
+    return () => clearInterval(interval);
+  }, [editing, changingPin]);
+
+  const uploadAvatar = async (uri: string) => {
+    try {
+      setUploadingAvatar(true);
+      const token = await getToken();
+      if (!token?.id) throw new Error("Authentication required");
+
+      let normalizedUri = uri;
+      if (!normalizedUri.startsWith("file://")) {
+        normalizedUri = `file://${uri}`;
+      }
+
+      const formData = new FormData();
+      formData.append("avatar", {
+        uri: normalizedUri,
+        name: "avatar.jpg",
+        type: "image/jpeg",
+      } as any);
+
+      const res = await api.post(`/auth/${token.id}/avatar`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const newAvatar = res.data?.user?.avatarUrl;
+      if (newAvatar) {
+        setUser((prev) => (prev ? { ...prev, avatarUrl: newAvatar } : null));
+        setFormData((prev) => ({ ...prev, avatarUrl: newAvatar }));
+        await saveToken({ ...token, avatarUrl: newAvatar });
+
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        showModal("✅ Success", "Avatar uploaded successfully!");
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      showModal("❌ Error", "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
-  syncProfile();
-  const interval = setInterval(syncProfile, 5000);
-  return () => clearInterval(interval);
-}, [editing, changingPin]);
+  const pickImage = async (fromCamera: boolean) => {
+    try {
+      const permission = fromCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-
-
-
-
-async function normalizeUri(uri: string): Promise<string> {
-  if (Platform.OS === "ios" && uri.startsWith("ph://")) {
-    const assetId = uri.split("/")[2];
-    const dest = `${FileSystem.cacheDirectory}${assetId}.jpg`;
-    await FileSystem.copyAsync({ from: uri, to: dest });
-    return dest;
-  }
-
-  if (Platform.OS === "android" && uri.startsWith("content://")) {
-    const dest = `${FileSystem.cacheDirectory}avatar.jpg`;
-    await FileSystem.copyAsync({ from: uri, to: dest });
-    return dest;
-  }
-
-  return uri; // already file://
-}
-
-
-// Enhanced avatar upload with feedback
-const uploadAvatar = async (uri: string) => {
-  try {
-    setUploadingAvatar(true);
-    const token = await getToken();
-    if (!token?.id) throw new Error("Authentication required");
-
-    let normalizedUri = uri;
-    if (!normalizedUri.startsWith("file://")) {
-      normalizedUri = `file://${uri}`;
-    }
-
-    const formData = new FormData();
-    formData.append("avatar", {
-      uri: normalizedUri,
-      name: "avatar.jpg",
-      type: "image/jpeg",
-    } as any);
-
-    const res = await api.post(`/auth/${token.id}/avatar`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    const newAvatar = res.data?.user?.avatarUrl;
-    if (newAvatar) {
-      setUser((prev) => (prev ? { ...prev, avatarUrl: newAvatar } : null));
-      setFormData((prev) => ({ ...prev, avatarUrl: newAvatar }));
-      await saveToken({ ...token, avatarUrl: newAvatar });
-
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      Alert.alert("Success", "Avatar uploaded!");
-    }
-  } catch (err) {
-    console.error("Upload failed:", err);
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-    Alert.alert("Error", "Failed to upload avatar");
-  } finally {
-    setUploadingAvatar(false);
-  }
-};
-
-// Let pickImage ONLY handle actual picking, no ActionSheet inside
-const pickImage = async (fromCamera: boolean) => {
-  try {
-    const permission = fromCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permission.status !== "granted") {
-      Alert.alert(
-        "Permission required",
-        fromCamera ? "Camera access is needed." : "Gallery access is needed."
-      );
-      return;
-    }
-
-    const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7,
-        });
-
-    if (!result.canceled) {
-      let uri = result.assets[0].uri;
-
-      // 🔑 Fix for gallery URIs
-      if (Platform.OS === "ios" && uri.startsWith("ph://")) {
-        // convert iOS ph:// URI to local file path
-        const assetId = uri.split("/")[2];
-        const dest = `${FileSystem.cacheDirectory}${assetId}.jpg`;
-        await FileSystem.copyAsync({ from: uri, to: dest });
-        uri = dest;
+      if (permission.status !== "granted") {
+        Alert.alert(
+          "Permission required",
+          fromCamera ? "Camera access is needed." : "Gallery access is needed."
+        );
+        return;
       }
 
-      if (Platform.OS === "android" && uri.startsWith("content://")) {
-        const dest = `${FileSystem.cacheDirectory}avatar.jpg`;
-        await FileSystem.copyAsync({ from: uri, to: dest });
-        uri = dest;
-      }
+      const result = fromCamera
+        ? await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+          });
 
-      await uploadAvatar(uri); // ✅ Upload after fixing path
+      if (!result.canceled) {
+        let uri = result.assets[0].uri;
+
+        if (Platform.OS === "ios" && uri.startsWith("ph://")) {
+          const assetId = uri.split("/")[2];
+          const dest = `${FileSystem.cacheDirectory}${assetId}.jpg`;
+          await FileSystem.copyAsync({ from: uri, to: dest });
+          uri = dest;
+        }
+
+        if (Platform.OS === "android" && uri.startsWith("content://")) {
+          const dest = `${FileSystem.cacheDirectory}avatar.jpg`;
+          await FileSystem.copyAsync({ from: uri, to: dest });
+          uri = dest;
+        }
+
+        await uploadAvatar(uri);
+      }
+    } catch (err) {
+      console.error("Image pick error:", err);
+      Alert.alert("Error", "Something went wrong while picking an image.");
     }
-  } catch (err) {
-    console.error("Image pick error:", err);
-    Alert.alert("Error", "Something went wrong while picking an image.");
-  }
-};
+  };
 
   const resetForms = useCallback(() => {
     if (user) {
@@ -420,7 +405,6 @@ const pickImage = async (fromCamera: boolean) => {
         avatarUrl: userData.avatarUrl || "",
       });
 
-      // Animate content in
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -441,12 +425,10 @@ const pickImage = async (fromCamera: boolean) => {
     }
   }, [fadeAnim, slideAnim]);
 
-  
-useEffect(() => {
-  console.log("🚀 Profile mounted, fetching data...");
-  fetchUserData();
-  fetchExpenseCount();
-}, [fetchUserData, fetchExpenseCount]);
+  useEffect(() => {
+    fetchUserData();
+    fetchExpenseCount();
+  }, [fetchUserData, fetchExpenseCount]);
 
   const validateProfileForm = (): boolean => {
     if (!formData.firstName.trim()) {
@@ -500,15 +482,16 @@ useEffect(() => {
       setSaving(false);
     }
   };
-const onRefresh = useCallback(async () => {
-  console.log("🔄 Refreshing profile data...");
-  setRefreshing(true);
-  await Promise.all([
-    fetchUserData(),
-    fetchExpenseCount() // Add this!
-  ]);
-  setRefreshing(false);
-}, [fetchUserData, fetchExpenseCount]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchUserData(),
+      fetchExpenseCount()
+    ]);
+    setRefreshing(false);
+  }, [fetchUserData, fetchExpenseCount]);
+
   const handleChangePin = async () => {
     if (!validatePinForm() || !user) return;
 
@@ -524,7 +507,7 @@ const onRefresh = useCallback(async () => {
 
       setPinData({ oldPin: "", newPin: "", confirmPin: "" });
       setChangingPin(false);
-      Alert.alert("Success", "PIN updated successfully");
+      showModal("✅ Success", "PIN updated successfully");
     } catch (error: any) {
       const message = error.response?.data?.error || "Failed to update PIN";
       Alert.alert("Error", message);
@@ -543,112 +526,107 @@ const onRefresh = useCallback(async () => {
     setPinData({ oldPin: "", newPin: "", confirmPin: "" });
   };
 
-// Enhanced avatar render with upload indicator
-const renderAvatar = () => {
-  const displayName =
-    user?.fullName ||
-    `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
-    "User";
+  const renderAvatar = () => {
+    const displayName =
+      user?.fullName ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+      "User";
 
-    
+    return (
+      <View style={styles.avatarContainer}>
+        <View style={styles.avatarWrapper}>
+          <View style={styles.avatarGlow} />
 
-  return (
-    <View style={styles.avatarContainer}>
-      <View style={styles.avatarWrapper}>
-        <View style={styles.avatarGlow} />
+          {uploadingAvatar && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+              <Text style={styles.uploadingText}>Uploading...</Text>
+            </View>
+          )}
 
-        {uploadingAvatar && (
-          <View style={styles.uploadingOverlay}>
-            <ActivityIndicator size="large" color="#fff" />
-            <Text style={styles.uploadingText}>Uploading...</Text>
-          </View>
-        )}
+          {user?.avatarUrl ? (
+            <Image
+              source={{ uri: `${user.avatarUrl}?t=${Date.now()}` }}
+              style={[styles.avatarImage, uploadingAvatar && styles.avatarImageDimmed]}
+              onError={() => console.log("❌ Avatar failed to load:", user.avatarUrl)}
+            />
+          ) : (
+            <LinearGradient
+              colors={['#1f4b81ff', '#2e86de']}
+              style={styles.avatarPlaceholder}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.avatarText}>
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
+        </View>
 
-        {user?.avatarUrl ? (
-          <Image
-            source={{ uri: `${user.avatarUrl}?t=${Date.now()}` }}
-            style={[styles.avatarImage, uploadingAvatar && styles.avatarImageDimmed]}
-            onError={() => console.log("❌ Avatar failed to load:", user.avatarUrl)}
-          />
-        ) : (
+        <TouchableOpacity
+          style={styles.avatarBadge}
+          activeOpacity={0.8}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+            handleAvatarPress();
+          }}
+          disabled={uploadingAvatar}
+        >
           <LinearGradient
-            colors={['#1f4b81ff', '#2e86de']}
-            style={styles.avatarPlaceholder}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={uploadingAvatar ? ["#9ca3af", "#9ca3af"] : ["#3b82f6", "#1d4ed8"]}
+            style={styles.avatarBadgeGradient}
           >
-            <Text style={styles.avatarText}>
-              {displayName.charAt(0).toUpperCase()}
-            </Text>
+            <Ionicons 
+              name={uploadingAvatar ? "hourglass-outline" : "camera"} 
+              size={18} 
+              color="#fff" 
+            />
           </LinearGradient>
+        </TouchableOpacity>
+
+        {Platform.OS === "web" && (
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            ref={fileInputRef}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+
+              try {
+                setUploadingAvatar(true);
+                const token = await getToken();
+                const formData = new FormData();
+                formData.append("avatar", file);
+
+                const res = await api.post(`/auth/${token.id}/avatar`, formData, {
+                  headers: { "Content-Type": "multipart/form-data" },
+                });
+
+                const newAvatar = res.data?.user?.avatarUrl;
+                if (newAvatar) {
+                  setUser((prev) =>
+                    prev ? { ...prev, avatarUrl: newAvatar } : null
+                  );
+                  await saveToken({ ...token, avatarUrl: newAvatar });
+                  showModal("✅ Success", "Avatar uploaded successfully!");
+                }
+              } catch (err) {
+                console.error("❌ Web avatar upload failed:", err);
+                showModal("❌ Error", "Failed to upload avatar");
+              } finally {
+                setUploadingAvatar(false);
+              }
+            }}
+          />
         )}
       </View>
-
-      <TouchableOpacity
-        style={styles.avatarBadge}
-        activeOpacity={0.8}
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }
-          handleAvatarPress();
-        }}
-        disabled={uploadingAvatar}
-      >
-        <LinearGradient
-          colors={uploadingAvatar ? ["#9ca3af", "#9ca3af"] : ["#3b82f6", "#1d4ed8"]}
-          style={styles.avatarBadgeGradient}
-        >
-          <Ionicons 
-            name={uploadingAvatar ? "hourglass-outline" : "camera"} 
-            size={18} 
-            color="#fff" 
-          />
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {Platform.OS === "web" && (
-        <input
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-
-            try {
-              setUploadingAvatar(true);
-              const token = await getToken();
-              const formData = new FormData();
-              formData.append("avatar", file);
-
-              const res = await api.post(`/auth/${token.id}/avatar`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-              });
-
-              const newAvatar = res.data?.user?.avatarUrl;
-              if (newAvatar) {
-                setUser((prev) =>
-                  prev ? { ...prev, avatarUrl: newAvatar } : null
-                );
-                await saveToken({ ...token, avatarUrl: newAvatar });
-                Alert.alert("Success", "Avatar uploaded!");
-              }
-            } catch (err) {
-              console.error("❌ Web avatar upload failed:", err);
-              showModal("❌ Error", "Failed to upload avatar");
-            } finally {
-              setUploadingAvatar(false);
-            }
-          }}
-        />
-      )}
-    </View>
-  );
-};
-
-
+    );
+  };
 
   const renderUserInfo = () => {
     const displayName = user?.fullName || 
@@ -678,13 +656,13 @@ const renderAvatar = () => {
           <View style={styles.joinedBadge}>
             <Ionicons name="calendar-outline" size={16} color="#6366f1" />
             <Text style={styles.joinedText}>
-                Joined {user?.createdAt
-  ? new Date(user.createdAt).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  : '--'}
+              Joined {user?.createdAt
+                ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : '--'}
             </Text>
           </View>
         </View>
@@ -692,148 +670,138 @@ const renderAvatar = () => {
     );
   };
 
-  // Enhanced action buttons with haptics
-const renderActionButtons = () => {
-  if (editing || changingPin) return null;
-  
-  return (
-    <Animated.View 
-      style={[
-        styles.actionButtonsContainer,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }
-      ]}
-    >
-      <TouchableOpacity 
-        style={styles.primaryButton} 
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const renderActionButtons = () => {
+    if (editing || changingPin) return null;
+    
+    return (
+      <Animated.View 
+        style={[
+          styles.actionButtonsContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
           }
-          setEditing(true);
-        }}
-        activeOpacity={0.8}
+        ]}
       >
-        <LinearGradient
-          colors={['#1f4b81ff', '#7fb1d6ff']}
-          style={styles.buttonGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <TouchableOpacity 
+          style={styles.primaryButton} 
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+            setEditing(true);
+          }}
+          activeOpacity={0.8}
         >
-          <Ionicons name="create-outline" size={22} color="#fff" />
-          <Text style={styles.primaryButtonText}>Edit Profile</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.secondaryButton} 
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }
-          setChangingPin(true);
-        }}
-        activeOpacity={0.8}
-      >
-        <View style={styles.secondaryButtonContent}>
-          <Ionicons name="key-outline" size={22} color="#6366f1" />
-          <Text style={styles.secondaryButtonText}>Change PIN</Text>
+          <LinearGradient
+            colors={['#1f4b81ff', '#7fb1d6ff']}
+            style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="create-outline" size={22} color="#fff" />
+            <Text style={styles.primaryButtonText}>Edit Profile</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.secondaryButton} 
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+            setChangingPin(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <View style={styles.secondaryButtonContent}>
+            <Ionicons name="key-outline" size={22} color="#6366f1" />
+            <Text style={styles.secondaryButtonText}>Change PIN</Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.statsContainer}>
+          <TouchableOpacity
+            style={styles.statItemRow}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              showModal(
+                "Account Status",
+                "Your account is active and verified. You have full access to all expense tracking features and can safely store your financial data."
+              );
+            }}
+          >
+            <View style={styles.statIconContainer}>
+              <Ionicons name="shield-checkmark" size={20} color="#10b981" />
+            </View>
+            <View style={styles.statTextContainer}>
+              <Text style={styles.statValue}>Active</Text>
+              <Text style={styles.statLabel}>Account Status</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statItemRow}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              const exp = totalExpenses || 0;
+              const expText = exp === 0 ? "None" : `${exp} expense${exp === 1 ? "" : "s"}`;
+              showModal(
+                "Expenses Tracked",
+                `You've logged ${expText} since joining. This shows your total transaction history and helps you understand your spending patterns.`
+              );
+            }}
+          >
+            <View style={styles.statIconContainer}>
+              <Ionicons name="receipt-outline" size={20} color="#3b82f6" />
+            </View>
+            <View style={styles.statTextContainer}>
+              <Text style={styles.statValue}>
+                {totalExpenses === 0 ? "None" : totalExpenses}
+              </Text>
+              <Text style={styles.statLabel}>Expenses Tracked</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statItemRow}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              showModal(
+                "Spending Streak",
+                spendingStreak > 0
+                  ? `You've logged expenses for ${spendingStreak} consecutive day${spendingStreak > 1 ? "s" : ""}! Keep your tracking habit going strong.`
+                  : "No active streak yet — start logging expenses daily to build consistency!"
+              );
+            }}
+          >
+            <View style={styles.statIconContainer}>
+              <Ionicons name="flame-outline" size={20} color="#f97316" />
+            </View>
+            <View style={styles.statTextContainer}>
+              <Text style={styles.statValue}>
+                {spendingStreak > 0 ? `${spendingStreak} day${spendingStreak > 1 ? "s" : ""}` : "None"}
+              </Text>
+              <Text style={styles.statLabel}>Spending Streak</Text>
+            </View>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
-
-    <View style={styles.statsContainer}>
-  {/* ✅ Account Status */}
-  <TouchableOpacity
-    style={styles.statItemRow}
-    onPress={() => {
-      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showModal(
-  "Account Status",
-  "Your account is active and verified. You have full access to all expense tracking features and can safely store your financial data."
-);
-
-    }}
-  >
-    <View style={styles.statIconContainer}>
-      <Ionicons name="shield-checkmark" size={20} color="#10b981" />
-    </View>
-    <View style={styles.statTextContainer}>
-      <Text style={styles.statValue}>Active</Text>
-      <Text style={styles.statLabel}>Account Status</Text>
-    </View>
-  </TouchableOpacity>
-
-  {/* ✅ Total Expenses */}
-<TouchableOpacity
-  style={styles.statItemRow}
-  onPress={() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const exp = totalExpenses || 0;
-    const expText = exp === 0 ? "None" : `${exp} expense${exp === 1 ? "" : "s"}`;
-    showModal(
-  "Expenses Tracked",
-  `You've logged ${expText} since joining. This shows your total transaction history and helps you understand your spending patterns.`
-);
-
-  }}
->
-  <View style={styles.statIconContainer}>
-    <Ionicons name="receipt-outline" size={20} color="#3b82f6" />
-  </View>
-  <View style={styles.statTextContainer}>
-    <Text style={styles.statValue}>
-      {totalExpenses === 0 ? "None" : totalExpenses}
-    </Text>
-    <Text style={styles.statLabel}>Expenses Tracked</Text>
-  </View>
-</TouchableOpacity>
-
-{/* 🔥 Spending Streak */}
-<TouchableOpacity
-  style={styles.statItemRow}
-  onPress={() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    showModal(
-  "Spending Streak",
-  spendingStreak > 0
-    ? `You've logged expenses for ${spendingStreak} consecutive day${spendingStreak > 1 ? "s" : ""}! Keep your tracking habit going strong.`
-    : "No active streak yet — start logging expenses daily to build consistency!"
-);
-
-  }}
->
-  <View style={styles.statIconContainer}>
-    <Ionicons name="flame-outline" size={20} color="#f97316" />
-  </View>
-  <View style={styles.statTextContainer}>
-    <Text style={styles.statValue}>
-      {spendingStreak > 0 ? `${spendingStreak} day${spendingStreak > 1 ? "s" : ""}` : "None"}
-    </Text>
-    <Text style={styles.statLabel}>Spending Streak</Text>
-  </View>
-</TouchableOpacity>
-
-
-</View>
-
-    </Animated.View>
-  );
-};
+      </Animated.View>
+    );
+  };
 
   const renderEditForm = () => {
     if (!editing) return null;
 
     return (
-   <BlurView intensity={80} tint="dark" style={styles.formContainer}>
+      <BlurView intensity={80} tint="dark" style={styles.formContainer}>
         <View style={styles.formOverlay}>
           <View style={styles.formContent}>
             <View style={styles.formHeader}>
               <View style={styles.formTitleContainer}>
                 <View style={styles.formIconContainer}>
                   <LinearGradient
-                        colors={['#1f4b81ff', '#7fb1d6ff']}
+                    colors={['#1f4b81ff', '#7fb1d6ff']}
                     style={styles.formIconGradient}
                   >
                     <Ionicons name="person-outline" size={20} color="#fff" />
@@ -925,7 +893,6 @@ const renderActionButtons = () => {
               >
                 <LinearGradient
                   colors={saving ? ['#9ca3af', '#9ca3af'] : ['#1f4b81ff', '#7fb1d6ff']}
-                
                   style={styles.saveButtonGradient}
                 >
                   {saving ? (
@@ -1061,7 +1028,7 @@ const renderActionButtons = () => {
     return (
       <View style={styles.loadingContainer}>
         <LinearGradient
-            colors={['#1f4b81ff', '#7fb1d6ff']}
+          colors={['#1f4b81ff', '#7fb1d6ff']}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.loadingContent}>
@@ -1076,82 +1043,80 @@ const renderActionButtons = () => {
   }
 
   return (
+    <>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <StatusBar barStyle="light-content" />
+        <LinearGradient
+          colors={['#1f4b81ff', '#7fb1d6ff']}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        
+        {(Platform.OS === "ios" || Platform.OS === "android") && (
+          <TouchableOpacity
+            style={styles.backArrowTop}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={26} color="#fff" />
+          </TouchableOpacity>
+        )}
+        
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#fff"
+              colors={['#1f4b81ff', '#7fb1d6ff']}
+              progressBackgroundColor="#fff"
+            />
+          }
+        >
+          <View style={styles.headerSection}>
+            {renderAvatar()}
+            {renderUserInfo()}
+          </View>
 
-    
-    <KeyboardAvoidingView 
-  style={styles.container} 
-  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-  keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
->
-      <StatusBar barStyle="light-content" />
-      <LinearGradient
-           colors={['#1f4b81ff', '#7fb1d6ff']}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-       {/* 🔙 Back Arrow (mobile only) */}
-{(Platform.OS === "ios" || Platform.OS === "android") && (
-  <TouchableOpacity
-    style={styles.backArrowTop}
-    onPress={() => router.back()}
-    activeOpacity={0.8}
-  >
-    <Ionicons name="arrow-back" size={26} color="#fff" />
-  </TouchableOpacity>
-)}
-      
-      <ScrollView 
-  style={styles.scrollView}
-  contentContainerStyle={styles.scrollContent}
-  showsVerticalScrollIndicator={false}
-  refreshControl={
-    <RefreshControl
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      tintColor="#fff"
-      colors={['#1f4b81ff', '#7fb1d6ff']}
-      progressBackgroundColor="#fff"
-    />
-  }
->
-  <View style={styles.headerSection}>
-    {renderAvatar()}
-    {renderUserInfo()}
-  </View>
+          <View style={styles.contentSection}>
+            {renderActionButtons()}
+          </View>
+        </ScrollView>
 
-  <View style={styles.contentSection}>
-    {renderActionButtons()}
-  </View>
-</ScrollView>
-
-      {renderEditForm()}
-      {renderPinForm()}
+        {renderEditForm()}
+        {renderPinForm()}
+      </KeyboardAvoidingView>
 
       <InfoModal
-  visible={modalVisible}
-  title={modalTitle}
-  message={modalMessage}
-  onClose={() => setModalVisible(false)}
-/>
+        visible={modalVisible}
+        title={modalTitle}
+        message={modalMessage}
+        onClose={() => setModalVisible(false)}
+      />
 
-<ChoiceModal
-  visible={choiceVisible}
-  title="Update Profile Picture"
-  message="Choose how you want to update your profile picture."
-  onCamera={() => {
-    setChoiceVisible(false);
-    pickImage(true);
-  }}
-  onGallery={() => {
-    setChoiceVisible(false);
-    pickImage(false);
-  }}
-  onCancel={() => setChoiceVisible(false)}
-/>
-
-
-    </KeyboardAvoidingView>
+      <ChoiceModal
+        visible={choiceVisible}
+        title="Update Profile Picture"
+        message="Choose how you want to update your profile picture."
+        onCamera={() => {
+          setChoiceVisible(false);
+          pickImage(true);
+        }}
+        onGallery={() => {
+          setChoiceVisible(false);
+          pickImage(false);
+        }}
+        onCancel={() => setChoiceVisible(false)}
+      />
+    </>
   );
 }
 
@@ -1195,16 +1160,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
- headerSection: {
-  paddingTop: Platform.OS === 'ios' ? 100 : 80, // More space on iOS for status bar
-  paddingBottom: 40,
-  alignItems: 'center',
-},
-  avatarContainer: {
-   position: 'relative',
-  marginBottom: 24, // Reduced from 32 for better spacing
+  headerSection: {
+    paddingTop: Platform.OS === 'ios' ? 100 : 80,
+    paddingBottom: 40,
+    alignItems: 'center',
   },
-
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 24,
+  },
   avatarWrapper: {
     width: 140,
     height: 140,
@@ -1253,7 +1217,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 3,
-    borderColor: '#2f0808ff',
+    borderColor: '#fff',
   },
   avatarBadgeGradient: {
     width: '100%',
@@ -1263,23 +1227,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userInfoContainer: {
-  alignItems: 'center',
-  paddingHorizontal: 24, // Add horizontal padding
-  width: '100%',
-   
-
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    width: '100%',
   },
   displayName: {
-  fontSize: 32,
-  fontWeight: '800',
-  color: '#fff', // Changed to white since it's on gradient background
-  marginBottom: 12, // Removed top: -10
-  textAlign: 'center',
-  textShadowColor: 'rgba(0, 0, 0, 0.2)',
-  textShadowOffset: { width: 0, height: 2 },
-  textShadowRadius: 4,
-},
-
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 12,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
   usernameContainer: {
     marginBottom: 12,
   },
@@ -1290,32 +1251,32 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   username: {
-     fontSize: 16,
-  color: '#1f2937', // Keep dark since it's on light badge
-  fontWeight: '600',
+    fontSize: 16,
+    color: '#1f2937',
+    fontWeight: '600',
   },
- email: {
-  fontSize: 16,
-  color: 'rgba(9, 1, 1, 0.95)', // White with slight transparency on gradient
-  marginBottom: 16,
-  fontWeight: '500',
-  textShadowColor: 'rgba(0, 0, 0, 0.2)',
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 2,
-},
+  email: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.95)',
+    marginBottom: 16,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   joinedContainer: {
     alignItems: 'center',
   },
   joinedBadge: {
-   flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  paddingHorizontal: 16,
-  paddingVertical: 8,
-  borderRadius: 20,
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   joinedText: {
     fontSize: 14,
@@ -1332,21 +1293,21 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     borderRadius: 20,
-  overflow: 'hidden',
-  elevation: 8,
-  shadowColor: '#6366f1',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.3,
-  shadowRadius: 16,
-  minHeight: 56, // Ensure tap target is large enough
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    minHeight: 56,
   },
   buttonGradient: {
-   flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingVertical: isSmallDevice ? 16 : 18, // Adjust for small screens
-  paddingHorizontal: isSmallDevice ? 24 : 32,
-  gap: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: isSmallDevice ? 16 : 18,
+    paddingHorizontal: isSmallDevice ? 24 : 32,
+    gap: 12,
   },
   primaryButtonText: {
     color: '#fff',
@@ -1378,90 +1339,81 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
- // Make stats stack on smaller screens
-statsContainer: {
-  flexDirection: "column", // Always rows (vertical)
-  backgroundColor: "#fff",
-  borderRadius: 20,
-  paddingVertical: 8,
-  paddingHorizontal: 20,
-  marginTop: 12,
-  gap: 12,
-  width: "100%",
-  alignSelf: "center",
-  shadowColor: "#000",
-  shadowOpacity: 0.1,
-  shadowRadius: 6,
-  elevation: 3,
-},
-
-statItemRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "#f9fafb",
-  borderRadius: 16,
-  paddingVertical: 12,
-  paddingHorizontal: 14,
-  shadowColor: "#000",
-  shadowOpacity: 0.05,
-  shadowRadius: 4,
-  elevation: 2,
-},
-
-statIconContainer: {
-  width: 48,
-  height: 48,
-  borderRadius: 24,
-  backgroundColor: "#f1f5f9",
-  justifyContent: "center",
-  alignItems: "center",
-  marginRight: 12,
-},
-
-statTextContainer: {
-  flex: 1,
-},
-
-statValue: {
-  fontSize: 16,
-  fontWeight: "700",
-  color: "#1f2937",
-  marginBottom: 2,
-},
-
-statLabel: {
-  fontSize: 14,
-  color: "#64748b",
-  fontWeight: "500",
-},
-
-formContainer: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.4)",
-  justifyContent: "flex-end",
-  alignItems: "center",
-  zIndex: 9999,
-},
-
-formOverlay: {
-   width: "100%",
-  backgroundColor: "#fff",
-  borderTopLeftRadius: 24,
-  borderTopRightRadius: 24,
-  paddingBottom: Platform.OS === 'ios' ? 40 : 20, // Extra padding for iOS gesture bar
-  maxHeight: Platform.OS === 'web' ? '80%' : '85%', // More height on mobile
-  elevation: 30,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: -2 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  overflow: "hidden",
-},
-
+  statsContainer: {
+    flexDirection: "column",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    gap: 12,
+    width: "100%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  statItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f9fafb",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  statTextContainer: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  formContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+  formOverlay: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    maxHeight: Platform.OS === 'web' ? '80%' : '85%',
+    elevation: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    overflow: "hidden",
+  },
   formContent: {
     flex: 1,
   },
@@ -1595,201 +1547,168 @@ formOverlay: {
     fontWeight: '700',
   },
   backArrowTop: {
-  position: "absolute",
-  top: Platform.OS === "ios" ? 60 : 50,
-  left: 20,
-  zIndex: 200,
-  backgroundColor: "rgba(0,0,0,0.3)", // translucent for readability
-  borderRadius: 30,
-  padding: 8,
-  elevation: 8,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-},
-
-uploadingOverlay: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  borderRadius: 70,
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 10,
-},
-uploadingText: {
-  color: '#fff',
-  fontSize: 12,
-  fontWeight: '600',
-  marginTop: 8,
-},
-avatarImageDimmed: {
-  opacity: 0.5,
-},
-
+    position: "absolute",
+    top: Platform.OS === "ios" ? 60 : 50,
+    left: 20,
+    zIndex: 200,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 30,
+    padding: 8,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  uploadingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  avatarImageDimmed: {
+    opacity: 0.5,
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 99999,
+  },
+  modalContainer: {
+    width: '85%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  modalIconWrapper: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#1f4b81ff',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  modalIconGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1f2937',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  modalOptionsContainer: {
+    width: '100%',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#1f4b81ff',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  modalButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  modalOption: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#1f4b81ff',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  modalOptionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  modalOptionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalCancelButton: {
+    width: '100%',
+    paddingVertical: 14,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  modalCancelText: {
+    color: '#64748b',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });
+
 if (Platform.OS === "ios" || Platform.OS === "android") {
   Object.assign(styles, {
     formContainer: {
       ...styles.formContainer,
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.4)",
-      justifyContent: "flex-end", // bottom sheet style
-      alignItems: "center",
-      zIndex: 999, // 👈 ensures it's on top
+      justifyContent: "flex-end",
     },
     formOverlay: {
       ...styles.formOverlay,
-      width: "100%",
       maxHeight: "65%",
-      backgroundColor: "#fff",
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      borderBottomLeftRadius: 0,
-      borderBottomRightRadius: 0,
-      position: "absolute",
-      bottom: 0,
-      elevation: 30,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 6,
-      zIndex: 1000,
     },
-    formHeader: {
-      ...styles.formHeader,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-    },
-    formTitle: {
-      ...styles.formTitle,
-      fontSize: 18,
-    },
-    inputContainer: {
-      ...styles.inputContainer,
-      paddingHorizontal: 16,
-      marginBottom: 12,
-    },
-    textInput: {
-      ...styles.textInput,
-      fontSize: 14,
-      paddingVertical: 8,
-    },
-    formActions: {
-      ...styles.formActions,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-    },
-    uploadingOverlay: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  borderRadius: 70,
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 10,
-},
-uploadingText: {
-  color: '#fff',
-  fontSize: 12,
-  fontWeight: '600',
-  marginTop: 8,
-},
-
-modalOverlay: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 9999,
-},
-modalContainer: {
-  width: '85%',
-  backgroundColor: '#fff',
-  borderRadius: 20,
-  padding: 24,
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOpacity: 0.2,
-  shadowRadius: 10,
-  elevation: 10,
-},
-modalTitle: {
-  fontSize: 20,
-  fontWeight: '700',
-  color: '#1f4b81',
-  marginBottom: 10,
-  textAlign: 'center',
-},
-modalMessage: {
-  fontSize: 16,
-  color: '#374151',
-  textAlign: 'center',
-  marginBottom: 20,
-  lineHeight: 22,
-},
-modalButton: {
-  width: '100%',
-  borderRadius: 12,
-  overflow: 'hidden',
-},
-modalButtonGradient: {
-  paddingVertical: 12,
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: 12,
-},
-modalButtonText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '700',
-},
-
-modalOption: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#1f4b81",
-  paddingVertical: 14,
-  borderRadius: 12,
-  marginTop: 10,
-  gap: 8,
-},
-modalOptionText: {
-  color: "#fff",
-  fontSize: 16,
-  fontWeight: "600",
-},
-modalCancelButton: {
-  marginTop: 14,
-  paddingVertical: 12,
-},
-modalCancelText: {
-  color: "#64748b",
-  fontSize: 15,
-  fontWeight: "600",
-  textAlign: "center",
-},
-
-avatarImageDimmed: {
-  opacity: 0.5,
-},
   });
-  
 }
-
