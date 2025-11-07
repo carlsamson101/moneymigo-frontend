@@ -567,17 +567,32 @@ useFocusEffect(
 
  const handleScanReceipt = async () => {
   try {
-    // 🧠 Ask user how to upload
-    Alert.alert(
-      "Scan Receipt",
-      "Choose an option",
-      [
-        { text: "📷 Camera", onPress: pickFromCamera },
-        { text: "🖼️ Gallery", onPress: pickFromGallery },
-        { text: "Cancel", style: "cancel" },
-      ],
-      { cancelable: true }
-    );
+    if (Platform.OS === "web") {
+      // 🧠 Browser fallback
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = async (event: any) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const uri = reader.result as string;
+          await processReceiptImage(uri); // send to OCR
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
+
+    // ✅ Native (Android/iOS)
+    Alert.alert("Scan Receipt", "Choose an option", [
+      { text: "📷 Camera", onPress: pickFromCamera },
+      { text: "🖼️ Gallery", onPress: pickFromGallery },
+      { text: "Cancel", style: "cancel" },
+    ]);
   } catch (error) {
     console.error("❌ Scan Receipt error:", error);
     Alert.alert("Error", "Something went wrong while selecting image.");
