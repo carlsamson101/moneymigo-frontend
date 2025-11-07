@@ -427,20 +427,55 @@ async function stopVoice() {
   setIsListening(false);
 }
 
-function applyParsedVoice(transcript: string) {
-  const { amount, category, notes } = parseVoiceCommand(transcript);
+function applyParsedVoice(speech) {
+  const lower = speech.toLowerCase();
+  console.log("🗣️ Voice input:", lower);
 
-  if (amount) setExpenseAmount(String(amount));
-  if (category) setExpenseCategory(category);
-  if (notes) setExpenseNotes(notes);
+  // 1️⃣ Detect if this is a "save" or "add" command
+  const isAddCommand = lower.includes("add") || lower.includes("record");
+  const isSaveCommand = lower.includes("save");
 
-  // Friendly TTS confirmation
-  const saidBack =
-    `Captured ${amount ? "₱" + amount : "amount"} ` +
-    `for ${category || "category"}` +
-    (notes ? ` with note ${notes}` : "");
-  Speech.speak(saidBack);
+  // 2️⃣ Extract amount
+  const amountMatch = lower.match(/\b(\d+(\.\d{1,2})?)\b/);
+  const amount = amountMatch ? parseFloat(amountMatch[1]) : null;
+
+  // 3️⃣ Detect category
+  const categories = ["food", "transport", "bills", "school", "shopping", "others"];
+  const category = categories.find(cat => lower.includes(cat)) || "others";
+
+  // 4️⃣ Optional note
+  const noteMatch = lower.match(/note\s+(.*)/i);
+  const note = noteMatch ? noteMatch[1] : "";
+
+  // 5️⃣ If no amount, don’t proceed
+  if (!amount) {
+    Speech.speak("I didn't catch the amount. Please try again.");
+    return;
+  }
+
+  // 6️⃣ Apply data to your expense state
+  setExpenseAmount(amount.toString());
+  setExpenseCategory(category);
+  setExpenseNotes(note);
+
+  console.log("✅ Voice Parsed:", { amount, category, note });
+
+  // 7️⃣ Auto-save if it’s an “add” command
+  if (isAddCommand) {
+    Speech.speak(`Saving ${amount} pesos for ${category}${note ? `, note ${note}` : ""}.`);
+    // Delay slightly to ensure state is set
+    setTimeout(() => {
+      handleAddExpense(); // ✅ Trigger your existing save logic
+    }, 800);
+  }
+
+  // 8️⃣ Also allow saying “save” explicitly
+  if (isSaveCommand) {
+    Speech.speak("Saving your expense now.");
+    setTimeout(() => handleAddExpense(), 800);
+  }
 }
+
 
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
@@ -2406,12 +2441,12 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: 100, // Adjust if it overlaps your Add Expense FAB
-    right: 22,
+    bottom: 50, // Adjust if it overlaps your Add Expense FAB
+    right: 18,
     backgroundColor: isListening ? "#dc2626" : "#1f4b81",
     borderRadius: 50,
-    width: 56,
-    height: 56,
+    width: 30,
+    height: 30,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
