@@ -7,7 +7,7 @@ LogBox.ignoreLogs([
 
 import React, { useEffect, useState, useCallback } from 'react';
 
-
+import { Modal } from "react-native";
 import { router } from "expo-router";  
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -70,7 +70,8 @@ export default function DealsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
     const [total, setTotal] = useState(0);
-
+const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+const [modalVisible, setModalVisible] = useState(false);
   // Product categories - FIXED to match backend
   const categories = [
     { value: "all", label: "All" }, // make it a string for Picker reliability
@@ -386,12 +387,15 @@ const onRefresh = () => {
       const categoryInfo = getCategoryInfo(item.category);
 
       return (
-        <View
-          style={[
-            styles.dealCard,
-            isCheapest && styles.cheapestCard,
-          ]}
-        >
+        <TouchableOpacity
+  activeOpacity={0.9}
+  onPress={() => {
+    setSelectedDeal(item);
+    setModalVisible(true);
+  }}
+  style={[styles.dealCard, isCheapest && styles.cheapestCard]}
+>
+
           {isCheapest && (
             <View style={styles.cheapestBadge}>
               <Ionicons name="star" size={10} color="white" />
@@ -442,20 +446,24 @@ const onRefresh = () => {
           </View>
 
           {/* 🧮 Stock Info */}
-          {item.stock === 0 ? (
-            <View style={styles.outOfStockContainer}>
-              <Text style={styles.outOfStockText}>No stock available</Text>
-            </View>
-          ) : (
-            <View style={styles.stockContainer}>
-              <Ionicons name="cube-outline" size={12} color="#059669" />
-              <Text style={styles.stockText}>
-                {typeof item.stock === 'number'
-                  ? `${item.stock} in stock`
-                  : 'Stock unavailable'}
-              </Text>
-            </View>
-          )}
+          <View style={styles.stockContainer}>
+  {item.stock && item.stock > 0 ? (
+    <>
+      <Ionicons name="cube-outline" size={12} color="#059669" />
+      <Text style={[styles.stockText, { color: "#059669" }]}>
+        {item.stock} in stock
+      </Text>
+    </>
+  ) : (
+    <>
+      <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
+      <Text style={[styles.stockText, { color: "#DC2626" }]}>
+        No stock available
+      </Text>
+    </>
+  )}
+</View>
+
 
           <View style={styles.priceSection}>
             <Text style={[styles.price, isCheapest && styles.cheapestPrice]}>
@@ -476,11 +484,80 @@ const onRefresh = () => {
               </TouchableOpacity>
             )}
           </View>
-        </View>
+       </TouchableOpacity>
+
       );
     }}
   />
 )}
+{/* 🪟 Product Detail Modal */}
+<Modal
+  animationType="slide"
+  transparent={true}
+  visible={modalVisible}
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      {selectedDeal && (
+        <>
+          <Text style={styles.modalTitle}>{selectedDeal.itemName}</Text>
+
+          <Text style={styles.modalText}>🏪 Store: {selectedDeal.storeName}</Text>
+          <Text style={styles.modalText}>
+            🏷️ Category: {selectedDeal.category || "N/A"}
+          </Text>
+          <Text style={styles.modalText}>💰 Price: ₱{selectedDeal.price}</Text>
+
+          <Text style={styles.modalText}>
+            📦 Stock:{" "}
+            {selectedDeal.stock && selectedDeal.stock > 0
+              ? `${selectedDeal.stock} in stock`
+              : "No stock available"}
+          </Text>
+
+          {selectedDeal.unit && (
+            <Text style={styles.modalText}>📏 Unit: {selectedDeal.unit}</Text>
+          )}
+
+          {selectedDeal.distance && (
+            <Text style={styles.modalText}>
+              📍 Distance: {(selectedDeal.distance / 1000).toFixed(2)} km
+            </Text>
+          )}
+
+          {/* 📍 View on Map Button */}
+          {selectedDeal.location?.coordinates && (
+            <TouchableOpacity
+              style={styles.mapButton}
+              onPress={() => {
+                const [lng, lat] = selectedDeal.location.coordinates;
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                if (Platform.OS === "web") {
+                  window.open(url, "_blank");
+                } else {
+                  router.push(url);
+                }
+              }}
+            >
+              <Ionicons name="navigate" size={16} color="#fff" />
+              <Text style={styles.mapButtonText}>View on Map</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            onPress={() => setModalVisible(false)}
+            style={styles.closeModalButton}
+          >
+            <Text style={styles.closeModalText}>Close</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  </View>
+</Modal>
+
+
   </ScrollView>
   );
 }
@@ -900,4 +977,56 @@ picker: {
   color: '#111827',
   fontSize: 13,
 },
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+modalContent: {
+  backgroundColor: "white",
+  borderRadius: 16,
+  padding: 20,
+  width: "85%",
+  maxHeight: "80%",
+  elevation: 5,
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  marginBottom: 10,
+  color: "#1f4b81",
+  textAlign: "center",
+},
+modalText: {
+  fontSize: 14,
+  marginBottom: 6,
+  color: "#374151",
+},
+closeModalButton: {
+  marginTop: 10,
+  backgroundColor: "#1f4b81",
+  borderRadius: 8,
+  paddingVertical: 10,
+},
+closeModalText: {
+  textAlign: "center",
+  color: "#fff",
+  fontWeight: "600",
+},
+mapButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#2563EB",
+  borderRadius: 8,
+  paddingVertical: 10,
+  marginTop: 10,
+},
+mapButtonText: {
+  color: "#fff",
+  fontWeight: "600",
+  marginLeft: 6,
+},
+
 });

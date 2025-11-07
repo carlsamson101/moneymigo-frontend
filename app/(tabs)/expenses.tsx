@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { LogBox } from 'react-native';
 // Temporarily ignore the text rendering warning
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
@@ -232,6 +232,8 @@ export default function ExpensesPage() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [expenses, setExpenses] = useState<{ [date: string]: any[] }>({});
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
+  const [budgetAmount, setBudgetAmount] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [showExpenseDetailModal, setShowExpenseDetailModal] = useState(false);
@@ -453,11 +455,13 @@ useFocusEffect(
 );
 
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchExpenses();
-    }, [budgetPeriod, startDate, endDate])
-  );
+ useFocusEffect(
+  useCallback(() => {
+    fetchBudget();    // ✅ load latest budget
+    fetchExpenses();  // ✅ load latest expenses
+  }, [budgetPeriod, startDate, endDate])
+);
+
 
   useFocusEffect(
     useCallback(() => {
@@ -501,6 +505,21 @@ useFocusEffect(
     setLoading(false);
   }
 };
+
+// 🔄 Fetch current budget amount from backend
+const fetchBudget = async () => {
+  try {
+    const user = await getToken();
+    if (!user?.id) return;
+
+    const res = await api.get(`/budget/user/${user.id}`);
+    setBudgetAmount(res.data?.amount || 0);
+  } catch (err: any) {
+    console.warn("⚠️ Could not fetch budget:", err.message);
+    setBudgetAmount(0);
+  }
+};
+
 
 
   const handleChangePeriod = async (newPeriod: string) => {
@@ -1375,16 +1394,36 @@ const HistorySection = (
           </View>
         </Modal>
 
-        {/* Overspend Warning */}
-        {filteredExpenses.some(e =>
-          (e.overspentAmount && e.overspentAmount > 0) ||
-          (e.overspent && typeof e.overspent === "number" && e.overspent > 0)
-        ) && (
-          <OverspendWarning
-            overspentTransactions={filteredExpenses.filter(e => e.overspent && e.overspent > 0)}
-            categoryColors={categoryColors}
-          />
-        )}
+       {/* Dynamic Overspend Warning (auto-hides when budget covers spending) */}
+{(() => {
+  const totalSpent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const currentBudget = budgetAmount || 0; // use your budget state or prop
+  const overspentAmount = totalSpent - currentBudget;
+
+  if (overspentAmount > 0) {
+    return (
+      <View
+        style={{
+          backgroundColor: "#fee2e2",
+          borderLeftColor: "#dc2626",
+          borderLeftWidth: 6,
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 8,
+        }}
+      >
+        <Text style={{ color: "#dc2626", fontWeight: "700" }}>
+          ⚠️ You’ve exceeded your budget by ₱
+          {overspentAmount.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+          })}
+        </Text>
+      </View>
+    );
+  }
+  return null;
+})()}
+
 
         {/* Expense Chart */}
         <View style={styles.chartCard}>
@@ -1448,18 +1487,32 @@ const HistorySection = (
             </View>
 
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={[styles.timeText, expense.overspent && { color: "#b91c1c", fontWeight: "600" }]}>
-                {new Date(expense.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </Text>
+  {/* Show the transaction time only */}
+  <Text style={styles.timeText}>
+    {new Date(expense.date).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}
+  </Text>
 
-              {expense.overspent && (
-                <View style={{ backgroundColor: "#dc2626", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
-                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>
-                    Overspent
-                  </Text>
-                </View>
-              )}
-            </View>
+  {/* Show Overspent tag only if positive */}
+  {expense.overspent && expense.overspent > 0 && (
+    <View
+      style={{
+        backgroundColor: "#dc2626",
+        borderRadius: 6,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        marginTop: 4,
+      }}
+    >
+      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>
+        Overspent
+      </Text>
+    </View>
+  )}
+</View>
+
           </TouchableOpacity>
         );
       })}
