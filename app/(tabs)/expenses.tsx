@@ -32,7 +32,7 @@ const imagesOnly = () => {
     return { mediaTypes: [ImagePicker.MediaType.Image] };
   }
   // Old API: use MediaTypeOptions enum (deprecated but still works)
-  return { mediaTypes: ImagePicker.MediaTypeOptions.Images };
+  return { mediaTypes: [ImagePicker.MediaType.image]};
 };
 
 let DateTimePicker: any = () => null;
@@ -256,10 +256,20 @@ const [historyStartDate, setHistoryStartDate] = useState<Date | null>(null);
 const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 
 const [isScanning, setIsScanning] = useState(false);
+const [expenseAmount, setExpenseAmount] = useState("");
+const [expenseCategory, setExpenseCategory] = useState("Select Category");
+
+// 🔍 OCR confirmation states
+const [showOcrModal, setShowOcrModal] = useState(false);
+const [ocrRawText, setOcrRawText] = useState("");
+const [ocrDetectedAmount, setOcrDetectedAmount] = useState("");
+const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
 
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
 
+
+  
   const colorPalette = [
     '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
     '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC',
@@ -564,130 +574,174 @@ useFocusEffect(
       alert('Failed to set custom budget.');
     }
   };
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import { Platform, Alert } from "react-native";
 
- const handleScanReceipt = async () => {
+async function handleScanReceipt() {
   try {
     if (Platform.OS === "web") {
-      // 🌐 Web & Mobile Browser (camera + gallery)
+      // 🖼️ Web browsers — open file picker
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
-      input.capture = "environment"; // ✅ allows camera or gallery on mobile
-      input.style.display = "none";
-
-      input.onchange = async (event: any) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const uri = reader.result as string;
+      input.onchange = async (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const uri = URL.createObjectURL(file);
           await processReceiptImage(uri);
-        };
-        reader.readAsDataURL(file);
+        }
       };
-
-      // ✅ Attach to DOM temporarily (fixes mobile Chrome & Safari bug)
-      document.body.appendChild(input);
       input.click();
-      document.body.removeChild(input);
       return;
     }
 
-    // 📱 Native (Expo Go / APK)
-    Alert.alert("Scan Receipt", "Choose an option", [
-      { text: "📷 Camera", onPress: pickFromCamera },
-      { text: "🖼️ Gallery", onPress: pickFromGallery },
-      { text: "Cancel", style: "cancel" },
-    ]);
+    // 📱 Mobile (APK or browser): choose Camera or Photos
+    Alert.alert(
+      "Scan Receipt",
+      "Choose an option",
+      [
+        { text: "📷 Camera", onPress: pickFromCamera },
+        { text: "🖼️ Photos", onPress: pickFromGallery },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
   } catch (error) {
     console.error("❌ Scan Receipt error:", error);
-    Alert.alert("Error", "Something went wrong while selecting image.");
+    Alert.alert("Error", "Something went wrong while selecting an image.");
   }
-};
+}
 
+// 📸 Camera
+async function pickFromCamera() {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Permission Required", "Please allow camera access.");
+    return;
+  }
 
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    quality: 1,
+  });
 
-async function processReceiptImage(uri: string) {
+  if (!result.canceled) await processReceiptImage(result.assets[0].uri);
+}
+
+// 🖼️ Gallery
+async function pickFromGallery() {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Permission Required", "Please allow photo access.");
+    return;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: [ImagePicker.MediaType.Image],
+    allowsEditing: true,
+    quality: 1,
+  });
+
+  if (!result.canceled) await processReceiptImage(result.assets[0].uri);
+}
+
+// 🧠 OCR processing
+async function processReceiptImage(uri) {
   try {
     setIsScanning(true);
 
-    // ✂️ Resize for clarity
+    // ✂️ Optimize image for OCR
     const processed = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 900 } }],
+      [{ resize: { width: 1000 } }],
       { compress: 1, format: ImageManipulator.SaveFormat.PNG }
     );
 
     let text = "";
 
-    // 🌐 Web or Expo Go
-    if (Platform.OS === "web" || Platform.Constants?.appOwnership === "expo") {
-      const { createWorker } = await import("tesseract.js");
-      const worker = await createWorker("eng");
-      const result = await worker.recognize(processed.uri);
-      text = result.data.text || "";
-      await worker.terminate();
-    } else {
-      // 📱 Native
-      let TextRecognition: any;
+    // 🧩 OCR Engine (Native or Web)
+    if (Platform.OS !== "web") {
+      let TextRecognition = null;
       try {
         TextRecognition = require("react-native-text-recognition").default;
       } catch {
-        TextRecognition = null;
+        console.warn("OCR native engine unavailable, fallback to web mode");
       }
 
-      if (TextRecognition?.recognize) {
-        const result = await TextRecognition.recognize(processed.uri);
-        text = (result || []).join(" ");
+      if (TextRecognition && TextRecognition.recognize) {
+        const blocks = await TextRecognition.recognize(processed.uri);
+        text = (blocks || []).join(" ");
       } else {
-        Alert.alert("⚠️ OCR Not Available", "OCR works only in APK builds.");
-        return;
+        const Tesseract = await import("tesseract.js");
+        const result = await Tesseract.recognize(processed.uri, "eng");
+        text = result?.data?.text || "";
       }
+    } else {
+      const Tesseract = await import("tesseract.js");
+      const result = await Tesseract.recognize(processed.uri, "eng");
+      text = result?.data?.text || "";
     }
 
-   console.log("🧠 OCR Output:", text);
+    console.log("🧾 OCR (raw):", text);
 
-// 🧠 Enhanced OCR Amount Detection Logic
-const allNumbers = [...text.matchAll(/(\d+(?:[.,]\d{1,2})?)/g)]
-  .map(m => parseFloat(m[1].replace(/,/g, '')))
-  .filter(n => !isNaN(n) && n > 0);
+    // 🧠 Clean + normalize
+    const cleanText = text
+      .replace(/\n+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .toLowerCase();
 
-// 🧩 Try to find numbers after keywords like TOTAL, AMOUNT, or PRICE
-const keywordPattern = /(total|amount|price|cash|withdrawal|change|vatable sales)[^\d]{0,10}(\d+(?:[.,]\d{1,2})?)/gi;
-const keywordMatches = [...text.matchAll(keywordPattern)].map(m => parseFloat(m[2].replace(/,/g, '')));
+    // 🧮 Extract numbers
+    const numberMatches = [...cleanText.matchAll(/₱?\s*(\d+(?:[.,]\d{1,2})?)/g)]
+      .map(m => parseFloat(m[1].replace(/,/g, '')))
+      .filter(n => !isNaN(n) && n > 0);
 
-// 🧠 Priority 1: Keyword-based match (e.g., "TOTAL 116.00")
-let detectedAmount = keywordMatches.length ? keywordMatches[keywordMatches.length - 1] : null;
+    const keywordPattern = /(total|amount|cash|withdrawal|paid|bill|price|vatable sales)[^\d]{0,10}(\d+(?:[.,]\d{1,2})?)/gi;
+    const keywordMatches = [...cleanText.matchAll(keywordPattern)]
+      .map(m => parseFloat(m[2].replace(/,/g, '')))
+      .filter(n => !isNaN(n) && n > 0);
 
-// 🧠 Priority 2: If no keyword-based match, pick the largest valid number
-if (!detectedAmount && allNumbers.length > 0) {
-  // Ignore very small single-digit numbers (likely quantities)
-  const filtered = allNumbers.filter(n => n >= 10);
-  detectedAmount = filtered.length ? Math.max(...filtered) : Math.max(...allNumbers);
+    const reasonable = numberMatches.filter(n => n >= 10 && n <= 999999);
+
+    // 🧩 Smart priority logic
+    let detectedAmount = null;
+    if (keywordMatches.length > 0) {
+      detectedAmount = keywordMatches[keywordMatches.length - 1];
+    } else if (reasonable.length > 0) {
+      detectedAmount = Math.max(...reasonable);
+    } else if (numberMatches.length > 0) {
+      detectedAmount = numberMatches[numberMatches.length - 1];
+    }
+
+    detectedAmount = detectedAmount || null;
+    console.log("💰 Detected amount:", detectedAmount);
+
+    // 🧠 Detect category
+    let detectedCategory = "Others";
+    if (/mcdonald|jollibee|kfc|burger|food/i.test(cleanText))
+      detectedCategory = "Food";
+    else if (/grab|taxi|jeep|bus|transport|tricycle/i.test(cleanText))
+      detectedCategory = "Transport";
+    else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(cleanText))
+      detectedCategory = "Bills";
+    else if (/notebook|school|pen|tuition|module/i.test(cleanText))
+      detectedCategory = "School";
+    else if (/mall|store|shop|sm|robinsons|puregold|supermarket|7[\s\-]?11|seven[-\s]?eleven|711/i.test(cleanText))
+      detectedCategory = "Shopping";
+    else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(cleanText))
+      detectedCategory = "Savings";
+
+    // ✅ Apply results
+   if (detectedAmount) {
+  setOcrDetectedAmount(detectedAmount.toString());
+  setOcrDetectedCategory(detectedCategory);
+  setOcrRawText(cleanText);
+  setShowOcrModal(true); // open confirmation modal
+} else {
+  setExpenseCategory("Others");
+  Alert.alert("⚠️ No amount found", "Could not detect a total. Please enter manually.");
 }
 
-// ✅ Fallback: if nothing found, set null
-detectedAmount = detectedAmount || null;
-
-
-
-    let detectedCategory = "Others";
-if (/mcdonald|jollibee|kfc|burger|food|meal/i.test(text)) detectedCategory = "Food";
-else if (/grab|taxi|jeep|bus|transport/i.test(text)) detectedCategory = "Transport";
-else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(text)) detectedCategory = "Bills";
-else if (/notebook|school|pen|tuition/i.test(text)) detectedCategory = "School";
-else if (/mall|store|shop|sm|robinsons|puregold|supermarket|711/i.test(text)) detectedCategory = "Shopping";
-else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(text)) detectedCategory = "Savings";
-
-
-    if (detectedAmount) {
-      setExpenseAmount(detectedAmount);
-      setExpenseCategory(detectedCategory);
-      Alert.alert("✅ Scan Complete", `Detected ₱${detectedAmount} under ${detectedCategory}`);
-    } else {
-      Alert.alert("⚠️ No amount found", "Please enter manually.");
-    }
   } catch (err) {
     console.error("❌ OCR failed:", err);
     Alert.alert("❌ Error", "Failed to scan receipt. Try again with a clearer image.");
@@ -695,6 +749,7 @@ else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(text)) detectedCategory = "S
     setIsScanning(false);
   }
 }
+
 
   const handleAddExpense = async () => {
   const user = await getToken();
@@ -1577,6 +1632,94 @@ const HistorySection = (
     </Pressable>
     </Pressable>
     </Modal>
+
+    {/* 🧠 OCR Confirmation Modal */}
+<Modal visible={showOcrModal} transparent animationType="fade">
+  <View style={styles.modalOverlay}>
+    <View style={[styles.modalContainer, { width: '85%', padding: 20 }]}>
+      <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
+        📸 Confirm Receipt Details
+      </Text>
+
+      <Text style={{ fontSize: 14, color: "#64748B", marginBottom: 8 }}>
+        Adjust if needed before saving.
+      </Text>
+
+      {/* Editable Detected Amount */}
+      <View style={{ marginBottom: 10 }}>
+        <Text style={{ fontSize: 14, color: "#475569", marginBottom: 4 }}>Amount (₱)</Text>
+        <TextInput
+          value={ocrDetectedAmount}
+          onChangeText={setOcrDetectedAmount}
+          keyboardType="numeric"
+          style={{
+            borderWidth: 1,
+            borderColor: "#CBD5E1",
+            borderRadius: 10,
+            padding: 10,
+            fontSize: 16,
+            backgroundColor: "#F8FAFC",
+          }}
+        />
+      </View>
+
+      {/* Editable Detected Category */}
+      <View style={{ marginBottom: 10 }}>
+        <Text style={{ fontSize: 14, color: "#475569", marginBottom: 4 }}>Category</Text>
+        <TextInput
+          value={ocrDetectedCategory}
+          onChangeText={setOcrDetectedCategory}
+          style={{
+            borderWidth: 1,
+            borderColor: "#CBD5E1",
+            borderRadius: 10,
+            padding: 10,
+            fontSize: 16,
+            backgroundColor: "#F8FAFC",
+          }}
+        />
+      </View>
+
+      {/* OCR Raw Text Viewer */}
+      <Text style={{ fontSize: 14, color: "#475569", marginBottom: 4 }}>Extracted Text:</Text>
+      <ScrollView
+        style={{
+          maxHeight: 120,
+          borderWidth: 1,
+          borderColor: "#E2E8F0",
+          borderRadius: 10,
+          padding: 10,
+          backgroundColor: "#F1F5F9",
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ color: "#334155", fontSize: 13 }}>{ocrRawText}</Text>
+      </ScrollView>
+
+      {/* Confirm / Cancel Buttons */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <TouchableOpacity
+          style={[styles.submitButton, { flex: 1, marginRight: 6, backgroundColor: "#2563EB" }]}
+          onPress={() => {
+            setExpenseAmount(ocrDetectedAmount);
+            setExpenseCategory(ocrDetectedCategory);
+            setShowOcrModal(false);
+            Alert.alert("✅ Scan Confirmed", "Receipt data applied successfully!");
+          }}
+        >
+          <Text style={styles.submitText}>Confirm</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.submitButton, { flex: 1, backgroundColor: "#aaa" }]}
+          onPress={() => setShowOcrModal(false)}
+        >
+          <Text style={styles.submitText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
 
           {/* Category Picker Modal */}
 <Modal visible={categoryModalVisible} transparent animationType="fade">
