@@ -2,7 +2,7 @@
 import { LogBox } from 'react-native';
 // Temporarily ignore the text rendering warning
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Pressable,
   TextInput, Dimensions, Alert, SafeAreaView, StatusBar
@@ -17,13 +17,18 @@ import ExpenseChart from '../../components/ExpenseChart';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { getCachedData, syncOfflineChanges, queueOfflineChange } from "../../lib/offlineCache";
+import { Animated } from "react-native";
 
 import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import TextRecognition from "react-native-text-recognition"; // native OCR (APK)
-import Tesseract from "tesseract.js"; // web / Expo Go fallback
+
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Returns the right `mediaTypes` option for the installed ImagePicker version
 const imagesOnly = () => {
@@ -106,6 +111,8 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
       : "#EF4444";
 
   return (
+
+    
     <View
       style={{
         backgroundColor: "#FFF5F5",
@@ -140,17 +147,10 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
             color="#DC2626"
             style={{ marginRight: 8 }}
           />
-          <Text
-  style={{
-    fontWeight: "600",
-    color: "#DC2626",
-    fontSize: 15,
-  }}
->
-  ⚠️ You've exceeded your budget by ₱{totalOverspent.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-  })}
-</Text>
+
+    
+
+
         </View>
         <Ionicons
           name={expanded ? "chevron-up-outline" : "chevron-down-outline"}
@@ -258,6 +258,10 @@ const [historyStartDate, setHistoryStartDate] = useState<Date | null>(null);
 const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 
 const [isScanning, setIsScanning] = useState(false);
+
+// 💡 state at the top of your component
+const [showWarning, setShowWarning] = useState(false);
+const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
 
 // 🔍 OCR confirmation states
 const [showOcrModal, setShowOcrModal] = useState(false);
@@ -429,6 +433,34 @@ const getCategoryColor = (category: string) => {
     loadUserCategories();
   }, []);
 
+ // 🧠 Whenever filteredExpenses or budget changes, check overspend
+useEffect(() => {
+  const totalSpent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const currentBudget = budgetAmount || 0;
+  const overspentAmount =
+    currentBudget > 0 ? Math.max(totalSpent - currentBudget, 0) : 0;
+
+  if (overspentAmount > 0) {
+    // ⚠️ Animate slide-in warning
+    setShowWarning(true);
+    Animated.timing(warningAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
+  } else {
+    // ✅ When overspend is cleared → auto-hide with fade-out
+    if (showWarning) {
+      Animated.timing(warningAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: false,
+      }).start(() => setShowWarning(false));
+    }
+  }
+}, [filteredExpenses, budgetAmount]);
+
+
   const saveCustomCategories = async (categories: string[]) => {
     setCustomCategories(categories);
     const token = await getToken();
@@ -595,22 +627,53 @@ const fetchBudget = async () => {
 async function handleScanReceipt() {
   try {
     if (Platform.OS === "web") {
-      // 🖼️ Web browsers — open file picker
+      // 🧠 Detect if on a mobile browser
+      const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      if (isMobileBrowser) {
+        // Prompt user choice
+        const choice = window.confirm("📷 Use Camera?\nPress OK for Camera or Cancel for Photos.");
+
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+
+        // Allow camera if user chose OK
+        if (choice) input.setAttribute("capture", "environment");
+
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            const uri = URL.createObjectURL(file);
+            await processReceiptImage(uri);
+          }
+        };
+
+        // Append to DOM and click to ensure consistent mobile behavior
+        document.body.appendChild(input);
+        input.click();
+        document.body.removeChild(input);
+        return;
+      }
+
+      // 💻 Desktop browsers — standard file upload
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
       input.onchange = async (e) => {
-        const file = e.target.files?.[0];
+        const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
           const uri = URL.createObjectURL(file);
           await processReceiptImage(uri);
         }
       };
+      document.body.appendChild(input);
       input.click();
+      document.body.removeChild(input);
       return;
     }
 
-    // 📱 Mobile (APK or browser): choose Camera or Photos
+    // 📱 Native (Android/iOS) — use Alert picker
     Alert.alert(
       "Scan Receipt",
       "Choose an option",
@@ -763,6 +826,8 @@ async function processReceiptImage(uri) {
     setIsScanning(false);
   }
 }
+
+
 
 
   const handleAddExpense = async () => {
@@ -1394,38 +1459,63 @@ const HistorySection = (
           </View>
         </Modal>
 
-       {/* Dynamic Overspend Warning (auto-hides when budget covers spending) */}
-{(() => {
-  const totalSpent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const currentBudget = budgetAmount || 0; // use your budget state or prop
-  const overspentAmount = totalSpent - currentBudget;
+ {/* ⚠️ Animated Overspend Warning (auto-hide + success feedback) */}
+{(showWarning || warningAnim.__getValue() > 0) && (
+  <Animated.View
+    style={{
+      opacity: warningAnim,
+      height: warningAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 75],
+      }),
+      overflow: "hidden",
+      backgroundColor:
+        budgetAmount > 0 &&
+        filteredExpenses.reduce((sum, e) => sum + e.amount, 0) > budgetAmount
+          ? "#fee2e2" // red (overspent)
+          : "#dcfce7", // green (back within budget)
+      borderLeftColor:
+        budgetAmount > 0 &&
+        filteredExpenses.reduce((sum, e) => sum + e.amount, 0) > budgetAmount
+          ? "#dc2626"
+          : "#16a34a",
+      borderLeftWidth: 6,
+      borderRadius: 8,
+      padding: 12,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      transform: [
+        {
+          translateY: warningAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-10, 0],
+          }),
+        },
+      ],
+    }}
+  >
+    {budgetAmount > 0 &&
+    filteredExpenses.reduce((sum, e) => sum + e.amount, 0) > budgetAmount ? (
+      <Text style={{ color: "#dc2626", fontWeight: "700" }}>
+        ⚠️ You’ve exceeded your budget by ₱
+        {(
+          filteredExpenses.reduce((sum, e) => sum + e.amount, 0) - budgetAmount
+        ).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+        })}
+      </Text>
+    ) : budgetAmount > 0 ? (
+      <Text style={{ color: "#166534", fontWeight: "700" }}>
+        ✅ You’re back within budget!
+      </Text>
+    ) : null}
+  </Animated.View>
+)}
 
-  if (overspentAmount > 0) {
-    return (
-      <View
-        style={{
-          backgroundColor: "#fee2e2",
-          borderLeftColor: "#dc2626",
-          borderLeftWidth: 6,
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 8,
-        }}
-      >
-        <Text style={{ color: "#dc2626", fontWeight: "700" }}>
-          ⚠️ You’ve exceeded your budget by ₱
-          {overspentAmount.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-          })}
-        </Text>
-      </View>
-    );
-  }
-  return null;
-})()}
 
 
-        {/* Expense Chart */}
+
+      {/* Expense Chart */}
         <View style={styles.chartCard}>
           <ExpenseChart
             expenses={filteredExpenses}
