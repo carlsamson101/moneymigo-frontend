@@ -495,7 +495,7 @@ async function applyParsedVoice(command: string) {
         const res = await api.post("/expenses", payload);
         console.log("✅ Voice expense saved:", res.data);
 
-        // ✅ Update UI immediately using the actual saved expense from backend
+        // ✅ Update UI immediately using the actual saved expense from backend 
         if (res.data?.expense) {
           setFilteredExpenses(prev => [res.data.expense, ...prev]);
         } else {
@@ -2447,9 +2447,27 @@ const HistorySection = (
 
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Ionicons name="calendar-outline" size={20} color="#2563EB" />
-              <Text style={{ fontSize: 15, marginLeft: 8 }}>
-                {new Date(selectedExpense.date).toLocaleDateString()}
-              </Text>
+             <Text style={{ fontSize: 15, marginLeft: 8 }}>
+  {selectedExpense.date
+    ? (() => {
+        const d = new Date(selectedExpense.date);
+        const dateStr = d.toLocaleDateString([], {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+        const timeStr =
+          d.getHours() === 0 && d.getMinutes() === 0
+            ? ""
+            : `, ${d.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`;
+        return dateStr + timeStr;
+      })()
+    : ""}
+</Text>
+
             </View>
 
             {selectedExpense.notes ? (
