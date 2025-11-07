@@ -268,6 +268,8 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
 // 💡 state at the top of your component
 const [showWarning, setShowWarning] = useState(false);
 const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
+const [hasHeardVoiceGuide, setHasHeardVoiceGuide] = useState(false);
+const [showTranscript, setShowTranscript] = useState(false);
 
 // 🔍 OCR confirmation states
 const [showOcrModal, setShowOcrModal] = useState(false);
@@ -372,48 +374,65 @@ async function startVoice() {
     setVoiceTranscript("");
     setIsListening(true);
 
+    // 🎙️ Speak tutorial only once per session (until refresh)
+    if (!hasHeardVoiceGuide) {
+      setHasHeardVoiceGuide(true);
+      await Speech.speak(
+        "You can say something like: Add one hundred twenty to food note lunch. The format is Add then amount then note is optional.",
+        { rate: 0.95, pitch: 1.0 }
+      );
+
+      // ⏳ Wait a bit to finish speaking before listening
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    // 🌐 Web speech recognition
     if (Platform.OS === "web") {
-      // Web Speech API fallback
-      // @ts-ignore
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
         Alert.alert("Unavailable", "Speech recognition not supported in this browser.");
         setIsListening(false);
         return;
       }
-      // @ts-ignore
+
       const rec = new SR();
       rec.lang = "en-PH";
       rec.interimResults = false;
       rec.maxAlternatives = 1;
 
-      rec.onresult = (e: any) => {
+      rec.onresult = (e) => {
         const said = e.results?.[0]?.[0]?.transcript || "";
         setVoiceTranscript(said);
-        applyParsedVoice(said);
+        setShowTranscript(true);
+
+        // ⏳ Auto-hide transcript after 4 seconds
+        setTimeout(() => setShowTranscript(false), 2000);
       };
       rec.onend = () => setIsListening(false);
       rec.onerror = () => setIsListening(false);
       rec.start();
-      Speech.speak("Listening. Say: add 120 to food note burger");
       return;
     }
 
-    // Native (Android/iOS)
+    // 📱 Native (APK / Expo Go)
     const result = await SpeechRecognition.startAsync({
-      lang: "en-PH", // tweak as you like
+      lang: "en-PH",
       interimResults: false,
       requiresOnDeviceRecognition: false,
     });
 
     const said = result?.transcript ?? "";
     setVoiceTranscript(said);
-    applyParsedVoice(said);
-  } catch (e: any) {
+    setShowTranscript(true);
+
+    // ⏳ Auto-hide transcript after 4 seconds
+    setTimeout(() => setShowTranscript(false), 2000);
+  } catch (e) {
     console.log("🎙️ startVoice error:", e?.message);
     setIsListening(false);
   }
 }
+
 
 async function stopVoice() {
   try {
@@ -427,56 +446,71 @@ async function stopVoice() {
   setIsListening(false);
 }
 
-function applyParsedVoice(speech) {
-  const lower = speech.toLowerCase();
-  console.log("🗣️ Voice input:", lower);
+async function applyParsedVoice(command) {
+  console.log("🎤 Voice input:", command);
+  const lower = command.toLowerCase().trim();
 
-  // 1️⃣ Detect if this is a "save" or "add" command
-  const isAddCommand = lower.includes("add") || lower.includes("record");
-  const isSaveCommand = lower.includes("save");
+  // 🧠 Split multiple entries like “add 120 to food note lunch and 60 to transport note jeep”
+  const parts = lower.split(/\band\b/);
 
-  // 2️⃣ Extract amount
-  const amountMatch = lower.match(/\b(\d+(\.\d{1,2})?)\b/);
-  const amount = amountMatch ? parseFloat(amountMatch[1]) : null;
+  let totalAdded = 0;
+  let expenseCount = 0;
 
-  // 3️⃣ Detect category
-  const categories = ["food", "transport", "bills", "school", "shopping", "others"];
-  const category = categories.find(cat => lower.includes(cat)) || "others";
+  for (let part of parts) {
+    part = part.trim();
 
-  // 4️⃣ Optional note
-  const noteMatch = lower.match(/note\s+(.*)/i);
-  const note = noteMatch ? noteMatch[1] : "";
+    // ✅ Extract amount
+    const amountMatch = part.match(/(\d+(?:[.,]\d{0,2})?)/);
+    const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", "")) : 0;
 
-  // 5️⃣ If no amount, don’t proceed
-  if (!amount) {
-    Speech.speak("I didn't catch the amount. Please try again.");
-    return;
+    // ✅ Detect category
+    let category = "Others";
+    if (part.includes("food")) category = "Food";
+    else if (part.includes("transport")) category = "Transport";
+    else if (part.includes("bill")) category = "Bills";
+    else if (part.includes("school")) category = "School";
+    else if (part.includes("shop") || part.includes("shopping")) category = "Shopping";
+    else if (part.includes("save") || part.includes("bank")) category = "Savings";
+
+    // ✅ Extract notes (after “note”)
+    const noteMatch = part.match(/note\s+(.+)/);
+    const note = noteMatch ? noteMatch[1].trim() : "";
+
+    // ✅ Detect date
+    let date = new Date();
+    if (part.includes("yesterday")) {
+      date.setDate(date.getDate() - 1);
+    } else if (part.includes("today")) {
+      date = new Date();
+    } else if (part.includes("last week")) {
+      date.setDate(date.getDate() - 7);
+    }
+
+    // 💾 Auto-save valid expenses
+    if (amount > 0 && category) {
+      try {
+        await handleAddExpenseFromVoice({
+          amount,
+          category,
+          notes: note,
+          date,
+        });
+        totalAdded += amount;
+        expenseCount++;
+        Speech.speak(`Added ₱${amount} to ${category}${note ? ", note: " + note : ""}.`);
+      } catch (error) {
+        console.error("❌ Failed to save:", error);
+      }
+    }
   }
 
-  // 6️⃣ Apply data to your expense state
-  setExpenseAmount(amount.toString());
-  setExpenseCategory(category);
-  setExpenseNotes(note);
-
-  console.log("✅ Voice Parsed:", { amount, category, note });
-
-  // 7️⃣ Auto-save if it’s an “add” command
-  if (isAddCommand) {
-    Speech.speak(`Saving ${amount} pesos for ${category}${note ? `, note ${note}` : ""}.`);
-    // Delay slightly to ensure state is set
-    setTimeout(() => {
-      handleAddExpense(); // ✅ Trigger your existing save logic
-    }, 800);
-  }
-
-  // 8️⃣ Also allow saying “save” explicitly
-  if (isSaveCommand) {
-    Speech.speak("Saving your expense now.");
-    setTimeout(() => handleAddExpense(), 800);
+  // 🗣️ End summary (optional but helpful)
+  if (expenseCount > 0) {
+    Speech.speak(`You added ${expenseCount} expense${expenseCount > 1 ? "s" : ""} totaling ₱${totalAdded.toFixed(2)}.`);
+  } else {
+    Speech.speak("I didn’t detect a valid amount or category.");
   }
 }
-
-
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
     const today = new Date();
@@ -998,6 +1032,35 @@ async function processReceiptImage(uri) {
     );
     return;
   }
+
+  async function handleAddExpenseFromVoice(expense) {
+  try {
+    setIsLoading(true);
+
+    await api.post("/expenses/add", {
+      amount: expense.amount,
+      category: expense.category,
+      notes: expense.notes,
+      date: expense.date,
+    });
+
+    // Update local list
+    setExpenses((prev) => ({
+      ...prev,
+      [new Date(expense.date).toDateString()]: [
+        ...(prev[new Date(expense.date).toDateString()] || []),
+        expense,
+      ],
+    }));
+
+    await fetchExpenses();
+  } catch (error) {
+    console.error("❌ handleAddExpenseFromVoice error:", error);
+    Alert.alert("Error", "Could not save expense.");
+  } finally {
+    setIsLoading(false);
+  }
+}
 
   const payload = {
     category: expenseCategory.startsWith("Others")
@@ -2413,27 +2476,24 @@ const HistorySection = (
   </Pressable>
 </Modal>
 
-{voiceTranscript ? (
+{showTranscript && (
   <View
     style={{
       position: "absolute",
-      bottom: 165,
-      right: 22,
-      backgroundColor: "#f1f5f9",
-      borderRadius: 10,
+      bottom: 90,
+      right: 16,
+      backgroundColor: "#1E293B",
       paddingHorizontal: 10,
       paddingVertical: 6,
-      shadowColor: "#000",
-      shadowOpacity: 0.1,
-      shadowRadius: 3,
-      elevation: 2,
+      borderRadius: 8,
+      opacity: 0.9,
     }}
   >
-    <Text style={{ fontSize: 12, color: "#1e293b" }}>
-      Heard: “{voiceTranscript}”
+    <Text style={{ color: "#fff", fontSize: 13 }}>
+      🎙️ Heard: {voiceTranscript}
     </Text>
   </View>
-) : null}
+)}
 
 {/* 🎙️ Voice Input Floating Button */}
 <TouchableOpacity
@@ -2441,12 +2501,12 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: 50, // Adjust if it overlaps your Add Expense FAB
-    right: 18,
+    bottom: 0, // Adjust if it overlaps your Add Expense FAB
+    right: 10,
     backgroundColor: isListening ? "#dc2626" : "#1f4b81",
     borderRadius: 50,
-    width: 30,
-    height: 30,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
