@@ -568,26 +568,33 @@ useFocusEffect(
  const handleScanReceipt = async () => {
   try {
     if (Platform.OS === "web") {
-      // 🧠 Browser fallback
+      // 🌐 Web & Mobile Browser (camera + gallery)
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
+      input.capture = "environment"; // ✅ allows camera or gallery on mobile
+      input.style.display = "none";
+
       input.onchange = async (event: any) => {
-        const file = event.target.files[0];
+        const file = event.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = async () => {
           const uri = reader.result as string;
-          await processReceiptImage(uri); // send to OCR
+          await processReceiptImage(uri);
         };
         reader.readAsDataURL(file);
       };
+
+      // ✅ Attach to DOM temporarily (fixes mobile Chrome & Safari bug)
+      document.body.appendChild(input);
       input.click();
+      document.body.removeChild(input);
       return;
     }
 
-    // ✅ Native (Android/iOS)
+    // 📱 Native (Expo Go / APK)
     Alert.alert("Scan Receipt", "Choose an option", [
       { text: "📷 Camera", onPress: pickFromCamera },
       { text: "🖼️ Gallery", onPress: pickFromGallery },
@@ -599,46 +606,13 @@ useFocusEffect(
   }
 };
 
-// 📸 Take picture
-async function pickFromCamera() {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    Alert.alert("Permission Required", "Please allow camera access.");
-    return;
-  }
 
-  const result = await ImagePicker.launchCameraAsync({
-    ...imagesOnly(),         // ✅ works on both old/new APIs
-    allowsEditing: true,
-    quality: 1,
-  });
 
-  if (!result.canceled) processReceiptImage(result.assets[0].uri);
-}
-
-// 🖼️ Pick from gallery
-async function pickFromGallery() {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    Alert.alert("Permission Required", "Please allow access to your photos.");
-    return;
-  }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    ...imagesOnly(),         // ✅ works on both old/new APIs
-    allowsEditing: true,
-    quality: 1,
-  });
-
-  if (!result.canceled) processReceiptImage(result.assets[0].uri);
-}
-
-// 🧾 OCR processing (safe across Expo Go, Web, APK)
 async function processReceiptImage(uri: string) {
   try {
     setIsScanning(true);
 
-    // ✂️ Lightly resize image for better OCR accuracy
+    // ✂️ Resize for clarity
     const processed = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: 900 } }],
@@ -647,16 +621,15 @@ async function processReceiptImage(uri: string) {
 
     let text = "";
 
-    // 🌐 Web or Expo Go (no native module)
+    // 🌐 Web or Expo Go
     if (Platform.OS === "web" || Platform.Constants?.appOwnership === "expo") {
       const { createWorker } = await import("tesseract.js");
       const worker = await createWorker("eng");
       const result = await worker.recognize(processed.uri);
       text = result.data.text || "";
       await worker.terminate();
-    } 
-    // 📱 Stand-alone APK / prebuilt app
-    else {
+    } else {
+      // 📱 Native
       let TextRecognition: any;
       try {
         TextRecognition = require("react-native-text-recognition").default;
@@ -668,36 +641,30 @@ async function processReceiptImage(uri: string) {
         const result = await TextRecognition.recognize(processed.uri);
         text = (result || []).join(" ");
       } else {
-        Alert.alert(
-          "⚠️ OCR Not Available",
-          "Text recognition works only in the built APK. You can still upload from gallery in Expo Go."
-        );
+        Alert.alert("⚠️ OCR Not Available", "OCR works only in APK builds.");
         return;
       }
     }
 
     console.log("🧠 OCR Output:", text);
 
-    // 🔍 Extract total amount
     const amountMatch = text.match(/(?:₱|PHP|Total[:\s]*)?(\d+(?:[.,]\d{2})?)/i);
     const detectedAmount = amountMatch ? amountMatch[1].replace(",", "") : null;
 
-    // 🧠 Detect category keywords
     let detectedCategory = "Others";
     if (/mcdonald|jollibee|kfc|burger|food/i.test(text)) detectedCategory = "Food";
-    else if (/grab|taxi|jeep|bus|transport|tricycle/i.test(text)) detectedCategory = "Transport";
+    else if (/grab|taxi|jeep|bus|tricycle/i.test(text)) detectedCategory = "Transport";
     else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(text)) detectedCategory = "Bills";
-    else if (/notebook|school|pen|tuition|module/i.test(text)) detectedCategory = "School";
-    else if (/mall|store|shop|sm|robinsons|puregold|supermarket|7[\s\-]?11|seven[-\s]?eleven|711/i.test(text)) detectedCategory = "Shopping";
-    else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(text)) detectedCategory = "Savings";
+    else if (/notebook|school|pen|tuition/i.test(text)) detectedCategory = "School";
+    else if (/mall|store|shop|puregold|711/i.test(text)) detectedCategory = "Shopping";
+    else if (/bank|atm|bpi|bdo/i.test(text)) detectedCategory = "Savings";
 
     if (detectedAmount) {
       setExpenseAmount(detectedAmount);
       setExpenseCategory(detectedCategory);
       Alert.alert("✅ Scan Complete", `Detected ₱${detectedAmount} under ${detectedCategory}`);
     } else {
-      setExpenseCategory("Others");
-      Alert.alert("⚠️ No amount found", "Could not detect a total. Please enter manually.");
+      Alert.alert("⚠️ No amount found", "Please enter manually.");
     }
   } catch (err) {
     console.error("❌ OCR failed:", err);
@@ -706,78 +673,6 @@ async function processReceiptImage(uri: string) {
     setIsScanning(false);
   }
 }
-
-async function processReceiptImage(uri) {
-  try {
-    setIsScanning(true);
-
-    // ✂️ Resize image for better OCR accuracy
-    const processed = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 900 } }],
-      { compress: 1, format: ImageManipulator.SaveFormat.PNG }
-    );
-
-    // 🌍 Detect which OCR engine to use
-    let text = "";
-    if (Platform.OS === "web") {
-      const Tesseract = await import("tesseract.js");
-      const result = await Tesseract.recognize(processed.uri, "eng");
-      text = result?.data?.text || "";
-    } else {
-      let TextRecognition = null;
-      try {
-        TextRecognition = require("react-native-text-recognition").default;
-      } catch {
-        console.warn("Native OCR not available in Expo Go");
-      }
-
-      if (!TextRecognition) {
-        Alert.alert(
-          "⚠️ OCR Not Available",
-          "OCR works only in the APK build. You can still upload from gallery in Expo Go."
-        );
-        return;
-      }
-
-      const result = await TextRecognition.recognize(processed.uri);
-      text = (result || []).join(" ");
-    }
-
-    console.log("🧠 OCR Output:", text);
-
-    // 🔍 Extract total amount
-    const amountMatch = text.match(/(?:₱|PHP|Total[:\s]*)?(\d+(?:[.,]\d{2})?)/i);
-    const detectedAmount = amountMatch ? amountMatch[1].replace(",", "") : null;
-
-    // 🧠 Detect category keywords
-    let detectedCategory = "Others";
-    if (/mcdonald|jollibee|kfc|burger|food/i.test(text)) detectedCategory = "Food";
-    else if (/grab|taxi|jeep|bus|transport|tricycle/i.test(text)) detectedCategory = "Transport";
-    else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(text)) detectedCategory = "Bills";
-    else if (/notebook|school|pen|tuition|module/i.test(text)) detectedCategory = "School";
-    else if (/mall|store|shop|sm|robinsons|puregold|supermarket|7[\s\-]?11|seven[-\s]?eleven|711/i.test(text)) detectedCategory = "Shopping";
-    else if (/bank|savings|deposit|withdraw|atm|landbank|bpi|bdo/i.test(text)) detectedCategory = "Savings";
-
-    // ✅ Apply to state
-    if (detectedAmount) {
-      setExpenseAmount(detectedAmount);
-      setExpenseCategory(detectedCategory);
-      Alert.alert("✅ Scan Complete", `Detected ₱${detectedAmount} under ${detectedCategory}`);
-    } else {
-      setExpenseCategory("Others");
-      Alert.alert("⚠️ No amount found", "Could not detect a total. Please enter manually.");
-    }
-  } catch (err) {
-    console.error("❌ OCR failed:", err);
-    Alert.alert("❌ Error", "Failed to scan receipt. Try again with a clearer image.");
-  } finally {
-    setIsScanning(false);
-  }
-}
-
-
-
 
   const handleAddExpense = async () => {
   const user = await getToken();
