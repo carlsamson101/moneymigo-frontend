@@ -914,102 +914,87 @@ async function pickFromGallery() {
   if (!result.canceled) await processReceiptImage(result.assets[0].uri);
 }
 
-// 🧠 OCR processing
-async function processReceiptImage(uri) {
+// 🧠 OCR processing (Expo-safe version using Tesseract.js only)
+async function processReceiptImage(uri: string) {
   try {
     setIsScanning(true);
 
-    // ✂️ Optimize image for OCR
+    // ✂️ 1️⃣ Pre-process image for better OCR accuracy
     const processed = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: 1000 } }],
       { compress: 1, format: ImageManipulator.SaveFormat.PNG }
     );
 
-    let text = "";
+    // 🧠 2️⃣ Run OCR with Tesseract.js
+    const { createWorker } = await import("tesseract.js");
 
-    // 🧩 OCR Engine (Native or Web)
-    if (Platform.OS !== "web") {
-      let TextRecognition = null;
-      try {
-        TextRecognition = require("react-native-text-recognition").default;
-      } catch {
-        console.warn("OCR native engine unavailable, fallback to web mode");
-      }
+    const worker = await createWorker("eng", 1, {
+      logger: (m) =>
+        console.log(`🔍 OCR Progress: ${Math.round((m.progress || 0) * 100)}% ${m.status}`),
+    });
 
-      if (TextRecognition && TextRecognition.recognize) {
-        const blocks = await TextRecognition.recognize(processed.uri);
-        text = (blocks || []).join(" ");
-      } else {
-        const Tesseract = await import("tesseract.js");
-        const result = await Tesseract.recognize(processed.uri, "eng");
-        text = result?.data?.text || "";
-      }
-    } else {
-      const Tesseract = await import("tesseract.js");
-      const result = await Tesseract.recognize(processed.uri, "eng");
-      text = result?.data?.text || "";
-    }
+    const result = await worker.recognize(processed.uri);
+    await worker.terminate();
 
+    let text = result?.data?.text || "";
     console.log("🧾 OCR (raw):", text);
 
-    // 🧠 Clean + normalize
+    // 🧹 3️⃣ Clean & normalize text
     const cleanText = text
       .replace(/\n+/g, " ")
       .replace(/\s{2,}/g, " ")
       .toLowerCase();
 
-    // 🧮 Extract numbers
+    // 🧮 4️⃣ Extract possible numbers
     const numberMatches = [...cleanText.matchAll(/₱?\s*(\d+(?:[.,]\d{1,2})?)/g)]
-      .map(m => parseFloat(m[1].replace(/,/g, '')))
-      .filter(n => !isNaN(n) && n > 0);
+      .map((m) => parseFloat(m[1].replace(/,/g, "")))
+      .filter((n) => !isNaN(n) && n > 0);
 
-    const keywordPattern = /(total|amount|cash|withdrawal|paid|bill|price|vatable sales)[^\d]{0,10}(\d+(?:[.,]\d{1,2})?)/gi;
+    const keywordPattern =
+      /(total|amount|cash|withdrawal|paid|bill|price|vatable sales)[^\d]{0,10}(\d+(?:[.,]\d{1,2})?)/gi;
+
     const keywordMatches = [...cleanText.matchAll(keywordPattern)]
-      .map(m => parseFloat(m[2].replace(/,/g, '')))
-      .filter(n => !isNaN(n) && n > 0);
+      .map((m) => parseFloat(m[2].replace(/,/g, "")))
+      .filter((n) => !isNaN(n) && n > 0);
 
-    const reasonable = numberMatches.filter(n => n >= 10 && n <= 999999);
+    const reasonable = numberMatches.filter((n) => n >= 10 && n <= 999999);
 
-    // 🧩 Smart priority logic
+    // 🎯 5️⃣ Choose the most likely total
     let detectedAmount = null;
-    if (keywordMatches.length > 0) {
-      detectedAmount = keywordMatches[keywordMatches.length - 1];
-    } else if (reasonable.length > 0) {
-      detectedAmount = Math.max(...reasonable);
-    } else if (numberMatches.length > 0) {
-      detectedAmount = numberMatches[numberMatches.length - 1];
-    }
+    if (keywordMatches.length > 0) detectedAmount = keywordMatches.at(-1);
+    else if (reasonable.length > 0) detectedAmount = Math.max(...reasonable);
+    else if (numberMatches.length > 0) detectedAmount = numberMatches.at(-1);
 
-    detectedAmount = detectedAmount || null;
     console.log("💰 Detected amount:", detectedAmount);
 
-    // 🧠 Detect category
+    // 🧩 6️⃣ Smart category detection
     let detectedCategory = "Others";
-    if (/mcdonald|jollibee|kfc|burger|food/i.test(cleanText))
-      detectedCategory = "Food";
+    if (/mcdonald|jollibee|kfc|burger|food/i.test(cleanText)) detectedCategory = "Food";
     else if (/grab|taxi|jeep|bus|transport|tricycle/i.test(cleanText))
       detectedCategory = "Transport";
     else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(cleanText))
       detectedCategory = "Bills";
-    else if (/notebook|school|pen|tuition|module/i.test(cleanText))
-      detectedCategory = "School";
-    else if (/mall|store|shop|sm|robinsons|puregold|supermarket|7[\s\-]?11|seven[-\s]?eleven|711/i.test(cleanText))
+    else if (/notebook|school|pen|tuition|module/i.test(cleanText)) detectedCategory = "School";
+    else if (
+      /mall|store|shop|sm|robinsons|puregold|supermarket|7[\s\-]?11|seven[-\s]?eleven|711/i.test(
+        cleanText
+      )
+    )
       detectedCategory = "Shopping";
     else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(cleanText))
       detectedCategory = "Savings";
 
-    // ✅ Apply results
-   if (detectedAmount) {
-  setOcrDetectedAmount(detectedAmount.toString());
-  setOcrDetectedCategory(detectedCategory);
-  setOcrRawText(cleanText);
-  setShowOcrModal(true); // open confirmation modal
-} else {
-  setExpenseCategory("Others");
-  Alert.alert("⚠️ No amount found", "Could not detect a total. Please enter manually.");
-}
-
+    // ✅ 7️⃣ Apply result
+    if (detectedAmount) {
+      setOcrDetectedAmount(detectedAmount.toString());
+      setOcrDetectedCategory(detectedCategory);
+      setOcrRawText(cleanText);
+      setShowOcrModal(true); // open confirmation modal
+    } else {
+      setExpenseCategory("Others");
+      Alert.alert("⚠️ No amount found", "Could not detect a total. Please enter manually.");
+    }
   } catch (err) {
     console.error("❌ OCR failed:", err);
     Alert.alert("❌ Error", "Failed to scan receipt. Try again with a clearer image.");

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useEffect, useState, useCallback } from "react";
 import { router } from "expo-router";
 import { RefreshControl } from 'react-native';
@@ -28,8 +28,61 @@ import api from "../../lib/api";
 import { getToken, saveToken } from "../../lib/auth";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallDevice = SCREEN_WIDTH < 375;
+
+
+const InfoModal = ({ visible, title, message, onClose }) => {
+  if (!visible) return null;
+  return (
+    <View style={styles.modalOverlay}>
+      <BlurView intensity={80} tint="light" style={styles.modalContainer}>
+        <Text style={styles.modalTitle}>{title}</Text>
+        <Text style={styles.modalMessage}>{message}</Text>
+
+        <TouchableOpacity style={styles.modalButton} onPress={onClose}>
+          <LinearGradient
+            colors={['#1f4b81', '#7fb1d6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.modalButtonGradient}
+          >
+            <Text style={styles.modalButtonText}>Got it</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </BlurView>
+    </View>
+  );
+};
+
+const ChoiceModal = ({ visible, title, message, onCamera, onGallery, onCancel }) => {
+  if (!visible) return null;
+  return (
+    <View style={styles.modalOverlay}>
+      <BlurView intensity={80} tint="light" style={styles.modalContainer}>
+        <Text style={styles.modalTitle}>{title}</Text>
+        <Text style={styles.modalMessage}>{message}</Text>
+
+        <TouchableOpacity style={styles.modalOption} onPress={onCamera}>
+          <Ionicons name="camera" size={18} color="#fff" />
+          <Text style={styles.modalOptionText}>Take Photo</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.modalOption} onPress={onGallery}>
+          <Ionicons name="images-outline" size={18} color="#fff" />
+          <Text style={styles.modalOptionText}>Choose from Gallery</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.modalCancelButton} onPress={onCancel}>
+          <Text style={styles.modalCancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </BlurView>
+    </View>
+  );
+};
+
 
 
 interface User {
@@ -63,6 +116,17 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [changingPin, setChangingPin] = useState(false);
   const [totalExpenses, setTotalExpenses] = useState(0);
+const [choiceVisible, setChoiceVisible] = useState(false);
+
+  const [modalVisible, setModalVisible] = useState(false);
+const [modalTitle, setModalTitle] = useState("");
+const [modalMessage, setModalMessage] = useState("");
+
+const showModal = (title, message) => {
+  setModalTitle(title);
+  setModalMessage(message);
+  setModalVisible(true);
+};
   const [formData, setFormData] = useState<ProfileFormData>({
     firstName: "",
     lastName: "",
@@ -84,30 +148,14 @@ const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 // === Avatar Handling ===
 const handleAvatarPress = () => {
   if (Platform.OS === "web") {
-    // ✅ On web, open hidden file input
+    // ✅ On web, open hidden file input directly
     fileInputRef.current?.click();
-    return;
-  }
-
-  if (Platform.OS === "ios") {
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: ["Cancel", "Take Photo", "Choose from Gallery"],
-        cancelButtonIndex: 0,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 1) pickImage(true);   // Camera
-        if (buttonIndex === 2) pickImage(false);  // Gallery
-      }
-    );
   } else {
-    Alert.alert("Update Profile Picture", "Choose an option", [
-      { text: "Take Photo", onPress: () => pickImage(true) },
-      { text: "Choose from Gallery", onPress: () => pickImage(false) },
-      { text: "Cancel", style: "cancel" },
-    ]);
+    // ✅ On mobile, show your custom choice modal instead of alert
+    setChoiceVisible(true);
   }
 };
+
 
 const [spendingStreak, setSpendingStreak] = useState(0);
 
@@ -444,7 +492,7 @@ useEffect(() => {
       
       setUser(prev => prev ? { ...prev, ...formData } : null);
       setEditing(false);
-      Alert.alert("Success", "Profile updated successfully");
+      showModal("✅ Success", "Profile updated successfully");
     } catch (error: any) {
       const message = error.response?.data?.error || "Failed to update profile";
       Alert.alert("Error", message);
@@ -589,7 +637,7 @@ const renderAvatar = () => {
               }
             } catch (err) {
               console.error("❌ Web avatar upload failed:", err);
-              Alert.alert("Error", "Failed to upload avatar");
+              showModal("❌ Error", "Failed to upload avatar");
             } finally {
               setUploadingAvatar(false);
             }
@@ -701,11 +749,11 @@ const renderActionButtons = () => {
     style={styles.statItemRow}
     onPress={() => {
       if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Alert.alert(
-        "Account Status",
-        "Your account is active and verified. You have full access to all expense tracking features and can safely store your financial data.",
-        [{ text: "Got it" }]
-      );
+      showModal(
+  "Account Status",
+  "Your account is active and verified. You have full access to all expense tracking features and can safely store your financial data."
+);
+
     }}
   >
     <View style={styles.statIconContainer}>
@@ -724,11 +772,11 @@ const renderActionButtons = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const exp = totalExpenses || 0;
     const expText = exp === 0 ? "None" : `${exp} expense${exp === 1 ? "" : "s"}`;
-    Alert.alert(
-      "Expenses Tracked",
-      `You've logged ${expText} since joining. This shows your total transaction history and helps you understand your spending patterns.`,
-      [{ text: "Got it" }]
-    );
+    showModal(
+  "Expenses Tracked",
+  `You've logged ${expText} since joining. This shows your total transaction history and helps you understand your spending patterns.`
+);
+
   }}
 >
   <View style={styles.statIconContainer}>
@@ -747,13 +795,13 @@ const renderActionButtons = () => {
   style={styles.statItemRow}
   onPress={() => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert(
-      "Spending Streak",
-      spendingStreak > 0
-        ? `You've logged expenses for ${spendingStreak} consecutive day${spendingStreak > 1 ? "s" : ""}! Keep your tracking habit going strong.`
-        : "No active streak yet — start logging expenses daily to build consistency!",
-      [{ text: "Got it" }]
-    );
+    showModal(
+  "Spending Streak",
+  spendingStreak > 0
+    ? `You've logged expenses for ${spendingStreak} consecutive day${spendingStreak > 1 ? "s" : ""}! Keep your tracking habit going strong.`
+    : "No active streak yet — start logging expenses daily to build consistency!"
+);
+
   }}
 >
   <View style={styles.statIconContainer}>
@@ -1028,6 +1076,8 @@ const renderActionButtons = () => {
   }
 
   return (
+
+    
     <KeyboardAvoidingView 
   style={styles.container} 
   behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1077,6 +1127,30 @@ const renderActionButtons = () => {
 
       {renderEditForm()}
       {renderPinForm()}
+
+      <InfoModal
+  visible={modalVisible}
+  title={modalTitle}
+  message={modalMessage}
+  onClose={() => setModalVisible(false)}
+/>
+
+<ChoiceModal
+  visible={choiceVisible}
+  title="Update Profile Picture"
+  message="Choose how you want to update your profile picture."
+  onCamera={() => {
+    setChoiceVisible(false);
+    pickImage(true);
+  }}
+  onGallery={() => {
+    setChoiceVisible(false);
+    pickImage(false);
+  }}
+  onCancel={() => setChoiceVisible(false)}
+/>
+
+
     </KeyboardAvoidingView>
   );
 }
@@ -1632,6 +1706,86 @@ uploadingText: {
   fontWeight: '600',
   marginTop: 8,
 },
+
+modalOverlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 9999,
+},
+modalContainer: {
+  width: '85%',
+  backgroundColor: '#fff',
+  borderRadius: 20,
+  padding: 24,
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowRadius: 10,
+  elevation: 10,
+},
+modalTitle: {
+  fontSize: 20,
+  fontWeight: '700',
+  color: '#1f4b81',
+  marginBottom: 10,
+  textAlign: 'center',
+},
+modalMessage: {
+  fontSize: 16,
+  color: '#374151',
+  textAlign: 'center',
+  marginBottom: 20,
+  lineHeight: 22,
+},
+modalButton: {
+  width: '100%',
+  borderRadius: 12,
+  overflow: 'hidden',
+},
+modalButtonGradient: {
+  paddingVertical: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 12,
+},
+modalButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '700',
+},
+
+modalOption: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#1f4b81",
+  paddingVertical: 14,
+  borderRadius: 12,
+  marginTop: 10,
+  gap: 8,
+},
+modalOptionText: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "600",
+},
+modalCancelButton: {
+  marginTop: 14,
+  paddingVertical: 12,
+},
+modalCancelText: {
+  color: "#64748b",
+  fontSize: 15,
+  fontWeight: "600",
+  textAlign: "center",
+},
+
 avatarImageDimmed: {
   opacity: 0.5,
 },

@@ -28,6 +28,8 @@
       }
     },
     "android": {
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/moneymigo-icon.png",
         "backgroundColor": "#ffffff"
@@ -37,7 +39,8 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "INTERNET"
+        "INTERNET",
+        "RECORD_AUDIO"
       ],
       "package": "com.moneymigo.app"
     },
