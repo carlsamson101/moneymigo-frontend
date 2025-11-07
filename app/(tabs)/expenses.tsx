@@ -256,8 +256,6 @@ const [historyStartDate, setHistoryStartDate] = useState<Date | null>(null);
 const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 
 const [isScanning, setIsScanning] = useState(false);
-const [expenseAmount, setExpenseAmount] = useState("");
-const [expenseCategory, setExpenseCategory] = useState("Select Category");
 
 // 🔍 OCR confirmation states
 const [showOcrModal, setShowOcrModal] = useState(false);
