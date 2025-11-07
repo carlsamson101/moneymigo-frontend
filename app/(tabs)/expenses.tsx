@@ -446,7 +446,7 @@ async function stopVoice() {
   setIsListening(false);
 }
 
-aasync function applyParsedVoice(command) {
+async function applyParsedVoice(command) {
   console.log("🎤 Voice input:", command);
   const lower = command.toLowerCase().trim();
   const user = await getToken();
