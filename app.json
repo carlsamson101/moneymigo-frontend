@@ -5,24 +5,20 @@
     "version": "1.1.4",
     "orientation": "portrait",
     "icon": "./assets/images/moneymigo-icon.png",
-
     "splash": {
       "image": "./assets/images/moneymigo-logo-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "updates": {
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/d27d8f24-2514-48f7-b171-d0835f9a4976"
     },
-
     "scheme": "moneymigo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneymigo.app",
@@ -31,7 +27,6 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/moneymigo-icon.png",
@@ -46,7 +41,6 @@
       ],
       "package": "com.moneymigo.app"
     },
-
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -59,20 +53,18 @@
         "apple-mobile-web-app-status-bar-style": "default"
       }
     },
-
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-speech-recognition"
     ],
-
     "extra": {
       "router": {},
       "eas": {
         "projectId": "d27d8f24-2514-48f7-b171-d0835f9a4976"
       }
     },
-
     "runtimeVersion": {
       "policy": "appVersion"
     }

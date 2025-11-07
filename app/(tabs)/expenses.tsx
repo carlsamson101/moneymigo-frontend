@@ -19,6 +19,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getCachedData, syncOfflineChanges, queueOfflineChange } from "../../lib/offlineCache";
 import { Animated } from "react-native";
 
+import * as Speech from "expo-speech";
+import * as SpeechRecognition from "expo-speech-recognition";
+
 import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
@@ -259,6 +262,9 @@ const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 
 const [isScanning, setIsScanning] = useState(false);
 
+const [isListening, setIsListening] = useState(false);
+const [voiceTranscript, setVoiceTranscript] = useState("");
+
 // 💡 state at the top of your component
 const [showWarning, setShowWarning] = useState(false);
 const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
@@ -331,6 +337,111 @@ const getCategoryColor = (category: string) => {
       return acc;
     }, {});
   }
+
+  function parseVoiceCommand(text: string) {
+  // Normalize
+  const t = text.toLowerCase().trim();
+
+  // Amount: “₱120”, “120”, “120.50”
+  const amountMatch = t.match(/(\d+(?:[.,]\d{1,2})?)/);
+  const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", "")) : null;
+
+  // Category from your main list + any custom categories you keep
+  const knownCats = [
+    "food","transport","bills","school","shopping","savings","others",
+    ...customCategories, ...otherSubcategories
+  ].map(c => c.toLowerCase());
+
+  let category = "Others";
+  for (const c of knownCats) {
+    // match "to food", "for food", or just "... food ..."
+    const re = new RegExp(`(?: to | for |\\b)${c}\\b`, "i");
+    if (re.test(t)) { category = c[0].toUpperCase() + c.slice(1); break; }
+  }
+
+  // Notes after “note …” or “notes …”
+  let notes = "";
+  const noteMatch = t.match(/\bnotes?\s+(.*)$/i);
+  if (noteMatch && noteMatch[1]) notes = noteMatch[1].trim();
+
+  return { amount, category, notes };
+}
+
+async function startVoice() {
+  try {
+    setVoiceTranscript("");
+    setIsListening(true);
+
+    if (Platform.OS === "web") {
+      // Web Speech API fallback
+      // @ts-ignore
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        Alert.alert("Unavailable", "Speech recognition not supported in this browser.");
+        setIsListening(false);
+        return;
+      }
+      // @ts-ignore
+      const rec = new SR();
+      rec.lang = "en-PH";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+
+      rec.onresult = (e: any) => {
+        const said = e.results?.[0]?.[0]?.transcript || "";
+        setVoiceTranscript(said);
+        applyParsedVoice(said);
+      };
+      rec.onend = () => setIsListening(false);
+      rec.onerror = () => setIsListening(false);
+      rec.start();
+      Speech.speak("Listening. Say: add 120 to food note burger");
+      return;
+    }
+
+    // Native (Android/iOS)
+    const result = await SpeechRecognition.startAsync({
+      lang: "en-PH", // tweak as you like
+      interimResults: false,
+      requiresOnDeviceRecognition: false,
+    });
+
+    const said = result?.transcript ?? "";
+    setVoiceTranscript(said);
+    applyParsedVoice(said);
+  } catch (e: any) {
+    console.log("🎙️ startVoice error:", e?.message);
+    setIsListening(false);
+  }
+}
+
+async function stopVoice() {
+  try {
+    if (Platform.OS === "web") {
+      // Web Speech API auto-stops; nothing to do here
+      setIsListening(false);
+      return;
+    }
+    await SpeechRecognition.stopAsync();
+  } catch {}
+  setIsListening(false);
+}
+
+function applyParsedVoice(transcript: string) {
+  const { amount, category, notes } = parseVoiceCommand(transcript);
+
+  if (amount) setExpenseAmount(String(amount));
+  if (category) setExpenseCategory(category);
+  if (notes) setExpenseNotes(notes);
+
+  // Friendly TTS confirmation
+  const saidBack =
+    `Captured ${amount ? "₱" + amount : "amount"} ` +
+    `for ${category || "category"}` +
+    (notes ? ` with note ${notes}` : "");
+  Speech.speak(saidBack);
+}
+
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
     const today = new Date();
@@ -1164,18 +1275,18 @@ const HistorySection = (
                 </View>
               ))}
             <Text
-              style={{
-                fontWeight: 'bold',
-                textAlign: 'right',
-                marginTop: 4,
-              }}
-            >
-              Total: ₱
-              {(items as { amount: number }[]).reduce(
-                (sum: number, i: { amount: number }) => sum + i.amount,
-                0
-              ).toFixed(2)}
-            </Text>
+  style={{
+    fontWeight: 'bold',
+    textAlign: 'right',
+    marginTop: 4,
+  }}
+>
+  Total: ₱
+  {(items as { amount: number }[])
+    .reduce((sum: number, i: { amount: number }) => sum + (i.amount || 0), 0)
+    .toFixed(2)}
+</Text>
+
           </View>
         ))
       ) : (
@@ -1576,7 +1687,7 @@ const HistorySection = (
               </View>
             </View>
 
-            <View style={{ alignItems: "flex-end" }}>
+           <View style={{ alignItems: "flex-end" }}>
   {/* Show the transaction time only */}
   <Text style={styles.timeText}>
     {new Date(expense.date).toLocaleTimeString([], {
@@ -1586,7 +1697,7 @@ const HistorySection = (
   </Text>
 
   {/* Show Overspent tag only if positive */}
-  {expense.overspent && expense.overspent > 0 && (
+  {expense.overspent && expense.overspent > 0 ? (
     <View
       style={{
         backgroundColor: "#dc2626",
@@ -1600,7 +1711,7 @@ const HistorySection = (
         Overspent
       </Text>
     </View>
-  )}
+  ) : null}
 </View>
 
           </TouchableOpacity>
@@ -2232,26 +2343,27 @@ const HistorySection = (
               </Text>
             </View>
 
-            {selectedExpense.notes && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginTop: 10,
-                }}
-              >
-                <Ionicons name="document-text-outline" size={20} color="#2563EB" />
-                <Text
-                  style={{
-                    fontSize: 15,
-                    marginLeft: 8,
-                    color: "#374151",
-                  }}
-                >
-                  {selectedExpense.notes}
-                </Text>
-              </View>
-            )}
+            {selectedExpense.notes ? (
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 10,
+    }}
+  >
+    <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+    <Text
+      style={{
+        fontSize: 15,
+        marginLeft: 8,
+        color: "#374151",
+      }}
+    >
+      {selectedExpense.notes}
+    </Text>
+  </View>
+) : null}
+            
           </View>
 
           <TouchableOpacity
@@ -2265,6 +2377,57 @@ const HistorySection = (
     </View>
   </Pressable>
 </Modal>
+
+{voiceTranscript ? (
+  <View
+    style={{
+      position: "absolute",
+      bottom: 165,
+      right: 22,
+      backgroundColor: "#f1f5f9",
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2,
+    }}
+  >
+    <Text style={{ fontSize: 12, color: "#1e293b" }}>
+      Heard: “{voiceTranscript}”
+    </Text>
+  </View>
+) : null}
+
+{/* 🎙️ Voice Input Floating Button */}
+<TouchableOpacity
+  onPress={isListening ? stopVoice : startVoice}
+  activeOpacity={0.8}
+  style={{
+    position: "absolute",
+    bottom: 100, // Adjust if it overlaps your Add Expense FAB
+    right: 22,
+    backgroundColor: isListening ? "#dc2626" : "#1f4b81",
+    borderRadius: 50,
+    width: 56,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3.5,
+    elevation: 5,
+  }}
+>
+  <Ionicons
+    name={isListening ? "mic-off" : "mic"}
+    size={26}
+    color="#fff"
+  />
+</TouchableOpacity>
+
     </SafeAreaView>
   );
 }
