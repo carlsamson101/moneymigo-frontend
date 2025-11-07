@@ -405,6 +405,9 @@ async function startVoice() {
         setVoiceTranscript(said);
         setShowTranscript(true);
 
+        // 🎯 Call parser to save directly as expense
+        applyParsedVoice(said);
+
         // ⏳ Auto-hide transcript after 4 seconds
         setTimeout(() => setShowTranscript(false), 2000);
       };
@@ -446,19 +449,23 @@ async function stopVoice() {
   setIsListening(false);
 }
 
-async function applyParsedVoice(command) {
+async function applyParsedVoice(command: string) {
   console.log("🎤 Voice input:", command);
   const lower = command.toLowerCase().trim();
   const user = await getToken();
-  if (!user) return;
+  if (!user?.id) {
+    console.warn("❌ No user ID found");
+    Speech.speak("Please log in first before adding expenses.");
+    return;
+  }
 
+  // 🧠 Split if multiple commands like “add 120 food and 60 transport”
   const parts = lower.split(/\band\b/);
   let totalAdded = 0;
   let expenseCount = 0;
 
   for (let part of parts) {
     part = part.trim();
-
     const amountMatch = part.match(/(\d+(?:[.,]\d{0,2})?)/);
     const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", "")) : 0;
 
@@ -472,59 +479,49 @@ async function applyParsedVoice(command) {
 
     const noteMatch = part.match(/note\s+(.+)/);
     const note = noteMatch ? noteMatch[1].trim() : "";
+    const date = new Date();
 
-    let date = new Date();
-    if (part.includes("yesterday")) date.setDate(date.getDate() - 1);
-    else if (part.includes("last week")) date.setDate(date.getDate() - 7);
+    if (amount > 0 && category) {
+      try {
+        // ✅ Save directly to backend
+        const payload = {
+          amount,
+          category,
+          notes: note,
+          userId: user.id,
+          date: date.toISOString(),
+        };
 
-    if (amount <= 0) continue;
+        const res = await api.post("/expenses", payload);
+        console.log("✅ Voice expense saved:", res.data);
 
-    const payload = {
-      category: ["Food", "Transport", "Bills", "School", "Shopping", "Savings", "Others"].includes(category)
-        ? category
-        : `${category}`,
-      amount: amount,
-      notes: note,
-      userId: user.id,
-      date: date.toISOString(),
-    };
+        // ✅ Update UI immediately using the actual saved expense from backend
+        if (res.data?.expense) {
+          setFilteredExpenses(prev => [res.data.expense, ...prev]);
+        } else {
+          setFilteredExpenses(prev => [payload, ...prev]);
+        }
 
-    try {
-      // ✅ Offline-aware saving (same logic as manual)
-      if (!(await isOnline())) {
-        await queueOfflineChange("expense", payload);
-        Speech.speak("Saved offline. It will sync when you’re online.");
-        continue;
+        // 🔄 Refresh expense list
+        fetchExpenses();
+
+        // 🎤 Voice feedback
+        Speech.speak(`Added ₱${amount} to ${category}${note ? ", note " + note : ""}.`);
+        totalAdded += amount;
+        expenseCount++;
+      } catch (err: any) {
+        console.error("❌ Voice save failed:", err.response?.data || err.message);
+        Speech.speak("Sorry, failed to save your expense.");
       }
-
-      const res = await api.post("/expenses", payload);
-
-      const updatedCache = [payload, ...(filteredExpenses || [])];
-      await AsyncStorage.setItem(`expensesCache_${user.id}`, JSON.stringify(updatedCache));
-
-      if (res.data?.overspent && res.data.overspent > 0) {
-        Speech.speak(`Added ₱${amount} to ${category}. You exceeded your budget by ₱${res.data.overspent}.`);
-      } else {
-        Speech.speak(`Added ₱${amount} to ${category}${note ? ", note: " + note : ""}.`);
-      }
-
-      totalAdded += amount;
-      expenseCount++;
-
-      // 🔄 Refresh expense list immediately
-      await fetchExpenses();
-    } catch (err) {
-      console.error("❌ Voice save failed:", err);
-      Speech.speak("Failed to save your expense. Please try again.");
     }
   }
 
-  if (expenseCount > 0) {
+  // 🗣️ Summary feedback
+  if (expenseCount > 0)
     Speech.speak(`You added ${expenseCount} expense${expenseCount > 1 ? "s" : ""}, totaling ₱${totalAdded.toFixed(2)}.`);
-  } else {
-    Speech.speak("I didn’t detect a valid amount or category.");
-  }
+  else Speech.speak("No valid expense detected.");
 }
+
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
     const today = new Date();
