@@ -572,9 +572,6 @@ useFocusEffect(
       alert('Failed to set custom budget.');
     }
   };
-import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
-import { Platform, Alert } from "react-native";
 
 async function handleScanReceipt() {
   try {
