@@ -646,18 +646,40 @@ async function processReceiptImage(uri: string) {
       }
     }
 
-    console.log("🧠 OCR Output:", text);
+   console.log("🧠 OCR Output:", text);
 
-    const amountMatch = text.match(/(?:₱|PHP|Total[:\s]*)?(\d+(?:[.,]\d{2})?)/i);
-    const detectedAmount = amountMatch ? amountMatch[1].replace(",", "") : null;
+// 🧠 Enhanced OCR Amount Detection Logic
+const allNumbers = [...text.matchAll(/(\d+(?:[.,]\d{1,2})?)/g)]
+  .map(m => parseFloat(m[1].replace(/,/g, '')))
+  .filter(n => !isNaN(n) && n > 0);
+
+// 🧩 Try to find numbers after keywords like TOTAL, AMOUNT, or PRICE
+const keywordPattern = /(total|amount|price|cash|withdrawal|change|vatable sales)[^\d]{0,10}(\d+(?:[.,]\d{1,2})?)/gi;
+const keywordMatches = [...text.matchAll(keywordPattern)].map(m => parseFloat(m[2].replace(/,/g, '')));
+
+// 🧠 Priority 1: Keyword-based match (e.g., "TOTAL 116.00")
+let detectedAmount = keywordMatches.length ? keywordMatches[keywordMatches.length - 1] : null;
+
+// 🧠 Priority 2: If no keyword-based match, pick the largest valid number
+if (!detectedAmount && allNumbers.length > 0) {
+  // Ignore very small single-digit numbers (likely quantities)
+  const filtered = allNumbers.filter(n => n >= 10);
+  detectedAmount = filtered.length ? Math.max(...filtered) : Math.max(...allNumbers);
+}
+
+// ✅ Fallback: if nothing found, set null
+detectedAmount = detectedAmount || null;
+
+
 
     let detectedCategory = "Others";
-    if (/mcdonald|jollibee|kfc|burger|food/i.test(text)) detectedCategory = "Food";
-    else if (/grab|taxi|jeep|bus|tricycle/i.test(text)) detectedCategory = "Transport";
-    else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(text)) detectedCategory = "Bills";
-    else if (/notebook|school|pen|tuition/i.test(text)) detectedCategory = "School";
-    else if (/mall|store|shop|puregold|711/i.test(text)) detectedCategory = "Shopping";
-    else if (/bank|atm|bpi|bdo/i.test(text)) detectedCategory = "Savings";
+if (/mcdonald|jollibee|kfc|burger|food|meal/i.test(text)) detectedCategory = "Food";
+else if (/grab|taxi|jeep|bus|transport/i.test(text)) detectedCategory = "Transport";
+else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(text)) detectedCategory = "Bills";
+else if (/notebook|school|pen|tuition/i.test(text)) detectedCategory = "School";
+else if (/mall|store|shop|sm|robinsons|puregold|supermarket|711/i.test(text)) detectedCategory = "Shopping";
+else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(text)) detectedCategory = "Savings";
+
 
     if (detectedAmount) {
       setExpenseAmount(detectedAmount);
