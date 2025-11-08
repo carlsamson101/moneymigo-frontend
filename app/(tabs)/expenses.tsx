@@ -22,11 +22,12 @@ import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import Voice from '@react-native-voice/voice';
 
 import * as Speech from "expo-speech";
 import { OCR_API_KEY } from "@env";
 console.log("🧩 OCR API Key loaded:", OCR_API_KEY ? "✅ Yes" : "❌ Missing");
- import * as SpeechRecognition from "expo-speech-recognition";
+
 
 
 // Enable LayoutAnimation for Android
@@ -217,54 +218,51 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
-  useEffect(() => {
+ // 🔊 Request all permissions (mic + camera + media)
+useEffect(() => {
   const requestAllPermissions = async () => {
     try {
-      // 🎤 Microphone permission
-      const micResult = await SpeechRecognition.requestPermissionsAsync();
-      console.log("Microphone permission:", micResult.granted ? "✅ Granted" : "❌ Denied");
-      
-      if (!micResult.granted) {
-        Alert.alert(
-          "Microphone Required",
-          "Please allow microphone access to use MoneyMigo's voice features.",
-          [{ text: "OK" }]
-        );
-      }
+      if (Platform.OS === "web") {
+        // 🌐 Trigger mic permission for browsers
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log("✅ Microphone permission granted (Web)");
+        } catch {
+          Alert.alert(
+            "Microphone Required",
+            "Please allow microphone access to use voice commands."
+          );
+        }
+      } else {
+        // 📱 Native permissions
+        const mic = await Voice.requestPermissions();
+        console.log("🎤 Microphone permission:", mic?.granted ? "✅ Granted" : "❌ Denied");
+        if (!mic?.granted) {
+          Alert.alert("Microphone Required", "Please allow microphone access.");
+        }
 
-      // 📸 Camera permission
-      const camResult = await ImagePicker.requestCameraPermissionsAsync();
-      console.log("Camera permission:", camResult.granted ? "✅ Granted" : "❌ Denied");
-      
-      if (!camResult.granted) {
-        Alert.alert(
-          "Camera Required",
-          "Camera permission is needed to scan receipts or capture photos.",
-          [{ text: "OK" }]
-        );
-      }
+        const cam = await ImagePicker.requestCameraPermissionsAsync();
+        if (!cam.granted)
+          Alert.alert("Camera Required", "Camera permission is needed to scan receipts.");
 
-      // 🖼 Photos & Videos (Android 13+ and iOS)
-      const mediaResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log("Media Library permission:", mediaResult.granted ? "✅ Granted" : "❌ Denied");
-      
-      if (!mediaResult.granted) {
-        Alert.alert(
-          "Photos & Videos Access Needed",
-          "Please grant access to your Photos and Videos to upload or scan receipts.",
-          [{ text: "OK" }]
-        );
+        const media = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!media.granted)
+          Alert.alert("Photos Access Needed", "Please grant access to upload receipts.");
       }
-
-      console.log("✅ All permissions requested.");
     } catch (err) {
       console.error("⚠️ Permission setup failed:", err);
-      Alert.alert("Permission Error", "Failed to request permissions. Some features may not work.");
     }
   };
-
   requestAllPermissions();
+
+  // 🔹 Clean up Voice listeners when component unmounts
+  return () => {
+    if (Platform.OS !== "web") {
+      Voice.destroy().then(Voice.removeAllListeners);
+    }
+  };
 }, []);
+
 
 
   const router = useRouter();
@@ -383,103 +381,125 @@ const getCategoryColor = (category: string) => {
     }, {});
   }
 
-  async function startVoice() {
+ const isWeb = Platform.OS === "web";
+let webRecognition: any = null;
+
+// ✅ Start Voice Recognition
+async function startVoice() {
   try {
+    setIsListening(true);
+    setVoiceTranscript("");
     console.log("🎤 Starting voice recognition...");
 
-    const { granted } = await SpeechRecognition.requestPermissionsAsync();
-    if (!granted) {
-      Alert.alert(
-        "Permission Denied",
-        "Please allow microphone access in Settings."
-      );
+    if (isWeb) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        Alert.alert("Not Supported", "Your browser does not support voice recognition.");
+        setIsListening(false);
+        return;
+      }
+
+      webRecognition = new SpeechRecognition();
+      webRecognition.lang = "en-US";
+      webRecognition.continuous = false;
+      webRecognition.interimResults = false;
+
+      webRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("🗣️ Recognized (Web):", transcript);
+        setVoiceTranscript(transcript);
+        applyParsedVoice(transcript);
+      };
+
+      webRecognition.onerror = (err) => {
+        console.warn("Web Speech error:", err.error);
+        Alert.alert("Speech Error", "Unable to capture voice input.");
+        setIsListening(false);
+      };
+
+      webRecognition.onend = () => {
+        console.log("🛑 Web speech ended.");
+        setIsListening(false);
+      };
+
+      webRecognition.start();
       return;
     }
 
-    const available = await SpeechRecognition.getAvailableAsync();
-    if (!available) {
-      Alert.alert(
-        "Voice Not Supported",
-        "Speech recognition is not available on this build of MoneyMigo. " +
-        "This feature will be enabled in future updates."
-      );
-      return;
-    }
+    // 📱 Native (react-native-voice)
+    Voice.onSpeechStart = () => console.log("Speech start");
+    Voice.onSpeechResults = (event) => {
+      const text = event.value?.[0] || "";
+      console.log("🗣️ Recognized (Native):", text);
+      setVoiceTranscript(text);
+      applyParsedVoice(text);
+    };
+    Voice.onSpeechError = (err) => {
+      console.error("❌ Speech error:", err);
+      Alert.alert("Speech Error", "Speech recognition failed.");
+      setIsListening(false);
+    };
 
-    setIsListening(true);
-    const result = await SpeechRecognition.startAsync({
-      lang: "en-US",
-      interimResults: false,
-      requiresOnDeviceRecognition: false,
-    });
-
-    console.log("🗣️ Recognized:", result.transcript);
-    setVoiceTranscript(result.transcript || "");
-    setShowTranscript(true);
-    applyParsedVoice(result.transcript || "");
-
-    setTimeout(() => setShowTranscript(false), 4000);
-  } catch (error: any) {
-    console.warn("Voice error:", error?.message);
-    Alert.alert(
-      "Voice Feature Unavailable",
-      error?.message || "Speech recognition not supported on this device."
-    );
-  } finally {
+    await Voice.start("en-US");
+  } catch (err) {
+    console.error("Voice start failed:", err);
+    Alert.alert("Voice Error", err.message || "Unable to start voice input.");
     setIsListening(false);
   }
 }
 
+// ✅ Stop Voice Recognition
 async function stopVoice() {
   try {
-    await SpeechRecognition.stopAsync();
+    if (isWeb && webRecognition) {
+      webRecognition.stop();
+      webRecognition = null;
+      setIsListening(false);
+      return;
+    }
+    await Voice.stop();
     setIsListening(false);
   } catch (err) {
     console.error("Stop voice failed:", err);
   }
 }
 
+// ✅ Test mic/speech status
 async function testSpeechRecognition() {
-  const available = await SpeechRecognition.getAvailableAsync();
-  const permission = await SpeechRecognition.getPermissionsAsync();
-  const state = await SpeechRecognition.getStateAsync();
+  try {
+    if (isWeb) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        Alert.alert("Speech Status", "❌ Not supported in this browser.");
+        return;
+      }
 
-  Alert.alert(
-    "Speech Status",
-    `Available: ${available}\nPermission: ${permission.status}\nState: ${state.state}`
-  );
-}
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        Alert.alert("Speech Status", "✅ Supported & permission granted (Web).");
+      } catch {
+        Alert.alert("Speech Status", "⚠️ Mic permission denied.");
+      }
+      return;
+    }
 
-  function parseVoiceCommand(text: string) {
-  // Normalize
-  const t = text.toLowerCase().trim();
+    const available = await Voice.isAvailable();
+    const permission = await Voice.requestPermissions?.();
+    const state = await Voice.isRecognizing();
 
-  // Amount: “₱120”, “120”, “120.50”
-  const amountMatch = t.match(/(\d+(?:[.,]\d{1,2})?)/);
-  const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", "")) : null;
-
-  // Category from your main list + any custom categories you keep
-  const knownCats = [
-    "food","transport","bills","school","shopping","savings","others",
-    ...customCategories, ...otherSubcategories
-  ].map(c => c.toLowerCase());
-
-  let category = "Others";
-  for (const c of knownCats) {
-    // match "to food", "for food", or just "... food ..."
-    const re = new RegExp(`(?: to | for |\\b)${c}\\b`, "i");
-    if (re.test(t)) { category = c[0].toUpperCase() + c.slice(1); break; }
+    Alert.alert(
+      "Speech Status",
+      `Available: ${available ? "✅ Yes" : "❌ No"}\n` +
+        `Permission: ${permission?.granted ? "✅ Granted" : "❌ Denied"}\n` +
+        `Recognizing: ${state ? "🎤 Active" : "⏹ Idle"}`
+    );
+  } catch (err) {
+    console.error("Speech test failed:", err);
+    Alert.alert("Speech Status", "⚠️ Error: " + (err.message || "Unknown"));
   }
-
-  // Notes after “note …” or “notes …”
-  let notes = "";
-  const noteMatch = t.match(/\bnotes?\s+(.*)$/i);
-  if (noteMatch && noteMatch[1]) notes = noteMatch[1].trim();
-
-  return { amount, category, notes };
 }
-
-
 
 
 
@@ -960,89 +980,129 @@ async function pickFromGallery() {
 }
 
 // 🧠 OCR processing (Expo-safe version using Tesseract.js only)
-async function processReceiptImage(uri: string) {
+async function processReceiptImage(uri) {
   try {
     setIsScanning(true);
     console.log("📸 Processing image:", uri);
 
-     // 1️⃣ Optimize the image for better OCR accuracy
+    // 1️⃣ Enhance image for OCR accuracy
     const processed = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 1500 } }], // Higher resolution for better OCR
-      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG } // JPEG often works better
+      [{ resize: { width: 1600 } }],
+      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
     );
 
     let extractedText = "";
 
+    // 2️⃣ OCR (Tesseract for web, OCR.Space for native)
     if (Platform.OS === "web") {
-      // ✅ Web: use Tesseract.js
       const { createWorker } = await import("tesseract.js");
       const worker = await createWorker("eng");
       const result = await worker.recognize(processed.uri);
       await worker.terminate();
       extractedText = result?.data?.text || "";
     } else {
-      // ✅ Native (APK): use OCR.Space API
-    const formData = new FormData();
+      const formData = new FormData();
       formData.append("file", {
         uri: processed.uri,
-        type: "image/jpeg", // Match the new format
+        type: "image/jpeg",
         name: "receipt.jpg",
-      } as any);
+      });
       formData.append("language", "eng");
-      formData.append("scale", "true");
       formData.append("OCREngine", "2");
+      formData.append("scale", "true");
 
       const res = await fetch("https://api.ocr.space/parse/image", {
         method: "POST",
-        headers: {
-          apikey: OCR_API_KEY,
-        },
+        headers: { apikey: OCR_API_KEY },
         body: formData,
       });
-
       const data = await res.json();
-      console.log("🧠 OCR.Space result:", JSON.stringify(data, null, 2));
-      
-      if (data.IsErroredOnProcessing) {
-        throw new Error(data.ErrorMessage?.[0] || "OCR processing failed");
-      }
-      
+
+      if (data.IsErroredOnProcessing)
+        throw new Error(data.ErrorMessage?.[0] || "OCR failed");
+
       extractedText = data?.ParsedResults?.[0]?.ParsedText || "";
     }
 
-    if (!extractedText || extractedText.trim().length === 0) {
-      Alert.alert("⚠️ OCR Failed", "No readable text detected. Try again with a clearer image.");
+    if (!extractedText.trim()) {
+      Alert.alert("⚠️ OCR Failed", "No readable text detected. Try again.");
       return;
     }
 
-    // 2️⃣ Clean and normalize
+    // 3️⃣ Clean up text for parsing
     const cleanText = extractedText
       .replace(/\n+/g, " ")
       .replace(/\s{2,}/g, " ")
+      .replace(/[^\x20-\x7E]/g, "") // remove weird chars
       .toLowerCase();
 
-    // 3️⃣ Extract possible amount
-    const match = cleanText.match(/₱?\s*(\d+(?:[.,]\d{1,2})?)/);
-    const detectedAmount = match ? parseFloat(match[1].replace(",", "")) : null;
+    // 4️⃣ Detect amount
+    let detectedAmount = null;
+    const totalRegex =
+      /(grand total|amount due|total amount|transaction amount|cash withdrawal|deposit amount|subtotal|balance|total)[^0-9₱]*([₱]?\s*\d{1,6}(?:[.,]\d{2})?)/gi;
+    const totals = [...cleanText.matchAll(totalRegex)];
 
-    // 4️⃣ Detect category by keywords
+    if (totals.length > 0) {
+      const last = totals[totals.length - 1];
+      detectedAmount = parseFloat(last[2].replace(/[₱,\s]/g, ""));
+      console.log("💰 Found keyword-based total:", last[0]);
+    } else {
+      // fallback: pick largest number in the text
+      const nums = (cleanText.match(/\d{1,6}(?:[.,]\d{2})?/g) || [])
+        .map((n) => parseFloat(n.replace(",", "")))
+        .filter((n) => !isNaN(n) && n > 0);
+      if (nums.length > 0) {
+        detectedAmount = Math.max(...nums);
+        console.log("📈 Using fallback amount:", detectedAmount);
+      }
+    }
+
+    // 5️⃣ Smart Category Detection (includes banks)
     let detectedCategory = "Others";
-    if (/mcdonald|jollibee|food|restaurant|burger|kfc/i.test(cleanText)) detectedCategory = "Food";
-    else if (/grab|taxi|bus|tricycle|jeep/i.test(cleanText)) detectedCategory = "Transport";
-    else if (/bill|meralco|globe|pldt|smart|water/i.test(cleanText)) detectedCategory = "Bills";
-    else if (/notebook|tuition|school|pen|module/i.test(cleanText)) detectedCategory = "School";
-    else if (/store|shop|mall|711|robinsons|sm/i.test(cleanText)) detectedCategory = "Shopping";
-    else if (/bank|atm|withdraw|deposit/i.test(cleanText)) detectedCategory = "Savings";
+    const CATEGORY_PATTERNS = {
+      Food: /(jollibee|mcdonald|kfc|chowking|food|meal|snack|burger|pizza|coffee|tea|restaurant)/i,
+      Transport: /(grab|taxi|bus|jeep|tricycle|fare|transport|fuel|parking)/i,
+      Bills: /(meralco|pldt|globe|smart|bill|internet|wifi|water|electric)/i,
+      School: /(tuition|school|book|notebook|exam|project|student|module)/i,
+      Shopping: /(mall|shop|store|sm|robinsons|grocery|watsons|shopee|lazada)/i,
+      Savings: /(atm|bank|deposit|withdrawal|landbank|bpi|bdo|maya|gcash|balance|transaction record|cash withdrawal)/i,
+    };
 
-    // 5️⃣ Apply detected data
+    for (const [cat, regex] of Object.entries(CATEGORY_PATTERNS)) {
+      if (regex.test(cleanText)) {
+        detectedCategory = cat;
+        break;
+      }
+    }
+
+    // 🧮 Confidence calculation
+    let confidence = 0.6;
+    if (detectedAmount && /total|withdrawal|deposit|balance/.test(cleanText))
+      confidence += 0.25;
+    if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.15;
+    if (confidence > 1) confidence = 1;
+
+    // 6️⃣ Set preview modal
     setOcrRawText(cleanText);
-    setOcrDetectedAmount(detectedAmount ? detectedAmount.toString() : "");
+    setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
     setShowOcrModal(true);
-  } catch (error) {
-    console.error("❌ OCR failed:", error);
-    Alert.alert("Error", "Failed to process the image. Please try again.");
+
+    console.log("✅ OCR Result", {
+      amount: detectedAmount,
+      category: detectedCategory,
+      confidence,
+    });
+
+    Speech.speak(
+      `Detected ${detectedCategory} transaction for ₱${
+        detectedAmount ? detectedAmount.toFixed(2) : "unknown"
+      }.`
+    );
+  } catch (err) {
+    console.error("❌ OCR error:", err);
+    Alert.alert("Error", "Failed to process receipt. Try again.");
   } finally {
     setIsScanning(false);
   }
