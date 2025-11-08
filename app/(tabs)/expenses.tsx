@@ -229,25 +229,41 @@ export default function ExpensesPage() {
   useEffect(() => {
   (async () => {
     try {
-      // 🎙️ Request mic permission
+      // 🎤 Microphone permission
       const { granted: micGranted } = await SpeechRecognition.requestPermissionsAsync();
       if (!micGranted) {
         Alert.alert(
-          "Permission Required",
-          "Please allow microphone access to use voice features."
+          "Microphone Required",
+          "Please allow microphone access to use MoneyMigo’s voice features."
         );
       }
 
-      // 📸 Request camera + gallery permission early
-      await ImagePicker.requestCameraPermissionsAsync();
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // 📸 Camera permission
+      const cam = await ImagePicker.requestCameraPermissionsAsync();
+      if (!cam.granted) {
+        Alert.alert(
+          "Camera Required",
+          "Camera permission is needed to scan receipts or capture photos."
+        );
+      }
 
-      console.log("✅ Permissions ready for mic, camera, and gallery.");
+      // 🖼 Photos & Videos (Android 13+ and iOS)
+      // Uses correct APIs that map to “Photos and Videos” in system settings
+      const media = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!media.granted) {
+        Alert.alert(
+          "Photos & Videos Access Needed",
+          "Please grant access to your Photos and Videos to upload or scan receipts."
+        );
+      }
+
+      console.log("✅ Permissions ready (mic, camera, photos & videos).");
     } catch (err) {
       console.warn("⚠️ Permission setup failed:", err);
     }
   })();
 }, []);
+
 
   const router = useRouter();
   const { period } = useLocalSearchParams();
@@ -2562,7 +2578,7 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: 30, // Adjust if it overlaps your Add Expense FAB
+    bottom: Platform.OS === "web" ? 5 : 40, // ✅ web → 5, mobile → 40
     right: 10,
     backgroundColor: isListening ? "#dc2626" : "#1f4b81",
     borderRadius: 50,

@@ -19,14 +19,19 @@
     "scheme": "moneymigo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneymigo.app",
       "buildNumber": "1.1.4",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "MoneyMigo needs camera access to scan receipts and take photos.",
+        "NSPhotoLibraryUsageDescription": "MoneyMigo needs access to your Photos and Videos to upload receipts or media.",
+        "NSMicrophoneUsageDescription": "MoneyMigo needs microphone access for voice command and audio features."
       }
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/moneymigo-icon.png",
@@ -35,13 +40,16 @@
       "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
         "INTERNET",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ],
       "package": "com.moneymigo.app"
     },
+
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -54,12 +62,14 @@
         "apple-mobile-web-app-status-bar-style": "default"
       }
     },
+
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
       "expo-speech-recognition"
     ],
+
     "extra": {
       "router": {},
       "eas": {
