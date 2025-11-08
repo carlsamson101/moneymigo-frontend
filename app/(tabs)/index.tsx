@@ -3437,7 +3437,7 @@ setShowSetBudgetModal(true);
   alignItems: 'center',
   gap: width < 360 ? 2 : (isMobile ? 3 : 4),
   zIndex: 1001,
-  maxWidth: width < 360 ? '45%' : (isMobile ? '40%' : '50%'),
+  maxWidth: width < 360 ? '45%' : (isMobile ? '60%' : '70%'),
   transform: width < 360 ? [{ scale: 0.75 }] : (isMobile ? [{ scale: 0.85 }] : [{ scale: 1 }]),
 },
 

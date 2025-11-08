@@ -26,6 +26,7 @@ import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import { requestPermissionsAsync } from "expo-speech-recognition";
 
 
 // Enable LayoutAnimation for Android
@@ -224,6 +225,30 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 };
 
 export default function ExpensesPage() {
+
+  useEffect(() => {
+  (async () => {
+    try {
+      // 🎙️ Request mic permission
+      const { granted: micGranted } = await SpeechRecognition.requestPermissionsAsync();
+      if (!micGranted) {
+        Alert.alert(
+          "Permission Required",
+          "Please allow microphone access to use voice features."
+        );
+      }
+
+      // 📸 Request camera + gallery permission early
+      await ImagePicker.requestCameraPermissionsAsync();
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      console.log("✅ Permissions ready for mic, camera, and gallery.");
+    } catch (err) {
+      console.warn("⚠️ Permission setup failed:", err);
+    }
+  })();
+}, []);
+
   const router = useRouter();
   const { period } = useLocalSearchParams();
   const [budgetPeriod, setBudgetPeriod] = useState('Monthly');
@@ -280,7 +305,29 @@ const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
 
+const pickImage = async (useCamera = false) => {
+  // ask for media permissions
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Permission needed", "Please allow gallery access to select photos.");
+    return;
+  }
 
+  const result = useCamera
+    ? await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      })
+    : await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+
+  if (!result.canceled) {
+    const uri = result.assets[0].uri;
+    processReceiptImage(uri);
+  }
+};
   
   const colorPalette = [
     '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
@@ -2515,7 +2562,7 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: 5, // Adjust if it overlaps your Add Expense FAB
+    bottom: 30, // Adjust if it overlaps your Add Expense FAB
     right: 10,
     backgroundColor: isListening ? "#dc2626" : "#1f4b81",
     borderRadius: 50,
