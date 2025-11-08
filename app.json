@@ -66,17 +66,17 @@
     },
 
     "plugins": [
-  "expo-router",
-  "expo-secure-store",
-  "expo-web-browser",
-  [
-    "expo-image-picker",
-    {
-      "photosPermission": "MoneyMigo needs access to your Photos and Videos to upload receipts or media.",
-      "cameraPermission": "MoneyMigo needs camera access to scan receipts and take photos."
-    }
-  ]
-],
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MoneyMigo needs access to your Photos and Videos to upload receipts or media.",
+          "cameraPermission": "MoneyMigo needs camera access to scan receipts and take photos."
+        }
+      ]
+    ],
 
     "extra": {
       "router": {},
