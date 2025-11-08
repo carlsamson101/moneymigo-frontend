@@ -18,15 +18,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { getCachedData, syncOfflineChanges, queueOfflineChange } from "../../lib/offlineCache";
 import { Animated } from "react-native";
-
-import * as Speech from "expo-speech";
-import * as SpeechRecognition from "expo-speech-recognition";
-
 import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import { requestPermissionsAsync } from "expo-speech-recognition";
+
+import * as Speech from "expo-speech";
+import { OCR_API_KEY } from "@env";
+console.log("🧩 OCR API Key loaded:", OCR_API_KEY ? "✅ Yes" : "❌ Missing");
+ import * as SpeechRecognition from "expo-speech-recognition";
 
 
 // Enable LayoutAnimation for Android
@@ -34,15 +34,6 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Returns the right `mediaTypes` option for the installed ImagePicker version
-const imagesOnly = () => {
-  // New API (SDK 51+): use array of MediaType
-  if ((ImagePicker as any)?.MediaType?.Image) {
-    return { mediaTypes: [ImagePicker.MediaType.Image] };
-  }
-  // Old API: use MediaTypeOptions enum (deprecated but still works)
-  return { mediaTypes: [ImagePicker.MediaType.image]};
-};
 
 let DateTimePicker: any = () => null;
 if (Platform.OS !== 'web') {
@@ -227,41 +218,52 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 export default function ExpensesPage() {
 
   useEffect(() => {
-  (async () => {
+  const requestAllPermissions = async () => {
     try {
       // 🎤 Microphone permission
-      const { granted: micGranted } = await SpeechRecognition.requestPermissionsAsync();
-      if (!micGranted) {
+      const micResult = await SpeechRecognition.requestPermissionsAsync();
+      console.log("Microphone permission:", micResult.granted ? "✅ Granted" : "❌ Denied");
+      
+      if (!micResult.granted) {
         Alert.alert(
           "Microphone Required",
-          "Please allow microphone access to use MoneyMigo’s voice features."
+          "Please allow microphone access to use MoneyMigo's voice features.",
+          [{ text: "OK" }]
         );
       }
 
       // 📸 Camera permission
-      const cam = await ImagePicker.requestCameraPermissionsAsync();
-      if (!cam.granted) {
+      const camResult = await ImagePicker.requestCameraPermissionsAsync();
+      console.log("Camera permission:", camResult.granted ? "✅ Granted" : "❌ Denied");
+      
+      if (!camResult.granted) {
         Alert.alert(
           "Camera Required",
-          "Camera permission is needed to scan receipts or capture photos."
+          "Camera permission is needed to scan receipts or capture photos.",
+          [{ text: "OK" }]
         );
       }
 
       // 🖼 Photos & Videos (Android 13+ and iOS)
-      // Uses correct APIs that map to “Photos and Videos” in system settings
-      const media = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!media.granted) {
+      const mediaResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log("Media Library permission:", mediaResult.granted ? "✅ Granted" : "❌ Denied");
+      
+      if (!mediaResult.granted) {
         Alert.alert(
           "Photos & Videos Access Needed",
-          "Please grant access to your Photos and Videos to upload or scan receipts."
+          "Please grant access to your Photos and Videos to upload or scan receipts.",
+          [{ text: "OK" }]
         );
       }
 
-      console.log("✅ Permissions ready (mic, camera, photos & videos).");
+      console.log("✅ All permissions requested.");
     } catch (err) {
-      console.warn("⚠️ Permission setup failed:", err);
+      console.error("⚠️ Permission setup failed:", err);
+      Alert.alert("Permission Error", "Failed to request permissions. Some features may not work.");
     }
-  })();
+  };
+
+  requestAllPermissions();
 }, []);
 
 
@@ -321,29 +323,7 @@ const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
 
-const pickImage = async (useCamera = false) => {
-  // ask for media permissions
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== "granted") {
-    Alert.alert("Permission needed", "Please allow gallery access to select photos.");
-    return;
-  }
 
-  const result = useCamera
-    ? await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-      })
-    : await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-      });
-
-  if (!result.canceled) {
-    const uri = result.assets[0].uri;
-    processReceiptImage(uri);
-  }
-};
   
   const colorPalette = [
     '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
@@ -403,6 +383,73 @@ const getCategoryColor = (category: string) => {
     }, {});
   }
 
+  async function startVoice() {
+  try {
+    console.log("🎤 Starting voice recognition...");
+
+    const { granted } = await SpeechRecognition.requestPermissionsAsync();
+    if (!granted) {
+      Alert.alert(
+        "Permission Denied",
+        "Please allow microphone access in Settings."
+      );
+      return;
+    }
+
+    const available = await SpeechRecognition.getAvailableAsync();
+    if (!available) {
+      Alert.alert(
+        "Voice Not Supported",
+        "Speech recognition is not available on this build of MoneyMigo. " +
+        "This feature will be enabled in future updates."
+      );
+      return;
+    }
+
+    setIsListening(true);
+    const result = await SpeechRecognition.startAsync({
+      lang: "en-US",
+      interimResults: false,
+      requiresOnDeviceRecognition: false,
+    });
+
+    console.log("🗣️ Recognized:", result.transcript);
+    setVoiceTranscript(result.transcript || "");
+    setShowTranscript(true);
+    applyParsedVoice(result.transcript || "");
+
+    setTimeout(() => setShowTranscript(false), 4000);
+  } catch (error: any) {
+    console.warn("Voice error:", error?.message);
+    Alert.alert(
+      "Voice Feature Unavailable",
+      error?.message || "Speech recognition not supported on this device."
+    );
+  } finally {
+    setIsListening(false);
+  }
+}
+
+async function stopVoice() {
+  try {
+    await SpeechRecognition.stopAsync();
+    setIsListening(false);
+  } catch (err) {
+    console.error("Stop voice failed:", err);
+  }
+}
+
+async function testSpeechRecognition() {
+  const available = await SpeechRecognition.getAvailableAsync();
+  const permission = await SpeechRecognition.getPermissionsAsync();
+  const state = await SpeechRecognition.getStateAsync();
+
+  Alert.alert(
+    "Speech Status",
+    `Available: ${available}\nPermission: ${permission.status}\nState: ${state.state}`
+  );
+}
+
   function parseVoiceCommand(text: string) {
   // Normalize
   const t = text.toLowerCase().trim();
@@ -432,158 +479,63 @@ const getCategoryColor = (category: string) => {
   return { amount, category, notes };
 }
 
-async function startVoice() {
-  try {
-    setVoiceTranscript("");
-    setIsListening(true);
-
-    // 🎙️ Speak tutorial only once per session (until refresh)
-    if (!hasHeardVoiceGuide) {
-      setHasHeardVoiceGuide(true);
-      await Speech.speak(
-        "You can say something like: Add one hundred twenty to food note lunch. The format is Add then amount then note is optional.",
-        { rate: 0.95, pitch: 1.0 }
-      );
-
-      // ⏳ Wait a bit to finish speaking before listening
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    }
-
-    // 🌐 Web speech recognition
-    if (Platform.OS === "web") {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        Alert.alert("Unavailable", "Speech recognition not supported in this browser.");
-        setIsListening(false);
-        return;
-      }
-
-      const rec = new SR();
-      rec.lang = "en-PH";
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
-
-      rec.onresult = (e) => {
-        const said = e.results?.[0]?.[0]?.transcript || "";
-        setVoiceTranscript(said);
-        setShowTranscript(true);
-
-        // 🎯 Call parser to save directly as expense
-        applyParsedVoice(said);
-
-        // ⏳ Auto-hide transcript after 4 seconds
-        setTimeout(() => setShowTranscript(false), 2000);
-      };
-      rec.onend = () => setIsListening(false);
-      rec.onerror = () => setIsListening(false);
-      rec.start();
-      return;
-    }
-
-    // 📱 Native (APK / Expo Go)
-    const result = await SpeechRecognition.startAsync({
-      lang: "en-PH",
-      interimResults: false,
-      requiresOnDeviceRecognition: false,
-    });
-
-    const said = result?.transcript ?? "";
-    setVoiceTranscript(said);
-    setShowTranscript(true);
-
-    // ⏳ Auto-hide transcript after 4 seconds
-    setTimeout(() => setShowTranscript(false), 2000);
-  } catch (e) {
-    console.log("🎙️ startVoice error:", e?.message);
-    setIsListening(false);
-  }
-}
 
 
-async function stopVoice() {
-  try {
-    if (Platform.OS === "web") {
-      // Web Speech API auto-stops; nothing to do here
-      setIsListening(false);
-      return;
-    }
-    await SpeechRecognition.stopAsync();
-  } catch {}
-  setIsListening(false);
-}
+
 
 async function applyParsedVoice(command: string) {
   console.log("🎤 Voice input:", command);
-  const lower = command.toLowerCase().trim();
   const user = await getToken();
   if (!user?.id) {
-    console.warn("❌ No user ID found");
     Speech.speak("Please log in first before adding expenses.");
     return;
   }
 
-  // 🧠 Split if multiple commands like “add 120 food and 60 transport”
-  const parts = lower.split(/\band\b/);
+  // Split multi-commands like “add 120 food and 60 transport”
+  const parts = command.toLowerCase().split(/\band\b/);
   let totalAdded = 0;
   let expenseCount = 0;
 
-  for (let part of parts) {
-    part = part.trim();
-    const amountMatch = part.match(/(\d+(?:[.,]\d{0,2})?)/);
-    const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", "")) : 0;
+  for (const part of parts) {
+    const { amount, category, notes } = parseVoiceCommand(part);
+    if (!amount || !category) continue;
 
-    let category = "Others";
-    if (part.includes("food")) category = "Food";
-    else if (part.includes("transport")) category = "Transport";
-    else if (part.includes("bill")) category = "Bills";
-    else if (part.includes("school")) category = "School";
-    else if (part.includes("shop") || part.includes("shopping")) category = "Shopping";
-    else if (part.includes("save") || part.includes("bank")) category = "Savings";
+    const payload = {
+      amount,
+      category,
+      notes,
+      userId: user.id,
+      date: new Date().toISOString(),
+    };
 
-    const noteMatch = part.match(/note\s+(.+)/);
-    const note = noteMatch ? noteMatch[1].trim() : "";
-    const date = new Date();
+    try {
+      const res = await api.post("/expenses", payload);
+      console.log("✅ Voice expense saved:", res.data);
 
-    if (amount > 0 && category) {
-      try {
-        // ✅ Save directly to backend
-        const payload = {
-          amount,
-          category,
-          notes: note,
-          userId: user.id,
-          date: date.toISOString(),
-        };
-
-        const res = await api.post("/expenses", payload);
-        console.log("✅ Voice expense saved:", res.data);
-
-        // ✅ Update UI immediately using the actual saved expense from backend 
-        if (res.data?.expense) {
-          setFilteredExpenses(prev => [res.data.expense, ...prev]);
-        } else {
-          setFilteredExpenses(prev => [payload, ...prev]);
-        }
-
-        // 🔄 Refresh expense list
-        fetchExpenses();
-
-        // 🎤 Voice feedback
-        Speech.speak(`Added ₱${amount} to ${category}${note ? ", note " + note : ""}.`);
-        totalAdded += amount;
-        expenseCount++;
-      } catch (err: any) {
-        console.error("❌ Voice save failed:", err.response?.data || err.message);
-        Speech.speak("Sorry, failed to save your expense.");
+      if (res.data?.expense) {
+        setFilteredExpenses(prev => [res.data.expense, ...prev]);
+      } else {
+        setFilteredExpenses(prev => [payload, ...prev]);
       }
+
+      fetchExpenses();
+
+      Speech.speak(`Added ₱${amount} to ${category}${notes ? ", note " + notes : ""}.`);
+      totalAdded += amount;
+      expenseCount++;
+    } catch (err) {
+      console.error("❌ Voice save failed:", err.message);
+      Speech.speak("Sorry, failed to save your expense.");
     }
   }
 
-  // 🗣️ Summary feedback
-  if (expenseCount > 0)
+  if (expenseCount > 0) {
     Speech.speak(`You added ${expenseCount} expense${expenseCount > 1 ? "s" : ""}, totaling ₱${totalAdded.toFixed(2)}.`);
-  else Speech.speak("No valid expense detected.");
+  } else {
+    Speech.speak("No valid expense detected.");
+  }
 }
+
 
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
@@ -880,6 +832,8 @@ const fetchBudget = async () => {
 
 async function handleScanReceipt() {
   try {
+    console.log("📸 Scan Receipt button pressed, Platform:", Platform.OS);
+    
     if (Platform.OS === "web") {
       // 🧠 Detect if on a mobile browser
       const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -928,12 +882,25 @@ async function handleScanReceipt() {
     }
 
     // 📱 Native (Android/iOS) — use Alert picker
+    console.log("📱 Showing native picker alert");
     Alert.alert(
       "Scan Receipt",
       "Choose an option",
       [
-        { text: "📷 Camera", onPress: pickFromCamera },
-        { text: "🖼️ Photos", onPress: pickFromGallery },
+        { 
+          text: "📷 Camera", 
+          onPress: () => {
+            console.log("User selected Camera");
+            pickFromCamera();
+          }
+        },
+        { 
+          text: "🖼️ Photos", 
+          onPress: () => {
+            console.log("User selected Gallery");
+            pickFromGallery();
+          }
+        },
         { text: "Cancel", style: "cancel" },
       ],
       { cancelable: true }
@@ -944,129 +911,142 @@ async function handleScanReceipt() {
   }
 }
 
-// 📸 Camera
+/// 📸 Camera
 async function pickFromCamera() {
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  if (status !== "granted") {
-    Alert.alert("Permission Required", "Please allow camera access.");
-    return;
+  try {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Please allow camera access.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      await processReceiptImage(result.assets[0].uri);
+    }
+  } catch (error) {
+    console.error("Camera error:", error);
+    Alert.alert("Error", "Failed to open camera. Please try again.");
   }
-
-  const result = await ImagePicker.launchCameraAsync({
-    allowsEditing: true,
-    quality: 1,
-  });
-
-  if (!result.canceled) await processReceiptImage(result.assets[0].uri);
 }
 
 // 🖼️ Gallery
 async function pickFromGallery() {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== "granted") {
-    Alert.alert("Permission Required", "Please allow photo access.");
-    return;
+  try {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Please allow photo access.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      await processReceiptImage(result.assets[0].uri);
+    }
+  } catch (error) {
+    console.error("Gallery error:", error);
+    Alert.alert("Error", "Failed to open gallery. Please try again.");
   }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: [ImagePicker.MediaType.Image],
-    allowsEditing: true,
-    quality: 1,
-  });
-
-  if (!result.canceled) await processReceiptImage(result.assets[0].uri);
 }
 
 // 🧠 OCR processing (Expo-safe version using Tesseract.js only)
 async function processReceiptImage(uri: string) {
   try {
     setIsScanning(true);
+    console.log("📸 Processing image:", uri);
 
-    // ✂️ 1️⃣ Pre-process image for better OCR accuracy
+     // 1️⃣ Optimize the image for better OCR accuracy
     const processed = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 1000 } }],
-      { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+      [{ resize: { width: 1500 } }], // Higher resolution for better OCR
+      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG } // JPEG often works better
     );
 
-    // 🧠 2️⃣ Run OCR with Tesseract.js
-    const { createWorker } = await import("tesseract.js");
+    let extractedText = "";
 
-    const worker = await createWorker("eng", 1, {
-      logger: (m) =>
-        console.log(`🔍 OCR Progress: ${Math.round((m.progress || 0) * 100)}% ${m.status}`),
-    });
+    if (Platform.OS === "web") {
+      // ✅ Web: use Tesseract.js
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng");
+      const result = await worker.recognize(processed.uri);
+      await worker.terminate();
+      extractedText = result?.data?.text || "";
+    } else {
+      // ✅ Native (APK): use OCR.Space API
+    const formData = new FormData();
+      formData.append("file", {
+        uri: processed.uri,
+        type: "image/jpeg", // Match the new format
+        name: "receipt.jpg",
+      } as any);
+      formData.append("language", "eng");
+      formData.append("scale", "true");
+      formData.append("OCREngine", "2");
 
-    const result = await worker.recognize(processed.uri);
-    await worker.terminate();
+      const res = await fetch("https://api.ocr.space/parse/image", {
+        method: "POST",
+        headers: {
+          apikey: OCR_API_KEY,
+        },
+        body: formData,
+      });
 
-    let text = result?.data?.text || "";
-    console.log("🧾 OCR (raw):", text);
+      const data = await res.json();
+      console.log("🧠 OCR.Space result:", JSON.stringify(data, null, 2));
+      
+      if (data.IsErroredOnProcessing) {
+        throw new Error(data.ErrorMessage?.[0] || "OCR processing failed");
+      }
+      
+      extractedText = data?.ParsedResults?.[0]?.ParsedText || "";
+    }
 
-    // 🧹 3️⃣ Clean & normalize text
-    const cleanText = text
+    if (!extractedText || extractedText.trim().length === 0) {
+      Alert.alert("⚠️ OCR Failed", "No readable text detected. Try again with a clearer image.");
+      return;
+    }
+
+    // 2️⃣ Clean and normalize
+    const cleanText = extractedText
       .replace(/\n+/g, " ")
       .replace(/\s{2,}/g, " ")
       .toLowerCase();
 
-    // 🧮 4️⃣ Extract possible numbers
-    const numberMatches = [...cleanText.matchAll(/₱?\s*(\d+(?:[.,]\d{1,2})?)/g)]
-      .map((m) => parseFloat(m[1].replace(/,/g, "")))
-      .filter((n) => !isNaN(n) && n > 0);
+    // 3️⃣ Extract possible amount
+    const match = cleanText.match(/₱?\s*(\d+(?:[.,]\d{1,2})?)/);
+    const detectedAmount = match ? parseFloat(match[1].replace(",", "")) : null;
 
-    const keywordPattern =
-      /(total|amount|cash|withdrawal|paid|bill|price|vatable sales)[^\d]{0,10}(\d+(?:[.,]\d{1,2})?)/gi;
-
-    const keywordMatches = [...cleanText.matchAll(keywordPattern)]
-      .map((m) => parseFloat(m[2].replace(/,/g, "")))
-      .filter((n) => !isNaN(n) && n > 0);
-
-    const reasonable = numberMatches.filter((n) => n >= 10 && n <= 999999);
-
-    // 🎯 5️⃣ Choose the most likely total
-    let detectedAmount = null;
-    if (keywordMatches.length > 0) detectedAmount = keywordMatches.at(-1);
-    else if (reasonable.length > 0) detectedAmount = Math.max(...reasonable);
-    else if (numberMatches.length > 0) detectedAmount = numberMatches.at(-1);
-
-    console.log("💰 Detected amount:", detectedAmount);
-
-    // 🧩 6️⃣ Smart category detection
+    // 4️⃣ Detect category by keywords
     let detectedCategory = "Others";
-    if (/mcdonald|jollibee|kfc|burger|food/i.test(cleanText)) detectedCategory = "Food";
-    else if (/grab|taxi|jeep|bus|transport|tricycle/i.test(cleanText))
-      detectedCategory = "Transport";
-    else if (/meralco|water|electric|bill|globe|smart|pldt/i.test(cleanText))
-      detectedCategory = "Bills";
-    else if (/notebook|school|pen|tuition|module/i.test(cleanText)) detectedCategory = "School";
-    else if (
-      /mall|store|shop|sm|robinsons|puregold|supermarket|7[\s\-]?11|seven[-\s]?eleven|711/i.test(
-        cleanText
-      )
-    )
-      detectedCategory = "Shopping";
-    else if (/bank|withdraw|atm|landbank|bpi|bdo/i.test(cleanText))
-      detectedCategory = "Savings";
+    if (/mcdonald|jollibee|food|restaurant|burger|kfc/i.test(cleanText)) detectedCategory = "Food";
+    else if (/grab|taxi|bus|tricycle|jeep/i.test(cleanText)) detectedCategory = "Transport";
+    else if (/bill|meralco|globe|pldt|smart|water/i.test(cleanText)) detectedCategory = "Bills";
+    else if (/notebook|tuition|school|pen|module/i.test(cleanText)) detectedCategory = "School";
+    else if (/store|shop|mall|711|robinsons|sm/i.test(cleanText)) detectedCategory = "Shopping";
+    else if (/bank|atm|withdraw|deposit/i.test(cleanText)) detectedCategory = "Savings";
 
-    // ✅ 7️⃣ Apply result
-    if (detectedAmount) {
-      setOcrDetectedAmount(detectedAmount.toString());
-      setOcrDetectedCategory(detectedCategory);
-      setOcrRawText(cleanText);
-      setShowOcrModal(true); // open confirmation modal
-    } else {
-      setExpenseCategory("Others");
-      Alert.alert("⚠️ No amount found", "Could not detect a total. Please enter manually.");
-    }
-  } catch (err) {
-    console.error("❌ OCR failed:", err);
-    Alert.alert("❌ Error", "Failed to scan receipt. Try again with a clearer image.");
+    // 5️⃣ Apply detected data
+    setOcrRawText(cleanText);
+    setOcrDetectedAmount(detectedAmount ? detectedAmount.toString() : "");
+    setOcrDetectedCategory(detectedCategory);
+    setShowOcrModal(true);
+  } catch (error) {
+    console.error("❌ OCR failed:", error);
+    Alert.alert("Error", "Failed to process the image. Please try again.");
   } finally {
     setIsScanning(false);
   }
 }
-
-
 
 
   const handleAddExpense = async () => {
@@ -1092,34 +1072,6 @@ async function processReceiptImage(uri: string) {
     return;
   }
 
-  async function handleAddExpenseFromVoice(expense) {
-  try {
-    setIsLoading(true);
-
-    await api.post("/expenses/add", {
-      amount: expense.amount,
-      category: expense.category,
-      notes: expense.notes,
-      date: expense.date,
-    });
-
-    // Update local list
-    setExpenses((prev) => ({
-      ...prev,
-      [new Date(expense.date).toDateString()]: [
-        ...(prev[new Date(expense.date).toDateString()] || []),
-        expense,
-      ],
-    }));
-
-    await fetchExpenses();
-  } catch (error) {
-    console.error("❌ handleAddExpenseFromVoice error:", error);
-    Alert.alert("Error", "Could not save expense.");
-  } finally {
-    setIsLoading(false);
-  }
-}
 
   const payload = {
     category: expenseCategory.startsWith("Others")

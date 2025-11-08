@@ -20,6 +20,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# in .gitignore
+.env
+
 # Metro
 .metro-health-check*
 
