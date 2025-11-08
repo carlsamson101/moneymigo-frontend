@@ -2431,9 +2431,8 @@ const HistorySection = (
               borderColor: "#E5E7EB",
             }}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-            >
+            {/* 💰 Amount */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
               <MaterialCommunityIcons name="currency-php" size={20} color="#2563EB" />
               <Text
                 style={{
@@ -2443,16 +2442,16 @@ const HistorySection = (
                   color: selectedExpense.overspent ? "#dc2626" : "#1E293B",
                 }}
               >
-                {selectedExpense.amount.toLocaleString(undefined, {
+                ₱
+                {Number(selectedExpense.amount || 0).toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                 })}
               </Text>
             </View>
 
-            <View
-              style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-            >
-              {getCategoryIconComponent(selectedExpense.category)}
+            {/* 🏷 Category */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+              {getCategoryIconComponent(selectedExpense.category || "Others")}
               <Text
                 style={{
                   fontSize: 15,
@@ -2461,11 +2460,12 @@ const HistorySection = (
                   fontWeight: selectedExpense.overspent ? "600" : "400",
                 }}
               >
-                {capitalize(selectedExpense.category)}
+                {capitalize(selectedExpense.category || "Others")}
               </Text>
             </View>
 
-            {selectedExpense.overspent && (
+            {/* ⚠️ Overspend (only show if > 0) */}
+            {selectedExpense.overspent && selectedExpense.overspent > 0 && (
               <View
                 style={{
                   flexDirection: "row",
@@ -2486,61 +2486,63 @@ const HistorySection = (
                     fontSize: 14,
                   }}
                 >
-                  Overspent this period by ₱{selectedExpense.overspent.toLocaleString(undefined, {
+                  Overspent this period by ₱
+                  {Number(selectedExpense.overspent).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                   })}
                 </Text>
               </View>
             )}
 
+            {/* 📅 Date */}
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Ionicons name="calendar-outline" size={20} color="#2563EB" />
-             <Text style={{ fontSize: 15, marginLeft: 8 }}>
-  {selectedExpense.date
-    ? (() => {
-        const d = new Date(selectedExpense.date);
-        const dateStr = d.toLocaleDateString([], {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-        const timeStr =
-          d.getHours() === 0 && d.getMinutes() === 0
-            ? ""
-            : `, ${d.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}`;
-        return dateStr + timeStr;
-      })()
-    : ""}
-</Text>
-
+              <Text style={{ fontSize: 15, marginLeft: 8 }}>
+                {selectedExpense.date
+                  ? (() => {
+                      const d = new Date(selectedExpense.date);
+                      const dateStr = d.toLocaleDateString([], {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      });
+                      const timeStr =
+                        d.getHours() === 0 && d.getMinutes() === 0
+                          ? ""
+                          : `, ${d.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`;
+                      return dateStr + timeStr;
+                    })()
+                  : "No date available"}
+              </Text>
             </View>
 
+            {/* 📝 Notes */}
             {selectedExpense.notes ? (
-  <View
-    style={{
-      flexDirection: "row",
-      alignItems: "center",
-      marginTop: 10,
-    }}
-  >
-    <Ionicons name="document-text-outline" size={20} color="#2563EB" />
-    <Text
-      style={{
-        fontSize: 15,
-        marginLeft: 8,
-        color: "#374151",
-      }}
-    >
-      {selectedExpense.notes}
-    </Text>
-  </View>
-) : null}
-            
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginTop: 10,
+                }}
+              >
+                <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+                <Text
+                  style={{
+                    fontSize: 15,
+                    marginLeft: 8,
+                    color: "#374151",
+                  }}
+                >
+                  {selectedExpense.notes}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
+          {/* Close button */}
           <TouchableOpacity
             style={[styles.submitButton, styles.primaryBtn]}
             onPress={() => setShowExpenseDetailModal(false)}
