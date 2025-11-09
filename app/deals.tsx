@@ -675,14 +675,17 @@ const styles = StyleSheet.create({
   categoryTextActive: { color: '#FFFFFF' },
 
   resultsHeader: {
-    paddingHorizontal: 16, 
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF', 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#F3F4F6',
+  backgroundColor: '#FFFFFF',
+  paddingVertical: 6, // smaller
+  paddingHorizontal: 10,
+  borderBottomWidth: 1,
+  borderBottomColor: '#E5E7EB',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
   },
-  resultsText: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  bestPriceText: { fontSize: 13, color: '#1f4b81ff', fontWeight: '500', marginTop: 2 },
+  resultsText: { fontSize: 12, fontWeight: '600', color: '#374151' },
+  bestPriceText: { fontSize: 12, color: '#1f4b81ff', fontWeight: '500', marginTop: 2 },
 
   mapContainer: {
     margin: 12, 
@@ -915,14 +918,14 @@ outOfStockText: {
 },
 dropdownContainer: {
   backgroundColor: '#FFFFFF',
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  borderBottomWidth: 1,
-  borderBottomColor: '#E5E7EB',
+  paddingHorizontal: 10,
+  paddingVertical: 5, // less vertical space
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'space-between',
-  gap: 8,
+  borderBottomWidth: 1,
+  borderBottomColor: '#E5E7EB',
+  gap: 6,
 },
 dropdownLabel: {
   fontSize: 13,
@@ -932,13 +935,12 @@ dropdownLabel: {
   minWidth: 60,
 },
 dropdownWrapper: {
-  flex: 1,
-  maxWidth: 200,
+    flex: 1,
   borderWidth: 1,
   borderColor: '#E5E7EB',
   borderRadius: 6,
   backgroundColor: '#F9FAFB',
-  height: 44,
+  height: 34, // reduced from 44
   justifyContent: 'center',
 },
 picker: {

@@ -40,6 +40,22 @@ export async function getCachedData<T>(
   }
 }
 
+export const queueOfflineChange = async (type: string, data: any) => {
+  try {
+    const queueKey = `offlineQueue`;
+    const existingQueue = await AsyncStorage.getItem(queueKey);
+    const queue = existingQueue ? JSON.parse(existingQueue) : [];
+    
+    queue.push({ type, data, timestamp: Date.now() });
+    await AsyncStorage.setItem(queueKey, JSON.stringify(queue));
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to queue offline change:', error);
+    return false;
+  }
+};
+
 /* -------------------------------------------------------------------------- */
 /* 🧠 2. Queue Offline Actions                                                */
 /* -------------------------------------------------------------------------- */
