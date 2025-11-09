@@ -3,9 +3,10 @@ import { LogBox } from 'react-native';
 // Temporarily ignore the text rendering warning
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Pressable,
-  TextInput, Dimensions, Alert, SafeAreaView, StatusBar
+  TextInput, Dimensions, Alert, StatusBar
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,9 +23,8 @@ import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import Voice from '@react-native-voice/voice';
+import { WebView } from "react-native-webview";
 
-import * as Speech from "expo-speech";
 import { OCR_API_KEY } from "@env";
 console.log("🧩 OCR API Key loaded:", OCR_API_KEY ? "✅ Yes" : "❌ Missing");
 
@@ -218,52 +218,9 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
- // 🔊 Request all permissions (mic + camera + media)
-useEffect(() => {
-  const requestAllPermissions = async () => {
-    try {
-      if (Platform.OS === "web") {
-        // 🌐 Trigger mic permission for browsers
-        try {
-          await navigator.mediaDevices.getUserMedia({ audio: true });
-          console.log("✅ Microphone permission granted (Web)");
-        } catch {
-          Alert.alert(
-            "Microphone Required",
-            "Please allow microphone access to use voice commands."
-          );
-        }
-      } else {
-        // 📱 Native permissions
-        const mic = await Voice.requestPermissions();
-        console.log("🎤 Microphone permission:", mic?.granted ? "✅ Granted" : "❌ Denied");
-        if (!mic?.granted) {
-          Alert.alert("Microphone Required", "Please allow microphone access.");
-        }
+ 
 
-        const cam = await ImagePicker.requestCameraPermissionsAsync();
-        if (!cam.granted)
-          Alert.alert("Camera Required", "Camera permission is needed to scan receipts.");
-
-        const media = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!media.granted)
-          Alert.alert("Photos Access Needed", "Please grant access to upload receipts.");
-      }
-    } catch (err) {
-      console.error("⚠️ Permission setup failed:", err);
-    }
-  };
-  requestAllPermissions();
-
-  // 🔹 Clean up Voice listeners when component unmounts
-  return () => {
-    if (Platform.OS !== "web") {
-      Voice.destroy().then(Voice.removeAllListeners);
-    }
-  };
-}, []);
-
-
+const [isListening, setIsListening] = useState(false);
 
   const router = useRouter();
   const { period } = useLocalSearchParams();
@@ -300,23 +257,26 @@ useEffect(() => {
 // Add this new state at the top with your other useState declarations
 const [historyStartDate, setHistoryStartDate] = useState<Date | null>(null);
 const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
+const [ocrDetectedNotes, setOcrDetectedNotes] = useState("");
 
 const [isScanning, setIsScanning] = useState(false);
-
-const [isListening, setIsListening] = useState(false);
-const [voiceTranscript, setVoiceTranscript] = useState("");
+const [showWebView, setShowWebView] = useState(false);
 
 // 💡 state at the top of your component
 const [showWarning, setShowWarning] = useState(false);
 const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
-const [hasHeardVoiceGuide, setHasHeardVoiceGuide] = useState(false);
-const [showTranscript, setShowTranscript] = useState(false);
 
 // 🔍 OCR confirmation states
 const [showOcrModal, setShowOcrModal] = useState(false);
 const [ocrRawText, setOcrRawText] = useState("");
 const [ocrDetectedAmount, setOcrDetectedAmount] = useState("");
 const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
+
+
+// 🎙️ Hidden WebView Speech Recognition (works on mobile browser + APK)
+const webviewRef = useRef(null);
+
+
 
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
@@ -380,182 +340,239 @@ const getCategoryColor = (category: string) => {
       return acc;
     }, {});
   }
+  type ParsedVoiceExpense = {
+  amount: number;
+  category: string;
+  notes?: string;
+  dateISO?: string; // optional 'today'/'yesterday' support
+};
 
- const isWeb = Platform.OS === "web";
-let webRecognition: any = null;
+// Canonical categories & aliases → map to your app categories
+const CATEGORY_ALIASES: Record<string, string[]> = {
+  Food: ["food", "meal", "meals", "snack", "snacks", "coffee", "drink", "drinks", "groceries", "grocery", "restaurant"],
+  Transport: ["transport", "transportation", "fare", "taxi", "grab", "uber", "jeep", "bus", "tricycle", "fuel", "gas", "parking"],
+  Bills: ["bills", "bill", "electric", "electricity", "water", "internet", "wifi", "mobile", "phone", "load", "rent", "utilities"],
+  School: ["school", "tuition", "books", "book", "exam", "project", "modules", "notebook", "uniform"],
+  Shopping: ["shopping", "shop", "store", "mall", "clothes", "clothing", "shoes", "gadget", "grocery", "watsons", "lazada", "shopee"],
+  Savings: ["savings", "save", "deposit", "bank", "atm", "withdrawal"],
+  Others: ["others", "other", "misc", "miscellaneous"],
+};
 
-// ✅ Start Voice Recognition
-async function startVoice() {
-  try {
-    setIsListening(true);
-    setVoiceTranscript("");
-    console.log("🎤 Starting voice recognition...");
+// quick reverse-lookup for category detection
+const CATEGORY_LOOKUP: Record<string, string> = Object.entries(CATEGORY_ALIASES)
+  .reduce((acc, [canon, list]) => {
+    list.forEach(a => acc[a] = canon);
+    acc[canon.toLowerCase()] = canon;
+    return acc;
+  }, {} as Record<string, string>);
 
-    if (isWeb) {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        Alert.alert("Not Supported", "Your browser does not support voice recognition.");
-        setIsListening(false);
-        return;
-      }
+// normalize “₱1,200.50” / “1.200,50” / “1200” / “1200.5”
+function extractAmount(text: string): number | null {
+  // prefer last “moneyish” token (often the total)
+  const moneyish = text
+    .match(/(?:₱|\$)?\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?|\b\d+(?:\.\d{1,2})?\b/g);
+  if (!moneyish || moneyish.length === 0) return null;
 
-      webRecognition = new SpeechRecognition();
-      webRecognition.lang = "en-US";
-      webRecognition.continuous = false;
-      webRecognition.interimResults = false;
+  const raw = moneyish[moneyish.length - 1]
+    .replace(/[₱$\s]/g, "")
+    // if both separators appear, assume comma is thousands, dot is decimal (1,234.56)
+    .replace(/(\d)[,](?=\d{3}\b)/g, "$1") // drop thousands commas
+    .replace(/(\d)\.(?=\d{3}\b)/g, "$1") // drop thousands dots
+    .replace(/,/, "."); // remaining comma → decimal
 
-      webRecognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("🗣️ Recognized (Web):", transcript);
-        setVoiceTranscript(transcript);
-        applyParsedVoice(transcript);
-      };
-
-      webRecognition.onerror = (err) => {
-        console.warn("Web Speech error:", err.error);
-        Alert.alert("Speech Error", "Unable to capture voice input.");
-        setIsListening(false);
-      };
-
-      webRecognition.onend = () => {
-        console.log("🛑 Web speech ended.");
-        setIsListening(false);
-      };
-
-      webRecognition.start();
-      return;
-    }
-
-    // 📱 Native (react-native-voice)
-    Voice.onSpeechStart = () => console.log("Speech start");
-    Voice.onSpeechResults = (event) => {
-      const text = event.value?.[0] || "";
-      console.log("🗣️ Recognized (Native):", text);
-      setVoiceTranscript(text);
-      applyParsedVoice(text);
-    };
-    Voice.onSpeechError = (err) => {
-      console.error("❌ Speech error:", err);
-      Alert.alert("Speech Error", "Speech recognition failed.");
-      setIsListening(false);
-    };
-
-    await Voice.start("en-US");
-  } catch (err) {
-    console.error("Voice start failed:", err);
-    Alert.alert("Voice Error", err.message || "Unable to start voice input.");
-    setIsListening(false);
-  }
+  const num = parseFloat(raw);
+  return Number.isFinite(num) ? num : null;
 }
 
-// ✅ Stop Voice Recognition
-async function stopVoice() {
-  try {
-    if (isWeb && webRecognition) {
-      webRecognition.stop();
-      webRecognition = null;
-      setIsListening(false);
-      return;
-    }
-    await Voice.stop();
-    setIsListening(false);
-  } catch (err) {
-    console.error("Stop voice failed:", err);
+function extractCategory(text: string): string {
+  // look word by word so “for transport”, “to bills”, etc. are caught
+  const words = text.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  for (const w of words) {
+    if (CATEGORY_LOOKUP[w]) return CATEGORY_LOOKUP[w];
   }
+  return "Others";
 }
 
-// ✅ Test mic/speech status
-async function testSpeechRecognition() {
-  try {
-    if (isWeb) {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        Alert.alert("Speech Status", "❌ Not supported in this browser.");
-        return;
-      }
+function extractNotes(text: string): string | undefined {
+  // note … / with note … / comment …
+  const m = text.match(/\b(?:note|notes|comment|memo)\s+(.+)/i);
+  return m ? m[1].trim() : undefined;
+}
 
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        Alert.alert("Speech Status", "✅ Supported & permission granted (Web).");
-      } catch {
-        Alert.alert("Speech Status", "⚠️ Mic permission denied.");
-      }
-      return;
-    }
+function extractDateKeyword(text: string): string | undefined {
+  if (/\byesterday\b/i.test(text)) {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString();
+  }
+  if (/\btoday\b/i.test(text)) {
+    const d = new Date();
+    return d.toISOString();
+  }
+  return undefined;
+}
 
-    const available = await Voice.isAvailable();
-    const permission = await Voice.requestPermissions?.();
-    const state = await Voice.isRecognizing();
+// Split multiple commands: “add 150 food and 60 transport” / “120 coffee, 80 taxi”
+function splitIntoClauses(text: string): string[] {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  // split on ", " or " and " **only** if there is a number after the split
+  const parts = cleaned.split(/\s*(?:,| and )\s+/i)
+    .map(s => s.trim())
+    .filter(Boolean);
+  return parts.length > 1 ? parts : [cleaned];
+}
 
+const startVoiceRecognition = () => {
+  // 🧠 Detect: if NOT running as a web app
+  if (Platform.OS === "android" || Platform.OS === "ios") {
     Alert.alert(
-      "Speech Status",
-      `Available: ${available ? "✅ Yes" : "❌ No"}\n` +
-        `Permission: ${permission?.granted ? "✅ Granted" : "❌ Denied"}\n` +
-        `Recognizing: ${state ? "🎤 Active" : "⏹ Idle"}`
+      "Voice Input Unavailable",
+      "🎙️ Voice recognition works only on the web version (e.g., Google Chrome)."
     );
-  } catch (err) {
-    console.error("Speech test failed:", err);
-    Alert.alert("Speech Status", "⚠️ Error: " + (err.message || "Unknown"));
+    return; // Stop here on mobile app
   }
-}
 
+  console.log("🎤 Starting voice recognition...");
+  setIsListening(true);
+
+  webviewRef.current?.injectJavaScript(`
+    (function() {
+      try {
+        if (window.recognition && window.recognitionReady) {
+          try { window.recognition.stop(); } catch(e) {}
+          setTimeout(() => {
+            window.recognition.start();
+          }, 300);
+        }
+      } catch(e) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'error',
+          message: e.toString()
+        }));
+      }
+    })();
+    true;
+  `);
+};
+
+const handleWebViewMessage = (event) => {
+  try {
+    const data = JSON.parse(event.nativeEvent.data);
+    if (data.type === "ready") {
+      console.log("✅ WebView voice engine ready");
+      setShowWebView(true); // 👈 now show after it's initialized
+    } else if (data.type === "transcript") {
+      setVoiceResult(data.text);
+      setVoiceTranscript(data.text);
+      applyParsedVoice(data.text);
+    } else if (data.type === "error") {
+      console.error("Speech error:", data.message);
+    }
+  } catch (err) {
+    console.warn("WebView message parse error", err);
+  }
+};
 
 
 async function applyParsedVoice(command: string) {
   console.log("🎤 Voice input:", command);
+
   const user = await getToken();
   if (!user?.id) {
-    Speech.speak("Please log in first before adding expenses.");
+    Alert.alert("Please log in first before adding expenses.");
     return;
   }
 
-  // Split multi-commands like “add 120 food and 60 transport”
-  const parts = command.toLowerCase().split(/\band\b/);
-  let totalAdded = 0;
-  let expenseCount = 0;
+  const entries = parseVoiceCommand(command);
+  if (entries.length === 0) {
+    Alert.alert("No amount detected", "Try e.g. “add 150 food note lunch”.");
+    return;
+  }
 
-  for (const part of parts) {
-    const { amount, category, notes } = parseVoiceCommand(part);
-    if (!amount || !category) continue;
+  let total = 0;
+  let added = 0;
 
+  for (const { amount, category, notes, dateISO } of entries) {
     const payload = {
       amount,
       category,
       notes,
       userId: user.id,
-      date: new Date().toISOString(),
+      date: dateISO ?? new Date().toISOString(),
     };
 
     try {
+      // if you want offline support here too, you can reuse isOnline() + queueOfflineChange()
       const res = await api.post("/expenses", payload);
-      console.log("✅ Voice expense saved:", res.data);
 
+      // optimistic UI
       if (res.data?.expense) {
         setFilteredExpenses(prev => [res.data.expense, ...prev]);
       } else {
         setFilteredExpenses(prev => [payload, ...prev]);
       }
 
-      fetchExpenses();
-
-      Speech.speak(`Added ₱${amount} to ${category}${notes ? ", note " + notes : ""}.`);
-      totalAdded += amount;
-      expenseCount++;
-    } catch (err) {
-      console.error("❌ Voice save failed:", err.message);
-      Speech.speak("Sorry, failed to save your expense.");
+      total += amount;
+      added += 1;
+    } catch (err: any) {
+      console.error("❌ Voice save failed:", err?.message || err);
     }
   }
 
-  if (expenseCount > 0) {
-    Speech.speak(`You added ${expenseCount} expense${expenseCount > 1 ? "s" : ""}, totaling ₱${totalAdded.toFixed(2)}.`);
+  if (added > 0) {
+    fetchExpenses();
+    setShowTranscript(true);
+    const msg = `Added ${added} expense${added > 1 ? "s" : ""}, total ₱${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`;
+    console.log("✅", msg);
+    // optional toast/alert:
+    // Alert.alert("Voice Add", msg);
   } else {
-    Speech.speak("No valid expense detected.");
+    Alert.alert("Nothing added", "I didn’t find a valid amount to save.");
   }
 }
 
+
+function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
+  // Allow forms like:
+  //  - "add 150 to food"
+  //  - "150 food"
+  //  - "record 80 transport note taxi"
+  //  - "₱300 bills yesterday"
+  //  - "50 groceries and 120 fuel"
+  const clauses = splitIntoClauses(command);
+
+  const parsed: ParsedVoiceExpense[] = [];
+  for (const clause of clauses) {
+    const lower = clause.toLowerCase();
+
+    // 1) amount
+    const amount = extractAmount(lower);
+
+    // 2) category
+    // try “add|record X (to|for|in) CATEGORY” first
+    let category = "Others";
+    const rel = lower.match(/\b(?:to|for|in)\s+([a-z ]+)\b/);
+    if (rel?.[1]) {
+      // take first word after “to/for/in” that matches a known alias
+      const candidate = rel[1].split(/\s+/).find(w => CATEGORY_LOOKUP[w]);
+      if (candidate) category = CATEGORY_LOOKUP[candidate];
+    } else {
+      category = extractCategory(lower);
+    }
+
+    // 3) notes
+    const notes = extractNotes(clause);
+
+    // 4) date keyword
+    const dateISO = extractDateKeyword(clause);
+
+    if (amount) {
+      parsed.push({ amount, category, notes, dateISO });
+    }
+  }
+
+  return parsed;
+}
 
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
@@ -1037,26 +1054,74 @@ async function processReceiptImage(uri) {
       .replace(/[^\x20-\x7E]/g, "") // remove weird chars
       .toLowerCase();
 
-    // 4️⃣ Detect amount
-    let detectedAmount = null;
-    const totalRegex =
-      /(grand total|amount due|total amount|transaction amount|cash withdrawal|deposit amount|subtotal|balance|total)[^0-9₱]*([₱]?\s*\d{1,6}(?:[.,]\d{2})?)/gi;
-    const totals = [...cleanText.matchAll(totalRegex)];
+    // 4️⃣ Smarter amount detection (context-aware)
+let detectedAmount = null;
 
-    if (totals.length > 0) {
-      const last = totals[totals.length - 1];
-      detectedAmount = parseFloat(last[2].replace(/[₱,\s]/g, ""));
-      console.log("💰 Found keyword-based total:", last[0]);
-    } else {
-      // fallback: pick largest number in the text
-      const nums = (cleanText.match(/\d{1,6}(?:[.,]\d{2})?/g) || [])
-        .map((n) => parseFloat(n.replace(",", "")))
-        .filter((n) => !isNaN(n) && n > 0);
-      if (nums.length > 0) {
-        detectedAmount = Math.max(...nums);
-        console.log("📈 Using fallback amount:", detectedAmount);
+// Normalize text for matching
+const cleanLines = cleanText
+  .split(/(?<=\d)\s+/) // split by whitespace near numbers
+  .map(l => l.trim())
+  .filter(Boolean);
+
+// Priority 1: Look for lines with keywords that usually indicate totals or transactions
+const PRIORITY_PATTERNS = [
+  /(cash\s*withdrawal|withdrawal\s*amount)/i,
+  /(transaction\s*amount|total\s*amount|amount\s*due|grand\s*total)/i,
+  /(deposit\s*amount|credit\s*amount)/i,
+];
+
+// Try keyword-based extraction
+for (const regex of PRIORITY_PATTERNS) {
+  const match = cleanLines.find(line => regex.test(line));
+  if (match) {
+    const numMatch = match.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
+    if (numMatch) {
+      detectedAmount = parseFloat(numMatch[numMatch.length - 1].replace(/[^\d.]/g, ""));
+      console.log("💰 Found keyword-based line:", match);
+      break;
+    }
+  }
+}
+
+// Priority 2: If not found, find the **largest number near any 'withdrawal', 'amount', or 'total'**
+if (!detectedAmount) {
+  const contextMatches = [];
+  const contextRegex = /(withdrawal|amount|total|balance|deposit)/i;
+
+  cleanLines.forEach((line, idx) => {
+    if (contextRegex.test(line)) {
+      const numbers = (line.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
+        parseFloat(n.replace(/[^\d.]/g, ""))
+      );
+      if (numbers.length) {
+        contextMatches.push(...numbers);
+      }
+      // Also check next line (some receipts break lines)
+      if (cleanLines[idx + 1]) {
+        const nextNums = (cleanLines[idx + 1].match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
+          parseFloat(n.replace(/[^\d.]/g, ""))
+        );
+        if (nextNums.length) contextMatches.push(...nextNums);
       }
     }
+  });
+
+  if (contextMatches.length > 0) {
+    detectedAmount = Math.max(...contextMatches);
+    console.log("📊 Found context-based max amount:", detectedAmount);
+  }
+}
+
+// Priority 3: Fallback to global max numeric value (last resort)
+if (!detectedAmount) {
+  const allNumbers = (cleanText.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
+    parseFloat(n.replace(/[^\d.]/g, ""))
+  );
+  if (allNumbers.length) {
+    detectedAmount = Math.max(...allNumbers);
+    console.log("📈 Fallback: using global max:", detectedAmount);
+  }
+}
 
     // 5️⃣ Smart Category Detection (includes banks)
     let detectedCategory = "Others";
@@ -1095,11 +1160,11 @@ async function processReceiptImage(uri) {
       confidence,
     });
 
-    Speech.speak(
-      `Detected ${detectedCategory} transaction for ₱${
-        detectedAmount ? detectedAmount.toFixed(2) : "unknown"
-      }.`
-    );
+    console.log(
+  `Detected ${detectedCategory} transaction for ₱${
+    detectedAmount ? detectedAmount.toFixed(2) : "unknown"
+  }.`
+);
   } catch (err) {
     console.error("❌ OCR error:", err);
     Alert.alert("Error", "Failed to process receipt. Try again.");
@@ -1477,6 +1542,8 @@ const HistorySection = (
 );
 
   return (
+  
+
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#1f4b81ff" />
       
@@ -1484,6 +1551,7 @@ const HistorySection = (
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+
       >
         {/* Gradient Header Section */}
         <LinearGradient
@@ -1796,13 +1864,13 @@ const HistorySection = (
 
 
       {/* Expense Chart */}
-        <View style={styles.chartCard}>
-          <ExpenseChart
-            expenses={filteredExpenses}
-            categoryColors={categoryColors}
-            onRefresh={fetchExpenses}
-          />
-        </View>
+<View style={styles.chartCard}>
+  <ExpenseChart
+    expenses={filteredExpenses}
+    categoryColors={categoryColors}
+    onRefresh={fetchExpenses}
+  />
+</View>
 
         {/* Expense List */}
 {Object.entries(groupExpensesByDate(filteredExpenses))
@@ -2051,96 +2119,238 @@ const HistorySection = (
     </Pressable>
     </Modal>
 
-    {/* 🧠 OCR Confirmation Modal */}
+    {/* 🧠 Enhanced OCR Confirmation Modal */}
 <Modal visible={showOcrModal} transparent animationType="fade">
-  <View style={styles.modalOverlay}>
-    <View style={[styles.modalContainer, { width: '85%', padding: 20 }]}>
-      <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
-        📸 Confirm Receipt Details
-      </Text>
-
-      <Text style={{ fontSize: 14, color: "#64748B", marginBottom: 8 }}>
-        Adjust if needed before saving.
-      </Text>
-
-      {/* Editable Detected Amount */}
-      <View style={{ marginBottom: 10 }}>
-        <Text style={{ fontSize: 14, color: "#475569", marginBottom: 4 }}>Amount (₱)</Text>
-        <TextInput
-          value={ocrDetectedAmount}
-          onChangeText={setOcrDetectedAmount}
-          keyboardType="numeric"
-          style={{
-            borderWidth: 1,
-            borderColor: "#CBD5E1",
-            borderRadius: 10,
-            padding: 10,
-            fontSize: 16,
-            backgroundColor: "#F8FAFC",
-          }}
-        />
+  <Pressable style={styles.modalOverlay} onPress={() => setShowOcrModal(false)}>
+    <Pressable onPress={() => {}} style={[styles.modalContainer, { width: '90%', maxWidth: 380, padding: 18 }]}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: '#EFF6FF',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 10
+        }}>
+          <Ionicons name="camera" size={18} color="#2563EB" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 17, fontWeight: "700", color: "#1E293B" }}>
+            Confirm Receipt
+          </Text>
+          <Text style={{ fontSize: 12, color: "#64748B" }}>
+            Verify & adjust details
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => setShowOcrModal(false)}>
+          <Ionicons name="close-circle" size={24} color="#94A3B8" />
+        </TouchableOpacity>
       </View>
 
-      {/* Editable Detected Category */}
-      <View style={{ marginBottom: 10 }}>
-        <Text style={{ fontSize: 14, color: "#475569", marginBottom: 4 }}>Category</Text>
-        <TextInput
-          value={ocrDetectedCategory}
-          onChangeText={setOcrDetectedCategory}
-          style={{
-            borderWidth: 1,
-            borderColor: "#CBD5E1",
-            borderRadius: 10,
-            padding: 10,
-            fontSize: 16,
-            backgroundColor: "#F8FAFC",
-          }}
-        />
-      </View>
+      {/* Compact Form */}
+      <View style={{ gap: 10, marginBottom: 12 }}>
+        {/* Amount Input */}
+        <View>
+          <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
+            Amount (₱)
+          </Text>
+          <TextInput
+            value={ocrDetectedAmount}
+            onChangeText={setOcrDetectedAmount}
+            keyboardType="numeric"
+            placeholder="0.00"
+            style={{
+              borderWidth: 1,
+              borderColor: "#CBD5E1",
+              borderRadius: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              fontSize: 15,
+              backgroundColor: "#FFFFFF",
+            }}
+          />
+        </View>
 
-      {/* OCR Raw Text Viewer */}
-      <Text style={{ fontSize: 14, color: "#475569", marginBottom: 4 }}>Extracted Text:</Text>
-      <ScrollView
-        style={{
-          maxHeight: 120,
-          borderWidth: 1,
-          borderColor: "#E2E8F0",
-          borderRadius: 10,
-          padding: 10,
-          backgroundColor: "#F1F5F9",
-          marginBottom: 12,
-        }}
-      >
-        <Text style={{ color: "#334155", fontSize: 13 }}>{ocrRawText}</Text>
-      </ScrollView>
+        {/* Category Input */}
+        <View>
+          <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
+            Category
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setCategoryModalVisible(true); // just open picker
+            }}
+            style={{
+              borderWidth: 1,
+              borderColor: "#CBD5E1",
+              borderRadius: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              backgroundColor: "#FFFFFF",
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Text style={{ fontSize: 15, color: "#1E293B" }}>
+              {ocrDetectedCategory}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
 
-      {/* Confirm / Cancel Buttons */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            {/* Notes Input (optional) */}
+<View>
+  <Text
+    style={{
+      fontSize: 12,
+      color: "#64748B",
+      marginBottom: 4,
+      fontWeight: "600",
+    }}
+  >
+    Notes (optional)
+  </Text>
+  <TextInput
+    value={ocrDetectedNotes}
+    onChangeText={setOcrDetectedNotes}
+    placeholder="Add a short note..."
+    multiline
+    style={{
+      borderWidth: 1,
+      borderColor: "#CBD5E1",
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      fontSize: 15,
+      backgroundColor: "#FFFFFF",
+      minHeight: 40,
+      textAlignVertical: "top",
+    }}
+  />
+</View>
+        {/* Collapsible Extracted Text */}
         <TouchableOpacity
-          style={[styles.submitButton, { flex: 1, marginRight: 6, backgroundColor: "#2563EB" }]}
-          onPress={() => {
-            setExpenseAmount(ocrDetectedAmount);
-            setExpenseCategory(ocrDetectedCategory);
-            setShowOcrModal(false);
-            Alert.alert("✅ Scan Confirmed", "Receipt data applied successfully!");
+          onPress={() => setOthersExpanded(!othersExpanded)}
+          style={{
+            borderWidth: 1,
+            borderColor: "#E2E8F0",
+            borderRadius: 8,
+            padding: 10,
+            backgroundColor: "#F8FAFC",
           }}
         >
-          <Text style={styles.submitText}>Confirm</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 12, color: "#64748B", fontWeight: '600' }}>
+              📄 Extracted Text
+            </Text>
+            <Ionicons 
+              name={othersExpanded ? "chevron-up" : "chevron-down"} 
+              size={16} 
+              color="#64748B" 
+            />
+          </View>
+          
+          {othersExpanded && (
+            <ScrollView
+              style={{
+                maxHeight: 80,
+                marginTop: 8,
+                paddingTop: 8,
+                borderTopWidth: 1,
+                borderTopColor: "#E2E8F0",
+              }}
+              nestedScrollEnabled
+            >
+              <Text style={{ color: "#475569", fontSize: 12, lineHeight: 16 }}>
+                {ocrRawText || "No text extracted"}
+              </Text>
+            </ScrollView>
+          )}
         </TouchableOpacity>
+      </View>
 
+      {/* Action Buttons */}
+      <View style={{ flexDirection: "row", gap: 8 }}>
         <TouchableOpacity
-          style={[styles.submitButton, { flex: 1, backgroundColor: "#aaa" }]}
+          style={{
+            flex: 1,
+            backgroundColor: "#F1F5F9",
+            borderRadius: 10,
+            paddingVertical: 12,
+            alignItems: "center",
+          }}
           onPress={() => setShowOcrModal(false)}
         >
-          <Text style={styles.submitText}>Cancel</Text>
+          <Text style={{ color: "#475569", fontWeight: "600", fontSize: 14 }}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#2563EB",
+            borderRadius: 10,
+            paddingVertical: 12,
+            alignItems: "center",
+            shadowColor: "#2563EB",
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 3,
+          }}
+        onPress={async () => {
+  const amount = parseFloat(ocrDetectedAmount);
+
+  if (!amount || amount <= 0) {
+    Alert.alert("⚠️ Invalid Amount", "Please enter a valid amount.");
+    return;
+  }
+
+  // ✅ Fix category check: only block if it's actually unselected
+  if (!ocrDetectedCategory || ocrDetectedCategory === "Select Category") {
+    Alert.alert("⚠️ Incomplete Fields", "Please select a valid category.");
+    return;
+  }
+
+  try {
+    // 🧩 Pass detected fields into your main Add Expense flow
+    setExpenseAmount(ocrDetectedAmount);
+    setExpenseCategory(ocrDetectedCategory);
+    setExpenseNotes(ocrDetectedNotes?.trim() || ""); // Notes optional
+
+    setShowOcrModal(false);
+
+    // ✅ Allow state updates before saving
+    setTimeout(async () => {
+      await handleAddExpense(); // Use your existing logic
+    }, 200);
+  } catch (err) {
+    console.error("❌ Save error:", err);
+    Alert.alert("Error", "Failed to save expense from scanned receipt.");
+  }
+}}
+
+        >
+          <Text style={{ color: "#FFFFFF", fontWeight: "600", fontSize: 14 }}>
+            Save Expense
+          </Text>
         </TouchableOpacity>
       </View>
-    </View>
-  </View>
+    </Pressable>
+  </Pressable>
 </Modal>
 
           {/* Category Picker Modal */}
-<Modal visible={categoryModalVisible} transparent animationType="fade">
+<Modal
+  visible={categoryModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setCategoryModalVisible(false)}
+>
   <Pressable style={styles.modalOverlay} onPress={() => setCategoryModalVisible(false)}>
     <View style={[styles.modalContainer, { gap: 0, maxHeight: '70%' }]}>
       {/* Header */}
@@ -2567,55 +2777,91 @@ const HistorySection = (
   </Pressable>
 </Modal>
 
-{showTranscript && (
-  <View
-    style={{
-      position: "absolute",
-      bottom: 90,
-      right: 16,
-      backgroundColor: "#1E293B",
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 8,
-      opacity: 0.9,
+
+  {Platform.OS === "web" && showWebView && (
+  <WebView
+    ref={webviewRef}
+    source={{
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+          <body style="margin:0;background-color:#fff;">
+            <script>
+              (function() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: 'Speech recognition not supported' }));
+                  return;
+                }
+                window.recognition = new SpeechRecognition();
+                window.recognition.lang = 'en-US';
+                window.recognition.continuous = false;
+                window.recognition.interimResults = false;
+                window.recognition.maxAlternatives = 1;
+
+                window.recognition.onresult = function(e) {
+                  const transcript = e.results[0][0].transcript;
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'transcript', text: transcript }));
+                };
+
+                window.recognition.onerror = function(e) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.error }));
+                };
+
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+              })();
+            </script>
+          </body>
+        </html>
+      `
     }}
-  >
-    <Text style={{ color: "#fff", fontSize: 13 }}>
-      🎙️ Heard: {voiceTranscript}
-    </Text>
-  </View>
+    onMessage={handleWebViewMessage}
+    javaScriptEnabled
+    domStorageEnabled
+    originWhitelist={['*']}
+    style={{ display: "none" }} // just in case
+  />
 )}
 
-{/* 🎙️ Voice Input Floating Button */}
+
+
 <TouchableOpacity
-  onPress={isListening ? stopVoice : startVoice}
+  onPress={() => {
+    if (!isListening) {
+      startVoiceRecognition();
+    }
+  }}
   activeOpacity={0.8}
+  disabled={isListening}
   style={{
-    position: "absolute",
-    bottom: Platform.OS === "web" ? 5 : 40, // ✅ web → 5, mobile → 40
-    right: 10,
-    backgroundColor: isListening ? "#dc2626" : "#1f4b81",
-    borderRadius: 50,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3.5,
-    elevation: 5,
+  position: "absolute",
+  bottom: isMobile ? 60 : 10,
+  right: 16,
+  backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
+  borderRadius: 50,
+  width: isMobile ? 35 : 60,
+  height: isMobile ? 35 : 60,
+  alignItems: "center",
+  justifyContent: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.3,
+  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 4,
+  elevation: 5,
+  zIndex: 200,
   }}
 >
-  <Ionicons
-    name={isListening ? "mic-off" : "mic"}
-    size={26}
-    color="#fff"
+  <Ionicons 
+    name={isListening ? "mic-off" : "mic"} 
+    size={28} 
+    color="#fff" 
   />
 </TouchableOpacity>
 
     </SafeAreaView>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -2775,8 +3021,6 @@ fab: {
   padding: 10,
   zIndex: 100,
 },
-
-
 
   fabGradient: {
     width: 64,

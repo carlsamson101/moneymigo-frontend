@@ -2458,67 +2458,132 @@ useEffect(() => {
 </View>
 </View>
 
-{/* ==================== GETTING STARTED (COMBINED MODAL) ==================== */}
-{showGettingStarted && (
-  <Modal
-    visible={showGettingStarted}
-    transparent
-    animationType="fade"
-    onRequestClose={() => setShowGettingStarted(false)}
+<Modal
+  visible={showGettingStarted}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowGettingStarted(false)}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)", // ✅ dimmed overlay
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+    }}
   >
-    <View style={styles.overlay}>
-      <View style={styles.tutorialBox}>
-        {/* 🎉 Welcome Section */}
-        <Text style={styles.tutorialTitle}>Welcome to MoneyMigo 🎉</Text>
-        <Text style={styles.tutorialText}>
-          Your default budget period is set to{" "}
-          <Text style={{ fontWeight: "bold", color: "#2563eb" }}>
-            Weekly
-          </Text>.
-          {"\n\n"}
-          Let’s get started with a quick guide:
+    <View
+      style={{
+        backgroundColor: "#fff", // ✅ white background
+        borderRadius: 16,
+        padding: 20,
+        width: "90%",
+        maxWidth: 400,
+        elevation: 6, // ✅ Android shadow
+        shadowColor: "#000", // ✅ iOS shadow
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+      }}
+    >
+      {/* 🎉 Welcome Section */}
+      <Text
+        style={{
+          fontSize: 20,
+          fontWeight: "bold",
+          color: "#1e293b",
+          textAlign: "center",
+          marginBottom: 10,
+        }}
+      >
+        Welcome to MoneyMigo 🎉
+      </Text>
+
+      <Text
+        style={{
+          color: "#475569",
+          fontSize: 15,
+          textAlign: "center",
+          marginBottom: 15,
+        }}
+      >
+        Your default budget period is set to{" "}
+        <Text style={{ fontWeight: "bold", color: "#2563eb" }}>Weekly</Text>.
+        {"\n\n"}Let’s get started with a quick guide:
+      </Text>
+
+      {/* Steps */}
+      <View style={{ marginBottom: 16 }}>
+        <Text style={{ fontSize: 15, color: "#1e293b", marginBottom: 4 }}>
+          💰 Set your first budget
         </Text>
+        <Text style={{ fontSize: 15, color: "#1e293b", marginBottom: 4 }}>
+          🛍️ Track your expenses
+        </Text>
+        <Text style={{ fontSize: 15, color: "#1e293b" }}>
+          🎯 Start saving smarter
+        </Text>
+      </View>
 
-        {/* 🎯 Steps Section */}
-        <View style={{ marginTop: 10 }}>
-          <Text style={styles.tutorialStep}>💰 Set your first budget</Text>
-          <Text style={styles.tutorialStep}>🛍️ Track your expenses</Text>
-          <Text style={styles.tutorialStep}>🎯 Start saving smarter</Text>
-        </View>
-
-        {/* 🚀 Buttons Row */}
-        <View style={styles.tutorialButtonsRow}>
-          {/* Start Tutorial */}
-          <TouchableOpacity
-            style={[styles.tutorialButton, { flex: 1, marginRight: 6 }]}
-            onPress={async () => {
-              const token = await getToken();
-              const userId = token.userId || token._id || token.id;
-              const keys = [
-                [`hasSeenBudgetPeriodNotice_${userId}`, "true"],
-                [`hasSeenGettingStarted_${userId}`, "true"],
-              ];
-              await AsyncStorage.multiSet(keys);
-              setShowGettingStarted(false);
-              router.push("/gettingStarted");
+      {/* Buttons */}
+      <View style={{ flexDirection: "row", marginTop: 10 }}>
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#2563eb",
+            paddingVertical: 10,
+            borderRadius: 10,
+            marginRight: 6,
+          }}
+          onPress={async () => {
+            const token = await getToken();
+            const userId = token.userId || token._id || token.id;
+            const keys = [
+              [`hasSeenBudgetPeriodNotice_${userId}`, "true"],
+              [`hasSeenGettingStarted_${userId}`, "true"],
+            ];
+            await AsyncStorage.multiSet(keys);
+            setShowGettingStarted(false);
+            router.push("/gettingStarted");
+          }}
+        >
+          <Text
+            style={{
+              color: "#fff",
+              textAlign: "center",
+              fontWeight: "600",
+              fontSize: 15,
             }}
           >
-            <Text style={styles.tutorialButtonText}>Start Tutorial</Text>
-          </TouchableOpacity>
+            Start Tutorial
+          </Text>
+        </TouchableOpacity>
 
-          {/* Close */}
-          <TouchableOpacity
-            style={[styles.tutorialButton, { backgroundColor: "#9CA3AF", flex: 1 }]}
-            onPress={() => setShowGettingStarted(false)}
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#9CA3AF",
+            paddingVertical: 10,
+            borderRadius: 10,
+          }}
+          onPress={() => setShowGettingStarted(false)}
+        >
+          <Text
+            style={{
+              color: "#fff",
+              textAlign: "center",
+              fontWeight: "600",
+              fontSize: 15,
+            }}
           >
-            <Text style={styles.tutorialButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
+            Close
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
-  </Modal>
-)}
-
+  </View>
+</Modal>
 
 
 

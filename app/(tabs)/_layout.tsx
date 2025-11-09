@@ -7,6 +7,7 @@ LogBox.ignoreLogs([
   "Warning: Text strings must be rendered",   // companion message
 ]);
 
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import React, { useState, useRef } from "react";
 import { Tabs } from "expo-router";
