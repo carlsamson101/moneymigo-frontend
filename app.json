@@ -19,7 +19,6 @@
     "scheme": "moneymigo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneymigo.app",
@@ -32,7 +31,6 @@
         "NSSpeechRecognitionUsageDescription": "MoneyMigo needs speech recognition to add expenses by voice."
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/moneymigo-icon.png",
@@ -51,7 +49,6 @@
       ],
       "package": "com.moneymigo.app"
     },
-
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -64,7 +61,6 @@
         "apple-mobile-web-app-status-bar-style": "default"
       }
     },
-
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -75,9 +71,9 @@
           "photosPermission": "MoneyMigo needs access to your Photos and Videos to upload receipts or media.",
           "cameraPermission": "MoneyMigo needs camera access to scan receipts and take photos."
         }
-      ]
+      ],
+      "expo-speech-recognition"
     ],
-
     "extra": {
       "router": {},
       "eas": {

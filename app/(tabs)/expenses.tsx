@@ -3,7 +3,6 @@ import { LogBox } from 'react-native';
 // Temporarily ignore the text rendering warning
 LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Pressable,
   TextInput, Dimensions, Alert, StatusBar
@@ -23,8 +22,8 @@ import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import { WebView } from "react-native-webview";
-
+import * as Speech from "expo-speech";
+import * as SpeechRecognition from "expo-speech-recognition";
 import { OCR_API_KEY } from "@env";
 console.log("🧩 OCR API Key loaded:", OCR_API_KEY ? "✅ Yes" : "❌ Missing");
 
@@ -221,6 +220,7 @@ export default function ExpensesPage() {
  
 
 const [isListening, setIsListening] = useState(false);
+const [voiceTranscript, setVoiceTranscript] = useState("");
 
   const router = useRouter();
   const { period } = useLocalSearchParams();
@@ -260,8 +260,7 @@ const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 const [ocrDetectedNotes, setOcrDetectedNotes] = useState("");
 
 const [isScanning, setIsScanning] = useState(false);
-const [showWebView, setShowWebView] = useState(false);
-
+const [showTranscript, setShowTranscript] = useState(false);
 // 💡 state at the top of your component
 const [showWarning, setShowWarning] = useState(false);
 const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
@@ -272,16 +271,8 @@ const [ocrRawText, setOcrRawText] = useState("");
 const [ocrDetectedAmount, setOcrDetectedAmount] = useState("");
 const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
 
-
-// 🎙️ Hidden WebView Speech Recognition (works on mobile browser + APK)
-const webviewRef = useRef(null);
-
-
-
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
-
-
   
   const colorPalette = [
     '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
@@ -422,54 +413,53 @@ function splitIntoClauses(text: string): string[] {
   return parts.length > 1 ? parts : [cleaned];
 }
 
-const startVoiceRecognition = () => {
-  // 🧠 Detect: if NOT running as a web app
-  if (Platform.OS === "android" || Platform.OS === "ios") {
+const startVoiceRecognition = async () => {
+  const isMobileWeb = Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
+
+  if (!isMobileWeb) {
     Alert.alert(
-      "Voice Input Unavailable",
-      "🎙️ Voice recognition works only on the web version (e.g., Google Chrome)."
+      "🎙️ Voice Input Unavailable",
+      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at:\nhttps://moneymigo-6qx2.onrender.com/"
     );
-    return; // Stop here on mobile app
+    return;
   }
 
-  console.log("🎤 Starting voice recognition...");
-  setIsListening(true);
+  const available = await SpeechRecognition.isAvailableAsync();
+  if (!available) {
+    Alert.alert("⚠️ Not Supported", "Speech recognition is not supported on this browser.");
+    return;
+  }
 
-  webviewRef.current?.injectJavaScript(`
-    (function() {
-      try {
-        if (window.recognition && window.recognitionReady) {
-          try { window.recognition.stop(); } catch(e) {}
-          setTimeout(() => {
-            window.recognition.start();
-          }, 300);
-        }
-      } catch(e) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'error',
-          message: e.toString()
-        }));
-      }
-    })();
-    true;
-  `);
-};
-
-const handleWebViewMessage = (event) => {
   try {
-    const data = JSON.parse(event.nativeEvent.data);
-    if (data.type === "ready") {
-      console.log("✅ WebView voice engine ready");
-      setShowWebView(true); // 👈 now show after it's initialized
-    } else if (data.type === "transcript") {
-      setVoiceResult(data.text);
-      setVoiceTranscript(data.text);
-      applyParsedVoice(data.text);
-    } else if (data.type === "error") {
-      console.error("Speech error:", data.message);
-    }
+    Speech.speak("You can say something like: add ten food note burger.", {
+      language: "en-US",
+    });
+
+    setIsListening(true);
+    setShowTranscript(false); // Reset transcript display
+    setVoiceTranscript(""); // Clear previous transcript
+    
+    await SpeechRecognition.startAsync({ lang: "en-US", interimResults: false });
+
+    SpeechRecognition.addListener("onResult", (event) => {
+      const text = event.transcription;
+      console.log("🎤 Voice recognized:", text);
+      setVoiceTranscript(text);
+      setShowTranscript(true); // Show what was heard
+      applyParsedVoice(text);
+      setIsListening(false);
+
+      Speech.speak(`You said: ${text}`);
+      
+      // Auto-hide transcript after 5 seconds
+      setTimeout(() => {
+        setShowTranscript(false);
+      }, 5000);
+    });
   } catch (err) {
-    console.warn("WebView message parse error", err);
+    console.error("❌ Voice recognition error:", err);
+    setIsListening(false);
+    Alert.alert("Error", "Failed to start speech recognition.");
   }
 };
 
@@ -480,12 +470,14 @@ async function applyParsedVoice(command: string) {
   const user = await getToken();
   if (!user?.id) {
     Alert.alert("Please log in first before adding expenses.");
+    setVoiceTranscript(""); // Clear transcript
     return;
   }
 
   const entries = parseVoiceCommand(command);
   if (entries.length === 0) {
-    Alert.alert("No amount detected", "Try e.g. “add 150 food note lunch”.");
+    Alert.alert("No amount detected", "Try e.g. "add 150 food note lunch".");
+    setVoiceTranscript(""); // Clear transcript
     return;
   }
 
@@ -502,10 +494,8 @@ async function applyParsedVoice(command: string) {
     };
 
     try {
-      // if you want offline support here too, you can reuse isOnline() + queueOfflineChange()
       const res = await api.post("/expenses", payload);
 
-      // optimistic UI
       if (res.data?.expense) {
         setFilteredExpenses(prev => [res.data.expense, ...prev]);
       } else {
@@ -521,13 +511,16 @@ async function applyParsedVoice(command: string) {
 
   if (added > 0) {
     fetchExpenses();
-    setShowTranscript(true);
     const msg = `Added ${added} expense${added > 1 ? "s" : ""}, total ₱${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`;
     console.log("✅", msg);
-    // optional toast/alert:
-    // Alert.alert("Voice Add", msg);
+    
+    // Clear transcript after 3 seconds
+    setTimeout(() => {
+      setVoiceTranscript("");
+    }, 3000);
   } else {
-    Alert.alert("Nothing added", "I didn’t find a valid amount to save.");
+    Alert.alert("Nothing added", "I didn't find a valid amount to save.");
+    setVoiceTranscript(""); // Clear transcript
   }
 }
 
@@ -1544,15 +1537,13 @@ const HistorySection = (
   return (
   
 
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#1f4b81ff" />
-      
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-
-      >
+      <View style={styles.container}>
+    <StatusBar barStyle="light-content" backgroundColor="#1f4b81ff" />
+    <ScrollView 
+      style={styles.scrollContainer}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
         {/* Gradient Header Section */}
         <LinearGradient
           colors={['#1f4b81ff', '#7fb1d6ff']}
@@ -2272,74 +2263,100 @@ const HistorySection = (
         </TouchableOpacity>
       </View>
 
-      {/* Action Buttons */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "#F1F5F9",
-            borderRadius: 10,
-            paddingVertical: 12,
-            alignItems: "center",
-          }}
-          onPress={() => setShowOcrModal(false)}
-        >
-          <Text style={{ color: "#475569", fontWeight: "600", fontSize: 14 }}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
+     {/* Action Buttons */}
+<View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+  {/* Cancel Button */}
+  <TouchableOpacity
+    style={{
+      flex: 1,
+      backgroundColor: "#F1F5F9",
+      borderRadius: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: 100,
+    }}
+    onPress={() => setShowOcrModal(false)}
+  >
+    <Text
+      style={{
+        color: "#475569",
+        fontWeight: "600",
+        fontSize: 14,
+        textAlign: "center",
+      }}
+    >
+      Cancel
+    </Text>
+  </TouchableOpacity>
 
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "#2563EB",
-            borderRadius: 10,
-            paddingVertical: 12,
-            alignItems: "center",
-            shadowColor: "#2563EB",
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 3,
-          }}
-        onPress={async () => {
-  const amount = parseFloat(ocrDetectedAmount);
+  {/* Save Button */}
+  <TouchableOpacity
+    style={{
+      flex: 1,
+      borderRadius: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: 100,
+      overflow: "hidden",
+      shadowColor: "#2563EB",
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
+    }}
+    onPress={async () => {
+      const amount = parseFloat(ocrDetectedAmount);
 
-  if (!amount || amount <= 0) {
-    Alert.alert("⚠️ Invalid Amount", "Please enter a valid amount.");
-    return;
-  }
+      if (!amount || amount <= 0) {
+        Alert.alert("⚠️ Invalid Amount", "Please enter a valid amount.");
+        return;
+      }
 
-  // ✅ Fix category check: only block if it's actually unselected
-  if (!ocrDetectedCategory || ocrDetectedCategory === "Select Category") {
-    Alert.alert("⚠️ Incomplete Fields", "Please select a valid category.");
-    return;
-  }
+      if (!ocrDetectedCategory || ocrDetectedCategory === "Select Category") {
+        Alert.alert("⚠️ Incomplete Fields", "Please select a valid category.");
+        return;
+      }
 
-  try {
-    // 🧩 Pass detected fields into your main Add Expense flow
-    setExpenseAmount(ocrDetectedAmount);
-    setExpenseCategory(ocrDetectedCategory);
-    setExpenseNotes(ocrDetectedNotes?.trim() || ""); // Notes optional
+      try {
+        setExpenseAmount(ocrDetectedAmount);
+        setExpenseCategory(ocrDetectedCategory);
+        setExpenseNotes(ocrDetectedNotes?.trim() || "");
 
-    setShowOcrModal(false);
+        setShowOcrModal(false);
 
-    // ✅ Allow state updates before saving
-    setTimeout(async () => {
-      await handleAddExpense(); // Use your existing logic
-    }, 200);
-  } catch (err) {
-    console.error("❌ Save error:", err);
-    Alert.alert("Error", "Failed to save expense from scanned receipt.");
-  }
-}}
+        setTimeout(async () => {
+          await handleAddExpense();
+        }, 200);
+      } catch (err) {
+        console.error("❌ Save error:", err);
+        Alert.alert("Error", "Failed to save expense from scanned receipt.");
+      }
+    }}
+  >
+    <View
+      style={{
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "linear-gradient(90deg, #2563EB, #1E40AF)", // Web-like gradient fallback
+      }}
+    />
+    <Text
+      style={{
+        color: "#FFFFFF",
+        fontWeight: "600",
+        fontSize: 14,
+        textAlign: "center",
+      }}
+      numberOfLines={1}
+    >
+      Save Expense
+    </Text>
+  </TouchableOpacity>
+</View>
 
-        >
-          <Text style={{ color: "#FFFFFF", fontWeight: "600", fontSize: 14 }}>
-            Save Expense
-          </Text>
-        </TouchableOpacity>
-      </View>
     </Pressable>
   </Pressable>
 </Modal>
@@ -2778,78 +2795,83 @@ const HistorySection = (
 </Modal>
 
 
-  {Platform.OS === "web" && showWebView && (
-  <WebView
-    ref={webviewRef}
-    source={{
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-          <body style="margin:0;background-color:#fff;">
-            <script>
-              (function() {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: 'Speech recognition not supported' }));
-                  return;
-                }
-                window.recognition = new SpeechRecognition();
-                window.recognition.lang = 'en-US';
-                window.recognition.continuous = false;
-                window.recognition.interimResults = false;
-                window.recognition.maxAlternatives = 1;
-
-                window.recognition.onresult = function(e) {
-                  const transcript = e.results[0][0].transcript;
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'transcript', text: transcript }));
-                };
-
-                window.recognition.onerror = function(e) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.error }));
-                };
-
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
-              })();
-            </script>
-          </body>
-        </html>
-      `
+{/* 🎤 Voice Transcript Bubble */}
+{voiceTranscript && (
+  <View
+    style={{
+      position: "absolute",
+      bottom: isMobile ? 105 : 80,
+      right: 16,
+      backgroundColor: "#1f4b81",
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      maxWidth: 250,
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 6,
+      zIndex: 199,
     }}
-    onMessage={handleWebViewMessage}
-    javaScriptEnabled
-    domStorageEnabled
-    originWhitelist={['*']}
-    style={{ display: "none" }} // just in case
-  />
+  >
+    {/* Speech bubble arrow */}
+    <View
+      style={{
+        position: "absolute",
+        bottom: -6,
+        right: 20,
+        width: 0,
+        height: 0,
+        borderLeftWidth: 6,
+        borderRightWidth: 6,
+        borderTopWidth: 8,
+        borderLeftColor: "transparent",
+        borderRightColor: "transparent",
+        borderTopColor: "#1f4b81",
+      }}
+    />
+    
+    {/* Content */}
+    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+      <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
+      <Text style={{ color: "#4ade80", fontSize: 11, fontWeight: "600", marginLeft: 4 }}>
+        Heard
+      </Text>
+    </View>
+    
+    <Text style={{ color: "#fff", fontSize: 13, lineHeight: 18 }} numberOfLines={2}>
+      "{voiceTranscript}"
+    </Text>
+  </View>
 )}
 
-
-
+{/* Microphone FAB Button */}
 <TouchableOpacity
   onPress={() => {
     if (!isListening) {
       startVoiceRecognition();
+    } else {
+      setIsListening(false);
     }
   }}
   activeOpacity={0.8}
-  disabled={isListening}
   style={{
-  position: "absolute",
-  bottom: isMobile ? 60 : 10,
-  right: 16,
-  backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
-  borderRadius: 50,
-  width: isMobile ? 35 : 60,
-  height: isMobile ? 35 : 60,
-  alignItems: "center",
-  justifyContent: "center",
-  shadowColor: "#000",
-  shadowOpacity: 0.3,
-  shadowOffset: { width: 0, height: 2 },
-  shadowRadius: 4,
-  elevation: 5,
-  zIndex: 200,
+    position: "absolute",
+    bottom: isMobile ? 60 : 10,
+    right: 16,
+    backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
+    borderRadius: 50,
+    width: isMobile ? 35 : 60,
+    height: isMobile ? 35 : 60,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 200,
   }}
 >
   <Ionicons 
@@ -2859,16 +2881,14 @@ const HistorySection = (
   />
 </TouchableOpacity>
 
-    </SafeAreaView>
+
+  </View>
   );
   
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#1f4b81ff',
-  },
+
   container: {
     flex: 1,
     backgroundColor: '#f3f6fa',
@@ -2882,12 +2902,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     position: 'relative',
   },
-  headerRow: {
+   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    marginTop: Platform.OS === 'ios' ? 20 : 60,
+    marginTop: Platform.OS === 'ios' ? 20 : Platform.OS === 'web' ? 40 : 45,
     marginBottom: 8,
   },
   headerRowWeb: {
@@ -3284,6 +3304,4 @@ chartCard: {
   shadowOffset: { width: 0, height: 3 },
 },
 
-
-  
 });

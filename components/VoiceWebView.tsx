@@ -1,22 +1,31 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 
-const VoiceWebView: React.FC = () => {
-  const [text, setText] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [listening, setListening] = useState(false);
+interface VoiceWebViewProps {
+  onResult?: (text: string) => void;
+  onError?: (error: string) => void;
+  isListening?: boolean;
+  onListeningChange?: (listening: boolean) => void;
+}
+
+const VoiceWebView: React.FC<VoiceWebViewProps> = ({
+  onResult,
+  onError,
+  isListening = false,
+  onListeningChange,
+}) => {
   const recognitionRef = useRef<any>(null);
-
   const isWeb = Platform.OS === "web";
 
   // Set up Web Speech API only on web
   useEffect(() => {
     if (!isWeb) return;
+
     const SpeechRecognition: any =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setError("Speech recognition not supported in this browser.");
+      onError?.("Speech recognition not supported in this browser.");
       return;
     }
 
@@ -25,15 +34,26 @@ const VoiceWebView: React.FC = () => {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
-    rec.onstart = () => setListening(true);
-    rec.onend = () => setListening(false);
-    rec.onresult = (e: any) => {
-      const t = e.results[0][0].transcript;
-      setText(t);
+    rec.onstart = () => {
+      console.log("🎤 Speech recognition started");
+      onListeningChange?.(true);
     };
+
+    rec.onend = () => {
+      console.log("🎤 Speech recognition ended");
+      onListeningChange?.(false);
+    };
+
+    rec.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript;
+      console.log("🎤 Transcript:", transcript);
+      onResult?.(transcript);
+    };
+
     rec.onerror = (e: any) => {
-      setError(e.error || "Unknown error");
-      setListening(false);
+      console.error("🎤 Speech error:", e.error);
+      onError?.(e.error || "Unknown error");
+      onListeningChange?.(false);
     };
 
     recognitionRef.current = rec;
@@ -46,81 +66,40 @@ const VoiceWebView: React.FC = () => {
     };
   }, [isWeb]);
 
-  const startRecognition = () => {
-    if (!isWeb) return;
-    setError("");
-    try {
-      recognitionRef.current?.abort?.();
-      // slight delay to reset state
-      setTimeout(() => recognitionRef.current?.start?.(), 150);
-    } catch (e: any) {
-      setError(e?.message || "Could not start recognition");
-    }
-  };
+  // Start recognition when isListening prop changes
+  useEffect(() => {
+    if (!isWeb || !recognitionRef.current) return;
 
+    if (isListening) {
+      try {
+        recognitionRef.current.abort();
+        setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+          } catch (err) {
+            console.error("Failed to start recognition:", err);
+          }
+        }, 150);
+      } catch (err) {
+        console.error("Failed to abort previous recognition:", err);
+      }
+    } else {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+    }
+  }, [isListening, isWeb]);
+
+  // ✅ Return nothing - this is a hidden service component
   if (!isWeb) {
-    return (
-      <View style={styles.unsupportedContainer}>
-        <Text style={styles.unsupportedText}>
-          🎤 Voice recognition works only in mobile or desktop browsers.
-        </Text>
-        <Text style={styles.subText}>
-          Open this app in Chrome or Safari to use speech recognition.
-        </Text>
-      </View>
-    );
+    return null;
   }
 
-  return (
-    <View style={styles.container}>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <TouchableOpacity
-          onPress={startRecognition}
-          disabled={listening}
-          style={[
-            styles.button,
-            listening && { backgroundColor: "#64748B" },
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            {listening ? "Listening…" : "🎤 Tap to Speak"}
-          </Text>
-        </TouchableOpacity>
-
-        {!!error && <Text style={styles.errorText}>Error: {error}</Text>}
-      </View>
-
-      <View style={styles.outputBox}>
-        <Text style={styles.label}>You said:</Text>
-        <Text style={styles.result}>{text}</Text>
-      </View>
-    </View>
-  );
+  return null; // Component has no UI
 };
 
 export default VoiceWebView;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2f4f7" },
-  outputBox: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#ddd",
-  },
-  label: { fontSize: 18, color: "#333" },
-  result: { fontSize: 20, fontWeight: "600", marginTop: 0, color: "#1f4b81" },
-  unsupportedContainer: {
-    flex: 1, justifyContent: "center", alignItems: "center", padding: 30, backgroundColor: "#f8fafc",
-  },
-  unsupportedText: { fontSize: 18, fontWeight: "700", color: "#1f4b81", textAlign: "center" },
-  subText: { fontSize: 14, color: "#475569", textAlign: "center", marginTop: 8 },
-  button: {
-    backgroundColor: "#1f4b81",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-  },
-  buttonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  errorText: { marginTop: 10, color: "#DC2626" },
+  // No styles needed - component is invisible
 });

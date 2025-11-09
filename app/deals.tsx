@@ -199,370 +199,340 @@ const onRefresh = () => {
   }
 
   return (
-<ScrollView
-    style={styles.container}
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={{ paddingBottom: 80 }}
-    refreshControl={
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
-    }
-  >      <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
-      
-      {/* Header */}
-      <LinearGradient colors={['#1f4b81ff', '#7fb1d6ff']} style={styles.header}>
-        <View style={styles.headerRow}>
-          {isMobile && (
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-          
-          <View style={styles.headerContent}>
-            <Text style={styles.title}>Marketplace</Text>
-            <Text style={styles.subtitle}>Iligan City</Text>
-          </View>
-          
-          {isMobile && <View style={styles.headerSpacer} />}
-        </View>
-      </LinearGradient>
-
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchWrapper}>
-          <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search items..."
-            placeholderTextColor="#9CA3AF"
-            value={q}
-            onChangeText={setQ}
-            onSubmitEditing={() => fetchDeals()}
-          />
-          {q.length > 0 && (
-            <TouchableOpacity 
-              style={styles.clearButton}
-              onPress={() => setQ('')}
-            >
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
+<View style={styles.container}>
+    <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
+    
+    {/* Header - Fixed at top */}
+    <LinearGradient colors={['#1f4b81ff', '#7fb1d6ff']} style={styles.header}>
+      <View style={styles.headerRow}>
+        {isMobile && (
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+        
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Marketplace</Text>
+          <Text style={styles.subtitle}>Iligan City</Text>
         </View>
         
-        <TouchableOpacity 
-          style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
-          onPress={() => fetchDeals()}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Ionicons name="search" size={16} color="white" />
-          )}
-        </TouchableOpacity>
+        {isMobile && <View style={styles.headerSpacer} />}
       </View>
+    </LinearGradient>
 
-      {/* Category Filter */}
-     {/* Category Dropdown */}
-<View style={styles.dropdownContainer}>
-  <Text style={styles.dropdownLabel}>Category:</Text>
-  <View style={styles.dropdownWrapper}>
-    <Picker
-      selectedValue={selectedCategory || "all"}
-      onValueChange={(itemValue) => {
-        setSelectedCategory(itemValue === "all" ? null : itemValue);
-        setQ("");
-      }}
-      style={styles.picker}
-      dropdownIconColor="#1f4b81ff"
-    >
-      {categories.map((cat) => (
-        <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
-      ))}
-    </Picker>
-  </View>
-</View>
+    {/* Search - Fixed */}
+    <View style={styles.searchContainer}>
+      <View style={styles.searchWrapper}>
+        <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search items..."
+          placeholderTextColor="#9CA3AF"
+          value={q}
+          onChangeText={setQ}
+          onSubmitEditing={() => fetchDeals()}
+        />
+        {q.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearButton}
+            onPress={() => setQ('')}
+          >
+            <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      <TouchableOpacity 
+        style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
+        onPress={() => fetchDeals()}
+        disabled={loading}
+        activeOpacity={0.8}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Ionicons name="search" size={16} color="white" />
+        )}
+      </TouchableOpacity>
+    </View>
 
-
-
-      {/* Results Header */}
-      {!loading && deals.length > 0 && (
-  <View style={styles.resultsHeader}>
-    <Text style={styles.resultsText}>
-      {selectedCategory === null
-        ? `Showing ${total || deals.length} total deal${(total || deals.length) !== 1 ? "s" : ""}`
-        : `Showing ${deals.length} deal${deals.length !== 1 ? "s" : ""} in ${
-            categories.find(c => c.value === selectedCategory)?.label
-          }`}
-    </Text>
-
-    {cheapestPrice && (
-      <Text style={styles.bestPriceText}>
-        Best price: ₱{cheapestPrice}
-      </Text>
-    )}
-  </View>
-)}
-
-      {/* Map */}
-      {!loading && deals.length > 0 && (
-        <View style={styles.mapContainer}>
-          <UniversalMap deals={deals} />
-        </View>
-      )}
-
-      {/* Loading */}
-      {loading && !refreshing && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Finding best deals...</Text>
-        </View>
-      )}
-
-      {/* Empty State */}
-      {!loading && deals.length === 0 && !error && (
-        <ScrollView
-          contentContainerStyle={styles.emptyStateScroll}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
-          }
+    {/* Category Dropdown - Fixed */}
+    <View style={styles.dropdownContainer}>
+      <Text style={styles.dropdownLabel}>Category:</Text>
+      <View style={styles.dropdownWrapper}>
+        <Picker
+          selectedValue={selectedCategory || "all"}
+          onValueChange={(itemValue) => {
+            setSelectedCategory(itemValue === "all" ? null : itemValue);
+            setQ("");
+          }}
+          style={styles.picker}
+          dropdownIconColor="#1f4b81ff"
         >
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons 
-                name={q || selectedCategory ? "search-outline" : "pricetags-outline"} 
-                size={48} 
-                color="#3B82F6" 
-              />
-            </View>
-            <Text style={styles.emptyStateTitle}>No deals found</Text>
-            <Text style={styles.emptyStateMessage}>
-              {q 
-                ? `No results for "${q}". Try a different search term.`
-                : selectedCategory
-                ? `No deals available in ${categories.find(c => c.value === selectedCategory)?.label} category.`
-                : 'No deals available at the moment. Pull down to refresh.'}
-            </Text>
-            {(q || selectedCategory) && (
-              <TouchableOpacity
-               onPress={() => {
-                setQ('');
-                setSelectedCategory(null); // will automatically map back to "All"
+          {categories.map((cat) => (
+            <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+          ))}
+        </Picker>
+      </View>
+    </View>
+
+    {/* Results Header - Fixed */}
+    {!loading && deals.length > 0 && (
+      <View style={styles.resultsHeader}>
+        <Text style={styles.resultsText}>
+          {selectedCategory === null
+            ? `Showing ${Math.min(total || deals.length, 50)} of ${total || deals.length} total deal${(total || deals.length) !== 1 ? "s" : ""}`
+            : `Showing ${Math.min(deals.length, 50)} deal${deals.length !== 1 ? "s" : ""} in ${
+                categories.find(c => c.value === selectedCategory)?.label
+              }`}
+        </Text>
+
+        {cheapestPrice && (
+          <Text style={styles.bestPriceText}>
+            Best price: ₱{cheapestPrice}
+          </Text>
+        )}
+      </View>
+    )}
+
+    {/* Map - Fixed height, interactive */}
+    {!loading && deals.length > 0 && (
+      <View style={styles.mapContainer}>
+        <UniversalMap deals={deals.slice(0, 50)} />
+      </View>
+    )}
+
+    {/* Loading State */}
+    {loading && !refreshing && (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>Finding best deals...</Text>
+      </View>
+    )}
+
+    {/* Empty State */}
+    {!loading && deals.length === 0 && !error && (
+      <View style={styles.emptyStateContainer}>
+        <View style={styles.emptyIconCircle}>
+          <Ionicons 
+            name={q || selectedCategory ? "search-outline" : "pricetags-outline"} 
+            size={48} 
+            color="#3B82F6" 
+          />
+        </View>
+        <Text style={styles.emptyStateTitle}>No deals found</Text>
+        <Text style={styles.emptyStateMessage}>
+          {q 
+            ? `No results for "${q}". Try a different search term.`
+            : selectedCategory
+            ? `No deals available in ${categories.find(c => c.value === selectedCategory)?.label} category.`
+            : 'No deals available at the moment. Pull down to refresh.'}
+        </Text>
+        {(q || selectedCategory) && (
+          <TouchableOpacity
+            onPress={() => {
+              setQ('');
+              setSelectedCategory(null);
+            }}
+            style={styles.clearFiltersButton}
+          >
+            <Ionicons name="close-circle" size={20} color="white" />
+            <Text style={styles.clearFiltersText}>Clear Filters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    )}
+
+    {/* ✅ SINGLE Product List - Limited to 30 items */}
+    {!loading && deals.length > 0 && (
+      <FlatList
+        data={deals.slice(0, 50)} // ✅ LIMIT TO 30 ITEMS
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#3B82F6']}
+          />
+        }
+        renderItem={({ item }) => {
+          const distanceKm = item.distance ? (item.distance / 1000).toFixed(2) : '';
+          const isCheapest = cheapestPrice !== null && item.price === cheapestPrice;
+          const [lng, lat] = item.location?.coordinates || [null, null];
+          const categoryInfo = getCategoryInfo(item.category);
+
+          return (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                setSelectedDeal(item);
+                setModalVisible(true);
               }}
-
-                style={styles.clearFiltersButton}
-              >
-                <Ionicons name="close-circle" size={20} color="white" />
-                <Text style={styles.clearFiltersText}>Clear Filters</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </ScrollView>
-      )}
-
-     {/* List - Product Cards */}
-{!loading && deals.length > 0 && (
-  <FlatList
-    data={deals}
-    keyExtractor={(item) => item._id}
-    contentContainerStyle={styles.listContainer}
-    showsVerticalScrollIndicator={false}
-    nestedScrollEnabled // ✅ allow inner list inside ScrollView
-    scrollEnabled={false} // ✅ disable FlatList’s own scrolling to avoid conflict
-    refreshControl={
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        colors={['#3B82F6']}
-      />
-    }
-    renderItem={({ item }) => {
-      const distanceKm = item.distance ? (item.distance / 1000).toFixed(2) : '';
-      const isCheapest = cheapestPrice !== null && item.price === cheapestPrice;
-      const [lng, lat] = item.location?.coordinates || [null, null];
-      const categoryInfo = getCategoryInfo(item.category);
-
-      return (
-        <TouchableOpacity
-  activeOpacity={0.9}
-  onPress={() => {
-    setSelectedDeal(item);
-    setModalVisible(true);
-  }}
-  style={[styles.dealCard, isCheapest && styles.cheapestCard]}
->
-
-          {isCheapest && (
-            <View style={styles.cheapestBadge}>
-              <Ionicons name="star" size={10} color="white" />
-              <Text style={styles.cheapestBadgeText}>Lowest Price</Text>
-            </View>
-          )}
-
-          <View style={styles.dealInfo}>
-            <Text style={styles.itemName} numberOfLines={1}>{item.itemName}</Text>
-
-            {/* Category Badge */}
-            <View
-              style={[
-                styles.categoryBadge,
-                { backgroundColor: categoryInfo.bgColor, alignSelf: 'flex-start' },
-              ]}
+              style={[styles.dealCard, isCheapest && styles.cheapestCard]}
             >
-              <Ionicons name={categoryInfo.icon as any} size={9} color={categoryInfo.color} />
-              <Text
-                style={[
-                  styles.categoryBadgeText,
-                  { color: categoryInfo.color },
-                ]}
-              >
-                {categoryInfo.label}
-              </Text>
-            </View>
-
-            <View style={styles.storeInfo}>
-              <Ionicons name="storefront-outline" size={12} color="#6B7280" />
-              <Text style={styles.storeName} numberOfLines={1}>
-                {item.storeName}
-              </Text>
-              {item.unit && (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={styles.separator}>•</Text>
-                  <Text style={styles.unit}>{item.unit}</Text>
+              {isCheapest && (
+                <View style={styles.cheapestBadge}>
+                  <Ionicons name="star" size={10} color="white" />
+                  <Text style={styles.cheapestBadgeText}>Lowest Price</Text>
                 </View>
               )}
-            </View>
 
-            {distanceKm && (
-              <View style={styles.distanceInfo}>
-                <Ionicons name="location-outline" size={12} color="#9CA3AF" />
-                <Text style={styles.distance}>{distanceKm} km</Text>
+              <View style={styles.dealInfo}>
+                <Text style={styles.itemName} numberOfLines={1}>{item.itemName}</Text>
+
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: categoryInfo.bgColor, alignSelf: 'flex-start' },
+                  ]}
+                >
+                  <Ionicons name={categoryInfo.icon as any} size={9} color={categoryInfo.color} />
+                  <Text style={[styles.categoryBadgeText, { color: categoryInfo.color }]}>
+                    {categoryInfo.label}
+                  </Text>
+                </View>
+
+                <View style={styles.storeInfo}>
+                  <Ionicons name="storefront-outline" size={12} color="#6B7280" />
+                  <Text style={styles.storeName} numberOfLines={1}>
+                    {item.storeName}
+                  </Text>
+                  {item.unit && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.separator}>•</Text>
+                      <Text style={styles.unit}>{item.unit}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {distanceKm && (
+                  <View style={styles.distanceInfo}>
+                    <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                    <Text style={styles.distance}>{distanceKm} km</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
 
-          {/* 🧮 Stock Info */}
-          <View style={styles.stockContainer}>
-  {item.stock && item.stock > 0 ? (
-    <>
-      <Ionicons name="cube-outline" size={12} color="#059669" />
-      <Text style={[styles.stockText, { color: "#059669" }]}>
-        {item.stock} in stock
-      </Text>
-    </>
-  ) : (
-    <>
-      <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
-      <Text style={[styles.stockText, { color: "#DC2626" }]}>
-        No stock available
-      </Text>
-    </>
-  )}
-</View>
+              <View style={styles.stockContainer}>
+                {item.stock && item.stock > 0 ? (
+                  <>
+                    <Ionicons name="cube-outline" size={12} color="#059669" />
+                    <Text style={[styles.stockText, { color: "#059669" }]}>
+                      {item.stock} in stock
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
+                    <Text style={[styles.stockText, { color: "#DC2626" }]}>
+                      No stock available
+                    </Text>
+                  </>
+                )}
+              </View>
 
+              <View style={styles.priceSection}>
+                <Text style={[styles.price, isCheapest && styles.cheapestPrice]}>
+                  ₱{item.price}
+                </Text>
 
-          <View style={styles.priceSection}>
-            <Text style={[styles.price, isCheapest && styles.cheapestPrice]}>
-              ₱{item.price}
-            </Text>
-
-            {lat && lng && (
-              <TouchableOpacity
-                onPress={() =>
-                  router.push(
-                    `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-                  )
-                }
-                style={styles.directionsButton}
-              >
-                <Ionicons name="navigate" size={12} color="#2563EB" />
-                <Text style={styles.directionsText}>Directions</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-       </TouchableOpacity>
-
-      );
-    }}
-  />
-)}
-{/* 🪟 Product Detail Modal */}
-<Modal
-  animationType="slide"
-  transparent={true}
-  visible={modalVisible}
-  onRequestClose={() => setModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      {selectedDeal && (
-        <>
-          <Text style={styles.modalTitle}>{selectedDeal.itemName}</Text>
-
-          <Text style={styles.modalText}>🏪 Store: {selectedDeal.storeName}</Text>
-          <Text style={styles.modalText}>
-            🏷️ Category: {selectedDeal.category || "N/A"}
-          </Text>
-          <Text style={styles.modalText}>💰 Price: ₱{selectedDeal.price}</Text>
-
-          <Text style={styles.modalText}>
-            📦 Stock:{" "}
-            {selectedDeal.stock && selectedDeal.stock > 0
-              ? `${selectedDeal.stock} in stock`
-              : "No stock available"}
-          </Text>
-
-          {selectedDeal.unit && (
-            <Text style={styles.modalText}>📏 Unit: {selectedDeal.unit}</Text>
-          )}
-
-          {selectedDeal.distance && (
-            <Text style={styles.modalText}>
-              📍 Distance: {(selectedDeal.distance / 1000).toFixed(2)} km
-            </Text>
-          )}
-
-          {/* 📍 View on Map Button */}
-          {selectedDeal.location?.coordinates && (
-            <TouchableOpacity
-              style={styles.mapButton}
-              onPress={() => {
-                const [lng, lat] = selectedDeal.location.coordinates;
-                const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-                if (Platform.OS === "web") {
-                  window.open(url, "_blank");
-                } else {
-                  router.push(url);
-                }
-              }}
-            >
-              <Ionicons name="navigate" size={16} color="#fff" />
-              <Text style={styles.mapButtonText}>View on Map</Text>
+                {lat && lng && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push(
+                        `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                      )
+                    }
+                    style={styles.directionsButton}
+                  >
+                    <Ionicons name="navigate" size={12} color="#2563EB" />
+                    <Text style={styles.directionsText}>Directions</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </TouchableOpacity>
+          );
+        }}
+      />
+    )}
+
+    {/* Modal */}
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          {selectedDeal && (
+            <>
+              <Text style={styles.modalTitle}>{selectedDeal.itemName}</Text>
+
+              <Text style={styles.modalText}>🏪 Store: {selectedDeal.storeName}</Text>
+              <Text style={styles.modalText}>
+                🏷️ Category: {selectedDeal.category || "N/A"}
+              </Text>
+              <Text style={styles.modalText}>💰 Price: ₱{selectedDeal.price}</Text>
+
+              <Text style={styles.modalText}>
+                📦 Stock:{" "}
+                {selectedDeal.stock && selectedDeal.stock > 0
+                  ? `${selectedDeal.stock} in stock`
+                  : "No stock available"}
+              </Text>
+
+              {selectedDeal.unit && (
+                <Text style={styles.modalText}>📏 Unit: {selectedDeal.unit}</Text>
+              )}
+
+              {selectedDeal.distance && (
+                <Text style={styles.modalText}>
+                  📍 Distance: {(selectedDeal.distance / 1000).toFixed(2)} km
+                </Text>
+              )}
+
+              {selectedDeal.location?.coordinates && (
+                <TouchableOpacity
+                  style={styles.mapButton}
+                  onPress={() => {
+                    const [lng, lat] = selectedDeal.location.coordinates;
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                    if (Platform.OS === "web") {
+                      window.open(url, "_blank");
+                    } else {
+                      router.push(url);
+                    }
+                  }}
+                >
+                  <Ionicons name="navigate" size={16} color="#fff" />
+                  <Text style={styles.mapButtonText}>View on Map</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.closeModalButton}
+              >
+                <Text style={styles.closeModalText}>Close</Text>
+              </TouchableOpacity>
+            </>
           )}
-
-          <TouchableOpacity
-            onPress={() => setModalVisible(false)}
-            style={styles.closeModalButton}
-          >
-            <Text style={styles.closeModalText}>Close</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
-  </View>
-</Modal>
-
-
-  </ScrollView>
-  );
+        </View>
+      </View>
+    </Modal>
+  </View> 
+);
 }
 
 const styles = StyleSheet.create({
+  
   container: { flex: 1, backgroundColor: '#F9FAFB' },
 
   header: {
@@ -1028,5 +998,12 @@ mapButtonText: {
   fontWeight: "600",
   marginLeft: 6,
 },
+emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 60,
+  },
 
 });
