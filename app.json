@@ -44,8 +44,7 @@
         "READ_MEDIA_IMAGES",
         "READ_MEDIA_VIDEO",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "WRITE_EXTERNAL_STORAGE"
       ],
       "package": "com.moneymigo.app"
     },
@@ -56,10 +55,17 @@
       "themeColor": "#1f4b81",
       "backgroundColor": "#ffffff",
       "display": "standalone",
+      "orientation": "portrait",
+      "scope": "/",
+      "startUrl": "/",
       "meta": {
         "apple-mobile-web-app-capable": "yes",
-        "apple-mobile-web-app-status-bar-style": "default"
-      }
+        "apple-mobile-web-app-status-bar-style": "black-translucent",
+        "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+      },
+      "permissions": [
+        "microphone"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -72,7 +78,13 @@
           "cameraPermission": "MoneyMigo needs camera access to scan receipts and take photos."
         }
       ],
-      "expo-speech-recognition"
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "MoneyMigo needs microphone access for voice commands to add expenses.",
+          "speechRecognitionPermission": "MoneyMigo needs speech recognition to convert your voice to text."
+        }
+      ]
     ],
     "extra": {
       "router": {},

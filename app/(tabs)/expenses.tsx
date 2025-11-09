@@ -22,8 +22,18 @@ import { LayoutAnimation, UIManager } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import * as Speech from "expo-speech";
-import * as SpeechRecognition from "expo-speech-recognition";
+let Speech: any = null;
+let SpeechRecognition: any = null;
+
+if (Platform.OS === "web") {
+  try {
+    Speech = require("expo-speech");
+    SpeechRecognition = require("expo-speech-recognition");
+  } catch (e) {
+    console.log("🧩 Web-only: Speech modules not available natively");
+  }
+}
+
 import { OCR_API_KEY } from "@env";
 console.log("🧩 OCR API Key loaded:", OCR_API_KEY ? "✅ Yes" : "❌ Missing");
 
@@ -424,45 +434,90 @@ const startVoiceRecognition = async () => {
     return;
   }
 
-  const available = await SpeechRecognition.isAvailableAsync();
-  if (!available) {
-    Alert.alert("⚠️ Not Supported", "Speech recognition is not supported on this browser.");
-    return;
-  }
-
   try {
+    // 🎤 Check and request microphone permission
+    if (Platform.OS === "web" && navigator.permissions) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+        console.log("🎤 Microphone permission status:", permissionStatus.state);
+
+        if (permissionStatus.state === 'denied') {
+          Alert.alert(
+            "🎤 Permission Denied",
+            "Microphone access was denied. Please enable it in your browser settings:\n\n1. Tap the lock/info icon in the address bar\n2. Allow microphone access\n3. Refresh the page"
+          );
+          return;
+        }
+
+        // If prompt or granted, request access
+        if (permissionStatus.state === 'prompt' || permissionStatus.state === 'granted') {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(track => track.stop());
+          console.log("✅ Microphone access granted!");
+        }
+      } catch (permError) {
+        console.warn("⚠️ Permission check failed:", permError);
+        // Try to request anyway
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    // Check SpeechRecognition availability
+    const available = await SpeechRecognition.isAvailableAsync();
+    console.log("🎤 SpeechRecognition available:", available);
+    
+    if (!available) {
+      Alert.alert("⚠️ Not Supported", "Speech recognition is not supported on this browser. Please use Chrome or Safari.");
+      return;
+    }
+
+    // Start voice recognition
+    console.log("🎤 Starting voice recognition...");
     Speech.speak("You can say something like: add ten food note burger.", {
       language: "en-US",
     });
 
     setIsListening(true);
-    setShowTranscript(false); // Reset transcript display
-    setVoiceTranscript(""); // Clear previous transcript
+    setVoiceTranscript("");
     
     await SpeechRecognition.startAsync({ lang: "en-US", interimResults: false });
+    console.log("✅ Listening started!");
 
     SpeechRecognition.addListener("onResult", (event) => {
       const text = event.transcription;
       console.log("🎤 Voice recognized:", text);
       setVoiceTranscript(text);
-      setShowTranscript(true); // Show what was heard
       applyParsedVoice(text);
       setIsListening(false);
 
       Speech.speak(`You said: ${text}`);
       
-      // Auto-hide transcript after 5 seconds
       setTimeout(() => {
-        setShowTranscript(false);
-      }, 5000);
+        setVoiceTranscript("");
+      }, 3000);
     });
+
+    SpeechRecognition.addListener("onError", (error) => {
+      console.error("❌ Recognition error:", error);
+      setIsListening(false);
+      Alert.alert("Error", `Speech recognition error: ${error.message || 'Please try again'}`);
+    });
+
   } catch (err) {
-    console.error("❌ Voice recognition error:", err);
+    console.error("❌ Failed to start voice recognition:", err);
     setIsListening(false);
-    Alert.alert("Error", "Failed to start speech recognition.");
+    
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      Alert.alert(
+        "🎤 Permission Required",
+        "Please allow microphone access in your browser settings to use voice input."
+      );
+    } else {
+      Alert.alert("Error", `Failed to start: ${err.message || 'Unknown error'}`);
+    }
   }
 };
-
 
 async function applyParsedVoice(command: string) {
   console.log("🎤 Voice input:", command);
