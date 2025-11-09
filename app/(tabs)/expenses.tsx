@@ -474,15 +474,15 @@ async function applyParsedVoice(command: string) {
     return;
   }
 
-  const entries = parseVoiceCommand(command);
-  if (entries.length === 0) {
-    Alert.alert("No amount detected", "Try e.g. "add 150 food note lunch".");
-    setVoiceTranscript(""); // Clear transcript
-    return;
-  }
+const entries = parseVoiceCommand(command);
+if (entries.length === 0) {
+  Alert.alert("No amount detected", "Try e.g. 'add 150 food note lunch'.");
+  setVoiceTranscript(""); // Clear transcript
+  return;
+}
 
-  let total = 0;
-  let added = 0;
+let total = 0;  // Continue normally
+let added = 0;
 
   for (const { amount, category, notes, dateISO } of entries) {
     const payload = {
