@@ -6,7 +6,8 @@ LogBox.ignoreLogs([
 ]);
 
 import React, { useEffect, useState, useCallback } from 'react';
-
+import * as SpeechRecognition from "expo-speech-recognition";
+import * as Speech from "expo-speech";
 import { Modal } from "react-native";
 import { router } from "expo-router";  
 import { Ionicons } from '@expo/vector-icons';
@@ -72,6 +73,8 @@ export default function DealsPage() {
     const [total, setTotal] = useState(0);
 const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 const [modalVisible, setModalVisible] = useState(false);
+const [isListening, setIsListening] = useState(false);
+const [voiceTranscript, setVoiceTranscript] = useState("");
   // Product categories - FIXED to match backend
   const categories = [
     { value: "all", label: "All" }, // make it a string for Picker reliability
@@ -148,6 +151,70 @@ const onRefresh = () => {
   fetchDeals(true);
   fetchTotal();
 };
+
+const handleVoiceCommand = (command) => {
+  const text = command.toLowerCase().trim();
+  console.log("🎤 Voice command:", text);
+
+  const categories = ["food", "beverage", "personal care", "household", "medicine", "electronics", "clothing", "tools"];
+  const matchedCategory = categories.find(cat => text.includes(cat));
+
+  if (matchedCategory) {
+    setSelectedCategory(matchedCategory);
+    setQ("");
+    fetchDeals();
+    Speech.speak(`Showing ${matchedCategory} deals`, { language: "en-US" });
+    return;
+  }
+
+  const match = text.match(/(?:search|find|look for)\s+(.+)/);
+  if (match && match[1]) {
+    const keyword = match[1].trim();
+    setQ(keyword);
+    setSelectedCategory(null);
+    fetchDeals();
+    Speech.speak(`Searching for ${keyword}`, { language: "en-US" });
+    return;
+  }
+
+  if (text.includes("clear") || text.includes("reset") || text.includes("all")) {
+    setQ("");
+    setSelectedCategory(null);
+    fetchDeals();
+    Speech.speak("Showing all deals", { language: "en-US" });
+    return;
+  }
+
+  Speech.speak("Sorry, I didn’t understand. Try saying search milk or show food deals.", { language: "en-US" });
+};
+
+const startVoiceSearch = async () => {
+  const available = await SpeechRecognition.requestPermissionsAsync();
+  if (!available.granted) {
+    Alert.alert("Permission needed", "Microphone access is required for voice search.");
+    return;
+  }
+
+  Speech.speak("You can say search milk or show food deals.", { language: "en-US", rate: 1.0 });
+
+  setIsListening(true);
+  SpeechRecognition.startAsync({ language: "en-US" });
+
+  SpeechRecognition.addListener("onSpeechResults", (event) => {
+    const result = event.value?.[0];
+    if (result) {
+      setVoiceTranscript(result);
+      handleVoiceCommand(result);
+    }
+  });
+
+  // stop after 4 seconds
+  setTimeout(() => {
+    SpeechRecognition.stopAsync();
+    setIsListening(false);
+  }, 4000);
+};
+
 
 
   const cheapestPrice = deals.length ? Math.min(...deals.map(d => d.price)) : null;
@@ -226,25 +293,53 @@ const onRefresh = () => {
 
     {/* Search - Fixed */}
     <View style={styles.searchContainer}>
-      <View style={styles.searchWrapper}>
-        <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search items..."
-          placeholderTextColor="#9CA3AF"
-          value={q}
-          onChangeText={setQ}
-          onSubmitEditing={() => fetchDeals()}
-        />
-        {q.length > 0 && (
-          <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={() => setQ('')}
-          >
-            <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-        )}
-      </View>
+     <View style={styles.searchWrapper}>
+  {/* 🔍 Search Icon */}
+  <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
+
+  {/* 🧠 Input */}
+  <TextInput
+    style={styles.searchInput}
+    placeholder="Search items or say 'show food deals'..."
+    placeholderTextColor="#9CA3AF"
+    value={q}
+    onChangeText={setQ}
+    onSubmitEditing={() => fetchDeals()}
+  />
+
+  {/* 🎙 Mic Button beside search icon */}
+  <TouchableOpacity onPress={startVoiceSearch} style={{ paddingHorizontal: 6 }}>
+    <Ionicons
+      name={isListening ? "mic" : "mic-outline"}
+      size={18}
+      color={isListening ? "#1f4b81" : "#9CA3AF"}
+    />
+  </TouchableOpacity>
+
+  {/* ❌ Clear Button */}
+  {q.length > 0 && (
+    <TouchableOpacity style={styles.clearButton} onPress={() => setQ("")}>
+      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+    </TouchableOpacity>
+  )}
+</View>
+
+{voiceTranscript && (
+  <View
+    style={{
+      alignSelf: "flex-end",
+      backgroundColor: "#1f4b81",
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginTop: 4,
+      marginRight: 10,
+      maxWidth: 200,
+    }}
+  >
+    <Text style={{ color: "white", fontSize: 12 }}>{voiceTranscript}</Text>
+  </View>
+)}
       
       <TouchableOpacity 
         style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
@@ -512,7 +607,7 @@ const onRefresh = () => {
                   }}
                 >
                   <Ionicons name="navigate" size={16} color="#fff" />
-                  <Text style={styles.mapButtonText}>View on Map</Text>
+                  <Text style={styles.mapButtonText}>Get Directions</Text>
                 </TouchableOpacity>
               )}
 
