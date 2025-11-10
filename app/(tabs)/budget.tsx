@@ -2459,10 +2459,10 @@ headerTextBudget: {
 },
   backButton: {
     position: 'absolute',
-    left: 20,
-    top: Platform.OS === 'isMobile' ? 70 : 47,
-    width: 40,
-    height: 40,
+    left: 10,
+    top: Platform.OS === 'isMobile' ? 60 : 45,
+    width: 35,
+    height: 35,
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
@@ -2629,7 +2629,13 @@ headerContent: {
     gap: 8,
     alignItems: 'center',
   },
- 
+   heading: {
+      textAlign: "center",           // ✅ text itself centered
+      fontSize: 24,
+      fontWeight: "700",
+      color: "#fff",
+       marginTop:10,
+    },
    durationPill: {
     flexDirection: 'row',
     alignItems: 'center',
