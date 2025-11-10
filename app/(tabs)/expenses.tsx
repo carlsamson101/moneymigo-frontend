@@ -273,7 +273,6 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
   const [expenses, setExpenses] = useState<{ [date: string]: any[] }>({});
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
   const [budgetAmount, setBudgetAmount] = useState(0);
-const [language, setLanguage] = useState("en-US");
 
   const [loading, setLoading] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
@@ -504,167 +503,176 @@ if (Platform.OS === "web") {
   }, []);
 
 
- function handleVoiceConversation(spokenText) {
+
+
+function handleVoiceConversation(spokenText) {
   const lower = spokenText.toLowerCase().trim();
 
-  // 🇵🇭 Detect language automatically
-  let detectedLang = "en-US";
-  if (
-    /(magkano|resibo|dagdag|pakiscan|pahingi|gastos|kumusta|pera|budget|gasto|unsa|palihug|kapoy|gimingaw|kwarta)/i.test(lower)
-  ) {
-    detectedLang = "fil-PH";
-  }
-  setLanguage(detectedLang);
-
-  // 👋 Greetings
-  if (/(hi|hello|hey|good (morning|afternoon|evening)|kumusta|musta|oy)/i.test(lower)) {
+  // 👋 Greetings & casual intros
+  if (/(hi|hello|hey|good (morning|afternoon|evening))/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Kumusta! Pwede kang magdagdag ng gastos sa pagkain. Sabihin mo lang, dagdag isang daan pagkain. Pwede rin akong kausapin minsan, ha?"
-        : "Hey there! I’m happy to see you again. You can add an expense by saying add one hundred food note burger. Or if you just want to talk, I’m here.",
-      { language: detectedLang, rate: 0.97 }
+      "Hey there! I’m really happy to see you again. You can add an expense by saying something like, add one hundred food note burger. Or if you just want to chat, say hi anytime.",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // ❓ Asking for help or usage
-  if (/(help|tulong|giunsa|unsaon|how to|paano|what can i do|confused)/i.test(lower)) {
+  // ❓ Asking for help or guidance
+  if (/(what can i do|help|how to use|how does this work|what do i say|guide me|confused|need help)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Walay problema! Pwede kang magsabi ng dagdag isang daan pagkain, o pakiscan ang resibo para mag-add ng gastos. Tinutulungan din kita magbudget."
-        : "No worries! You can say add one hundred food note burger, or scan a receipt to add an expense.",
-      { language: detectedLang, rate: 0.96 }
+      "No worries! You can track expenses by saying something like add one hundred food note burger, or add fifty transport note jeep. I can also help you scan receipts or check your spending.",
+      { language: "en-US", rate: 0.98 }
     );
     return true;
   }
 
-  // 🧾 Receipt scanning
-  if (/(receipt|resibo|scan|pakiscan|kuha ug litrato|picture|read my receipt)/i.test(lower)) {
+  // 🧾 Receipt scanning and related queries
+  if (/(receipt|scan|photo|picture|take a pic|camera|read my receipt|how to scan)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "I-tap lang ang Scan Receipt button para kuhaan ng litrato ang resibo. Ako na bahala magbasa ng amount."
-        : "You can tap the Scan Receipt button to take a photo or upload one — I’ll read the total automatically.",
-      { language: detectedLang, rate: 0.96 }
+      "You can tap the Scan Receipt button below to take a photo or upload one. I’ll read the total amount automatically and help you save it as an expense.",
+      { language: "en-US", rate: 0.98 }
+    );
+    setAssistantMood("helpful");
+    return true;
+  }
+
+  // 💰 Budget and spending questions
+  if (/(budget|how much|spent|left|remaining|money left)/i.test(lower)) {
+    Speech.speak(
+      "You can check your remaining budget in the Budget Overview section. It updates automatically whenever you add a new expense.",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 💰 Budget / money questions
-  if (/(budget|pera|magkano|gastos|kwarta|nagasto|spent|left)/i.test(lower)) {
-    Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Makikita mo ang natitirang budget mo sa Budget Overview. Automatic itong nag-aadjust kapag may bagong gastos."
-        : "You can check your remaining budget in the Budget Overview section — it updates automatically.",
-      { language: detectedLang, rate: 0.95 }
-    );
-    return true;
-  }
-
-  // 🧠 Emotional comfort
-  if (
-    /(kapoy|gimingaw|nasuko|nobody likes me|i'm sad|lonely|feeling down|stressed|tired|anxious|worried)/i.test(lower)
-  ) {
+  // 🧠 Emotional or personal comfort
+  if (/(someone doesn.?t like me|nobody likes me|i'm sad|im sad|i feel lonely|feeling down|i feel bad|i'm upset)/i.test(lower)) {
     setAssistantMood("comforting");
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Ayaw kabalaka ha. Normal ra na. Hinay-hinay lang, pahulay usa. Kaya ra na nimo. Dili ka nag-inusara."
-        : "Hey, it’s okay to feel that way. Take a deep breath — you’re doing your best, and you’re not alone.",
-      { language: detectedLang, rate: 0.9 }
+      "Hey, I’m really sorry you feel that way. You deserve kindness and respect. Not everyone will understand your value — but that doesn’t mean you’re not worth it.",
+      { language: "en-US", rate: 0.93 }
     );
+    setTimeout(() => {
+      Speech.speak("Take a deep breath, okay? You’re doing your best, and I’m proud of you.", {
+        language: "en-US",
+        rate: 0.93,
+      });
+    }, 3500);
     return true;
   }
 
-  // 💬 About the assistant
-  if (/(who are you|what are you|sino ka|unsa ka)/i.test(lower)) {
+  if (/(tired|stressed|anxious|worried|burned out|overwhelmed)/i.test(lower)) {
+    setAssistantMood("comforting");
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Ako si MoneyMigo — assistant mo sa pagbudget ug pag-track sa imong kwarta."
-        : "I’m your MoneyMigo assistant — here to help you track your expenses and budget smartly.",
-      { language: detectedLang, rate: 1.0 }
+      "I know things can feel heavy sometimes. You’re doing better than you think — maybe take a short break and have some water.",
+      { language: "en-US", rate: 0.93 }
     );
     return true;
   }
 
-  // 📊 Viewing / checking expenses
-  if (/(show|view|see|list|display|check|tan-aw|pakita).*(expense|transaction|history|spending)/i.test(lower)) {
+  // 💬 Asking about the assistant
+  if (/(how are you|who are you|what are you)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Makikita nimo ang imong mga gastos sa Recent Expenses section, pwede sab nimo i-tap ang Show All para sa full list."
-        : "You can view your expenses in the Recent Expenses section, or tap Show All to see your full list.",
-      { language: detectedLang, rate: 0.96 }
+      "I’m your MoneyMigo assistant — I help you track expenses and remind you to take care of yourself too.",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 🏷️ Categories
-  if (/(category|categor|type|klase|uri)/i.test(lower)) {
+  // 📊 Viewing or listing expenses
+  if (/(show|view|see|list|display|check).*(expense|transaction|history|spending)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Pwede kang pumili ng kategorya tulad ng Pagkain, Transportasyon, Shopping, Bills, o Iba pa."
-        : "You can categorize expenses as Food, Transport, Shopping, Bills, School, Savings, or Others.",
-      { language: detectedLang, rate: 0.97 }
+      "You can view your expenses in the Recent Expenses section, or tap Show All to see your full history.",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 💡 Tips
-  if (/(tip|suggest|advice|save money|budget better|spending advice|tambag)/i.test(lower)) {
+  // ✏️ Editing or deleting expenses
+  if (/(edit|change|modify|delete|remove|fix).*(expense|transaction)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Tip ko lang: Mag-set ng lingguhang budget ug i-check imong spending kada adlaw. Bisan gamay ra, makadako na sa savings."
-        : "Here’s a tip: Try setting a weekly budget and check your spending daily. Small savings grow big over time.",
-      { language: detectedLang, rate: 0.95 }
+      "To edit or delete an expense, just tap on it in your Recent Expenses list — it’s super easy.",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 🎯 Motivation
-  if (/(motivate|encourage|inspire|good job|well done|proud|great work|maayo)/i.test(lower)) {
+  // 📅 Date-based filters
+  if (/(today|yesterday|this week|this month|last week|recent).*(expense|spent|spending)/i.test(lower)) {
+    Speech.speak(
+      "You can filter your expenses by date using the options in the expenses view — try selecting today, this week, or this month.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  // 🏷️ Asking about categories
+  if (/(what|which).*(categor|type)/i.test(lower)) {
+    Speech.speak(
+      "You can categorize expenses as Food, Transport, Shopping, Bills, School, Savings, or Others. You can even create your own!",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  // 🔢 Spending totals
+  if (/(total|how much did i|what did i).*(spend|spent)/i.test(lower)) {
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    Speech.speak(
+      `You've spent a total of ${total.toFixed(2)} pesos so far. You’re keeping track like a pro!`,
+      { language: "en-US", rate: 0.97 }
+    );
+    return true;
+  }
+
+  // 💡 Financial tips
+  if (/(tip|suggest|advice|save money|budget better|spending advice)/i.test(lower)) {
+    Speech.speak(
+      "Here’s a tip: Try setting a weekly budget and check your spending daily. Even small savings add up over time.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  // 🎯 Motivation and encouragement
+  if (/(motivate|encourage|inspire|good job|well done|proud|great work)/i.test(lower)) {
     setAssistantMood("happy");
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Maayo kaayo ka! Padayon lang sa pag-track sa imong gasto, kay makatabang gyud na nimo."
-        : "You're doing great! Tracking your expenses brings you closer to financial control.",
-      { language: detectedLang, rate: 0.97 }
+      "You're doing great! Every expense you track brings you closer to financial control. Keep it up!",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
   // 😊 Gratitude
-  if (/(thank you|thanks|salamat|daghang salamat|love you|appreciate|gihigugma tika)/i.test(lower)) {
+  if (/(thank you|thanks|good|great|awesome|love you|you're helpful|appreciate)/i.test(lower)) {
     setAssistantMood("happy");
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Awww, salamat pud! Malipay ko makatabang nimo pirme."
-        : "Aw, thank you! I'm always happy to help you out.",
-      { language: detectedLang, rate: 0.97 }
+      "Aw, you’re so sweet! I’m always happy to help you out.",
+      { language: "en-US", rate: 0.98 }
     );
     return true;
   }
 
-  // 🔄 Undo / mistakes
-  if (/(undo|cancel|go back|mistake|wrong|sayop)/i.test(lower)) {
+  // 🔄 Undo / mistake
+  if (/(undo|cancel|go back|mistake|wrong)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Kung sayop imong gi-add, pwede nimo i-tap ang gasto para ma-edit o ma-delete."
-        : "If you made a mistake adding an expense, you can tap it to edit or delete it.",
-      { language: detectedLang, rate: 0.96 }
+      "If you added something by mistake, you can tap that expense to edit or delete it.",
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 🤷 Fallback
-  if (lower.length < 6 || /(hmm|uh|ok|wala|nothing)/i.test(lower)) {
+  // 🧭 Default fallback (for any other random phrase)
+  if (lower.length < 6 || /(hmm|uh|huh|okay|idk|i don't know|nothing)/i.test(lower)) {
     Speech.speak(
-      detectedLang === "fil-PH"
-        ? "Hmm, murag wala ko kasabot. Pwede nimo isulti, dagdag isang daan pagkain."
-        : "Hmm, I’m not sure what you meant. Try saying add one hundred food note burger.",
-      { language: detectedLang, rate: 0.95 }
+      "Hmm, I’m not sure what you meant. You can say add one hundred food note burger, or just ask me what I can do.",
+      { language: "en-US", rate: 0.96 }
     );
     return true;
   }
 
-  return false;
+  return false; // let applyParsedVoice handle it
 }
 
 
@@ -747,14 +755,6 @@ const startVoiceRecognition = async () => {
       setIsListening(false);
     };
 
-    // Auto-detect language from recent voice pattern
-      if (/^(unsa|palihug|gasto|kwarta|resibo|asa|kapoy|gimingaw)/i.test(voiceTranscript)) {
-        setLanguage("fil-PH"); // Use Filipino for Bisaya/Tagalog-like inputs
-      } else if (/(magkano|gastos|resibo|dagdag|pakiscan|pahingi)/i.test(voiceTranscript)) {
-        setLanguage("fil-PH");
-      } else {
-        setLanguage("en-US");
-      }
     // ✅ Start recognition instantly
     recognition.start();
 
@@ -1144,7 +1144,7 @@ const fetchBudget = async () => {
     const user = await getToken();
     if (!user?.id) return;
 
-    const res = await api.get(`/budget/user/${user.id}`);
+    const res = await api.get(`/budgets/user/${user.id}`);
     setBudgetAmount(res.data?.amount || 0);
   } catch (err: any) {
     console.warn("⚠️ Could not fetch budget:", err.message);
@@ -3162,7 +3162,6 @@ const HistorySection = (
         </Pressable>
       </Modal>
 
-     /* Replace your existing Expense Detail Modal with this updated version */
 
 {/* Expense Detail Modal */}
 <Modal
@@ -3323,36 +3322,34 @@ const HistorySection = (
               </View>
 
               {/* Action Buttons - View Mode */}
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
-                <TouchableOpacity
-                  style={[
-                    styles.submitButton,
-                    { flex: 1, backgroundColor: "#2563EB", flexDirection: "row", alignItems: "center", justifyContent: "center" }
-                  ]}
-                  onPress={() => {
-                    setIsEditMode(true);
-                    setEditAmount(selectedExpense.amount.toString());
-                    setEditCategory(selectedExpense.category);
-                    setEditNotes(selectedExpense.notes || "");
-                    setEditDate(new Date(selectedExpense.date));
-                  }}
-                >
-                  <Ionicons name="create-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitText}>Edit</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  { backgroundColor: "#2563EB", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 8 }
+                ]}
+                onPress={() => {
+                  setIsEditMode(true);
+                  setEditAmount(selectedExpense.amount.toString());
+                  setEditCategory(selectedExpense.category);
+                  setEditNotes(selectedExpense.notes || "");
+                  setEditDate(new Date(selectedExpense.date));
+                }}
+              >
+                <Ionicons name="create-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.submitText}>Edit</Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.submitButton,
-                    { flex: 1, backgroundColor: "#DC2626", flexDirection: "row", alignItems: "center", justifyContent: "center" }
-                  ]}
-                  onPress={handleDeleteExpense}
-                  disabled={isLoading}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitText}>{isLoading ? "Deleting..." : "Delete"}</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  { backgroundColor: "#DC2626", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 8 }
+                ]}
+                onPress={handleDeleteExpense}
+                disabled={isLoading}
+              >
+                <Ionicons name="trash-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.submitText}>{isLoading ? "Deleting..." : "Delete"}</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.submitButton, { backgroundColor: "#94A3B8" }]}
