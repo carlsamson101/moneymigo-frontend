@@ -230,17 +230,23 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
-  useEffect(() => {
+// 🎤 Request microphone permission on page load (web only)
+useEffect(() => {
   if (Platform.OS === "web") {
-    // 🔈 Light-touch priming so Chrome unlocks audio context
-    const audio = new AudioContext();
-    const resume = () => {
-      if (audio.state === "suspended") {
-        audio.resume();
+    const requestMicPermission = async () => {
+      try {
+        const isMobileWeb = /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
+        if (isMobileWeb && navigator.mediaDevices) {
+          console.log("🎤 Requesting microphone permission on page load...");
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((t) => t.stop());
+          console.log("✅ Microphone permission granted");
+        }
+      } catch (err) {
+        console.log("⚠️ Microphone permission not granted yet:", err);
       }
-      window.removeEventListener("click", resume);
     };
-    window.addEventListener("click", resume);
+    requestMicPermission();
   }
 }, []);
 
@@ -2989,16 +2995,13 @@ const HistorySection = (
   </View>
 )}
 
-/* Microphone FAB Button */
+{/* Microphone FAB Button */}
 <TouchableOpacity
   onPress={() => {
-    console.log("🎤 Microphone button pressed");
     if (!isListening) {
       startVoiceRecognition();
     } else {
-      console.log("🛑 Stopping listening");
       setIsListening(false);
-      setVoiceTranscript("");
     }
   }}
   activeOpacity={0.8}
@@ -3006,38 +3009,25 @@ const HistorySection = (
     position: "absolute",
     bottom: isMobile ? 60 : 5,
     right: 16,
-    backgroundColor: isListening ? "#ef4444" : "#1f4b81",
+    backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
     borderRadius: 50,
-    width: isMobile ? 45 : 50,
-    height: isMobile ? 45 : 50,
+    width: isMobile ? 35 : 45,
+    height: isMobile ? 35 : 45,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 5,
     zIndex: 200,
-    borderWidth: isListening ? 3 : 0,
-    borderColor: isListening ? "#fca5a5" : "transparent",
   }}
 >
   <Ionicons 
-    name={isListening ? "mic" : "mic-outline"} 
-    size={26} 
+    name={isListening ? "mic-off" : "mic"} 
+    size={28} 
     color="#fff" 
   />
-  {isListening && (
-    <View style={{
-      position: "absolute",
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      borderWidth: 2,
-      borderColor: "#ef4444",
-      opacity: 0.5,
-    }} />
-  )}
 </TouchableOpacity>
 
 {showVoiceTip && (
