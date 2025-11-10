@@ -250,6 +250,17 @@ useEffect(() => {
   }
 }, []);
 
+useEffect(() => {
+  if (Platform.OS === "web") {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const unlock = () => {
+      if (ctx.state === "suspended") ctx.resume();
+      window.removeEventListener("click", unlock);
+    };
+    window.addEventListener("click", unlock);
+  }
+}, []);
+
 const [isListening, setIsListening] = useState(false);
 const [voiceTranscript, setVoiceTranscript] = useState("");
 
@@ -455,19 +466,6 @@ function splitIntoClauses(text: string): string[] {
 
 const startVoiceRecognition = async () => {
   console.log("🎤 Voice button clicked");
-  console.log("Platform:", Platform.OS);
-  console.log("Speech available:", !!Speech);
-  console.log("SpeechRecognition available:", !!SpeechRecognition);
-  console.log("User agent:", Platform.OS === "web" ? navigator.userAgent : "N/A");
-
-  // Check if modules are loaded
-  if (!Speech || !SpeechRecognition) {
-    Alert.alert(
-      "🎙️ Voice Not Available",
-      "Speech recognition is not supported in this environment. Please use Chrome or Safari on mobile."
-    );
-    return;
-  }
 
   const isMobileWeb =
     Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
@@ -481,95 +479,63 @@ const startVoiceRecognition = async () => {
   }
 
   try {
-    // 🧩 Ensure permissions
-    if (navigator.permissions) {
-      try {
-        const permissionStatus = await navigator.permissions.query({ name: "microphone" as any });
-        if (permissionStatus.state === "denied") {
-          Alert.alert(
-            "🎤 Permission Denied",
-            "Please allow microphone access in your browser settings."
-          );
-          return;
-        }
-      } catch (err) {
-        console.log("⚠️ Permissions API not fully supported, trying direct access");
-      }
-    }
-
-    // Request mic access
+    // ✅ Stop any previous recognition
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      console.log("✅ Microphone access granted");
-    } catch (err) {
-      console.error("❌ Microphone access denied:", err);
-      Alert.alert(
-        "🎤 Microphone Access Required",
-        "Please allow microphone access when prompted by your browser."
-      );
-      return;
-    }
+      await SpeechRecognition.stopAsync();
+      SpeechRecognition.removeAllListeners();
+    } catch {}
 
+    // ✅ Ask for mic access
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+    console.log("✅ Microphone ready");
+
+    // ✅ Verify SpeechRecognition availability
     const supported = await SpeechRecognition.isAvailableAsync();
-    console.log("Speech recognition supported:", supported);
-    
     if (!supported) {
       Alert.alert("Not Supported", "Your browser does not support speech recognition.");
       return;
     }
 
-    // 🧹 Reset previous listener if any
-    SpeechRecognition.removeAllListeners();
     setVoiceTranscript("");
     setIsListening(true);
 
-    // 🗣️ Give audio feedback
-    try {
-      await Speech.speak("Listening. You can say something like add one hundred food note burger.", {
+    console.log("🎧 Starting recognition...");
+    const resultPromise = SpeechRecognition.startAsync({
+      lang: "en-US",
+      interimResults: false,
+    });
+
+    // 🕐 Delay the speech hint slightly AFTER mic starts
+    setTimeout(() => {
+      Speech.speak("Listening... You can say add one hundred food note burger.", {
         language: "en-US",
         rate: 1.0,
       });
-    } catch (err) {
-      console.log("⚠️ Speech output not available, continuing without audio feedback");
+    }, 500);
+
+    const result = await resultPromise;
+    console.log("🎤 Recognition result:", result);
+
+    if (result?.results?.[0]) {
+      const spokenText = result.results[0].transcript.trim();
+      setVoiceTranscript(spokenText);
+      applyParsedVoice(spokenText);
+    } else {
+      Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
     }
-
-    setTimeout(async () => {
-      try {
-        console.log("🎤 Starting recognition...");
-        const result = await SpeechRecognition.startAsync({
-          lang: "en-US",
-          interimResults: false,
-        });
-
-        console.log("Recognition result:", result);
-
-        if (result?.results?.[0]) {
-          const spokenText = result.results[0].transcript.trim();
-          console.log("🎤 Recognized:", spokenText);
-          setVoiceTranscript(spokenText);
-          applyParsedVoice(spokenText);
-        } else {
-          console.log("⚠️ No transcript in result");
-          try {
-            await Speech.speak("Sorry, I didn't catch that.", { language: "en-US" });
-          } catch (err) {
-            Alert.alert("No Speech Detected", "Please try speaking again.");
-          }
-        }
-      } catch (innerErr) {
-        console.error("❌ Voice recognition error:", innerErr);
-        Alert.alert("Error", "Unable to start voice recognition. Please try again.");
-      } finally {
-        setIsListening(false);
-      }
-    }, 1500);
   } catch (err) {
-    console.error("❌ Speech error:", err);
-    Alert.alert("Error", "Something went wrong while accessing the microphone.");
+    console.error("❌ Voice error:", err);
+    Alert.alert("Error", "Failed to start voice recognition.");
+  } finally {
     setIsListening(false);
+    try {
+      await SpeechRecognition.stopAsync();
+      SpeechRecognition.removeAllListeners();
+    } catch {}
   }
 };
+
 
 
 async function applyParsedVoice(command: string) {
