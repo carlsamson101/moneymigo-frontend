@@ -3493,8 +3493,8 @@ setShowSetBudgetModal(true);
   top: width < 360 ? 4 : (isMobile ? 0 : 0.5),
   right: width < 360 ? 4 : (isMobile ? 0 : 0.5),
   backgroundColor: '#F0F9FF',
-  paddingHorizontal: width < 360 ? 4 : (isMobile ? 6 : 10),
-  paddingVertical: width < 360 ? 2 : (isMobile ? 3 : 5),
+  paddingHorizontal: width < 360 ? 4 : (isMobile ? 6 : 6),
+  paddingVertical: width < 360 ? 2 : (isMobile ? 3 : 3),
   borderRadius: isMobile ? 6 : 8,
   borderWidth: 0.5,
   borderColor: '#1f4b81ff',
@@ -3502,8 +3502,8 @@ setShowSetBudgetModal(true);
   alignItems: 'center',
   gap: width < 360 ? 2 : (isMobile ? 3 : 4),
   zIndex: 1001,
-  maxWidth: width < 360 ? '45%' : (isMobile ? '60%' : '70%'),
-  transform: width < 360 ? [{ scale: 0.75 }] : (isMobile ? [{ scale: 0.85 }] : [{ scale: 1 }]),
+  maxWidth: width < 360 ? '45%' : (isMobile ? '60%' : '60%'),
+  transform: width < 360 ? [{ scale: 0.75 }] : (isMobile ? [{ scale: 0.85 }] : [{ scale: 0.90 }]),
 },
 
 lockBadgeText: {
