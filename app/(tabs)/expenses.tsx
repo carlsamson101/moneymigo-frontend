@@ -525,11 +525,17 @@ const startVoiceRecognition = async () => {
       setIsListening(true);
       setVoiceTranscript("");
       console.log("🎧 Listening...");
-      Speech.speak("Listening... You can say something like add one hundred food note burger.", {
+      // ✅ Delay slightly so mic is fully ready before TTS starts
+  setTimeout(() => {
+    Speech.speak(
+      "Listening... You can say something like add one hundred food note burger.",
+      {
         language: "en-US",
         rate: 1.0,
-      });
-    };
+      }
+    );
+  }, 500); // 500–700ms works best across Android and iOS
+};
 
     recognition.onresult = (event: any) => {
       const spokenText = event.results[0][0].transcript.trim();
