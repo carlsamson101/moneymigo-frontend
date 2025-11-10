@@ -230,23 +230,16 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
-// 🎤 Request microphone permission on page load (web only)
+// 🎧 Unlock Audio Context after first user tap (required for Chrome/Safari mobile)
 useEffect(() => {
   if (Platform.OS === "web") {
-    const requestMicPermission = async () => {
-      try {
-        const isMobileWeb = /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
-        if (isMobileWeb && navigator.mediaDevices) {
-          console.log("🎤 Requesting microphone permission on page load...");
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach((t) => t.stop());
-          console.log("✅ Microphone permission granted");
-        }
-      } catch (err) {
-        console.log("⚠️ Microphone permission not granted yet:", err);
-      }
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const unlock = () => {
+      if (ctx.state === "suspended") ctx.resume();
+      window.removeEventListener("click", unlock);
+      console.log("🔓 Audio context unlocked");
     };
-    requestMicPermission();
+    window.addEventListener("click", unlock);
   }
 }, []);
 
@@ -482,32 +475,26 @@ const startVoiceRecognition = async () => {
       return;
     }
 
-    // 🧹 Stop any ongoing recognition
-    try {
-      await SpeechRecognition.stopAsync();
-    } catch {}
+    // 🧹 stop any previous sessions
+    try { await SpeechRecognition.stopAsync(); } catch {}
+    try { await Speech.stop(); } catch {}
 
-    // 🎤 Request mic permission
+    // 🎤 Ask for mic access (must follow user tap)
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((t) => t.stop());
-    console.log("✅ Microphone access granted");
+    console.log("✅ Microphone active");
 
-    // 🧠 Ensure speech synthesis isn’t running
-    try {
-      await Speech.stop();
-    } catch {}
-
+    // ✅ verify support
     const supported = await SpeechRecognition.isAvailableAsync();
     if (!supported) {
-      Alert.alert("Not Supported", "Your browser does not support speech recognition.");
+      Alert.alert("Not Supported", "This browser doesn’t support speech recognition.");
       return;
     }
 
-    setVoiceTranscript("");
     setIsListening(true);
+    setVoiceTranscript("");
     console.log("🎧 Listening...");
 
-    // 🎙 Start listening immediately — no delay, no speech conflict
     const result = await SpeechRecognition.startAsync({
       lang: "en-US",
       interimResults: false,
@@ -520,24 +507,23 @@ const startVoiceRecognition = async () => {
       setVoiceTranscript(spokenText);
       applyParsedVoice(spokenText);
 
-      // ✅ Speak feedback *after* mic is done
-      Speech.speak(`Got it. You said ${spokenText}`, {
+      // 🔊 Feedback AFTER mic stops
+      await Speech.speak(`Got it. You said ${spokenText}`, {
         language: "en-US",
         rate: 1.0,
       });
     } else {
-      Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
+      await Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
     }
   } catch (err) {
     console.error("❌ Voice error:", err);
     Alert.alert("Error", "Failed to start voice recognition. Please try again.");
   } finally {
     setIsListening(false);
-    try {
-      await SpeechRecognition.stopAsync();
-    } catch {}
+    try { await SpeechRecognition.stopAsync(); } catch {}
   }
 };
+
 
 
 
@@ -1105,6 +1091,13 @@ async function pickFromGallery() {
     Alert.alert("Error", "Failed to open gallery. Please try again.");
   }
 }
+
+useEffect(() => {
+  if (voiceTranscript) {
+    const timer = setTimeout(() => setVoiceTranscript(""), 5000);
+    return () => clearTimeout(timer);
+  }
+}, [voiceTranscript]);
 
 // 🧠 OCR processing (Expo-safe version using Tesseract.js only)
 async function processReceiptImage(uri) {
@@ -2913,6 +2906,28 @@ const HistorySection = (
   </Pressable>
 </Modal>
 
+{isListening && (
+  <View
+    style={{
+      position: "absolute",
+      bottom: isMobile ? 105 : 80,
+      right: 16,
+      backgroundColor: "#2563eb",
+      borderRadius: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 5,
+      zIndex: 198,
+    }}
+  >
+    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "500" }}>
+      🎧 Listening...
+    </Text>
+  </View>
+)}
 
 {/* 🎤 Voice Transcript Bubble */}
 {voiceTranscript && (
@@ -2967,13 +2982,29 @@ const HistorySection = (
 
 {/* Microphone FAB Button */}
 <TouchableOpacity
-  onPress={() => {
-    if (!isListening) {
-      startVoiceRecognition();
-    } else {
+  onPress={async () => {
+  if (isListening) {
+    try {
+      await SpeechRecognition.stopAsync();
       setIsListening(false);
+      console.log("🛑 Voice stopped manually");
+    } catch (err) {
+      console.warn("⚠️ Could not stop recognition:", err);
     }
-  }}
+    return;
+  }
+
+  // ✅ Start listening (only after user gesture)
+  try {
+    setVoiceTranscript(""); // Clear previous transcript bubble
+    setShowVoiceTip(false);
+    await startVoiceRecognition();
+  } catch (err) {
+    console.error("🎙️ Mic start failed:", err);
+    Alert.alert("Error", "Microphone couldn’t start. Try again.");
+  }
+}}
+
   activeOpacity={0.8}
   style={{
     position: "absolute",
