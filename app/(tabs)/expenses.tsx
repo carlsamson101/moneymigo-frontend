@@ -714,7 +714,7 @@ function handleVoiceConversation(spokenText) {
     return true;
   }
 
-  if (/(tell me a joke| joke | make me laugh|something funny)/i.test(lower)) {
+  if (/(tell me a joke|make me laugh|something funny)/i.test(lower)) {
     setAssistantMood("happy");
     Speech.speak(
       "Why did the budget go to therapy? Because it had too many issues! Okay, I'll stick to helping with expenses.",
