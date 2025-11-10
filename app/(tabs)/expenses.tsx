@@ -442,7 +442,7 @@ const startVoiceRecognition = async () => {
   if (!isMobileWeb) {
     Alert.alert(
       "🎙️ Voice Input Unavailable",
-      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari)."
+      "🎙️ Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
     );
     return;
   }

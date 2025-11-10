@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -75,6 +76,49 @@ const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 const [modalVisible, setModalVisible] = useState(false);
 const [isListening, setIsListening] = useState(false);
 const [voiceTranscript, setVoiceTranscript] = useState("");
+
+const handleVoiceSearch = async () => {
+  if (Platform.OS !== "web") {
+    Alert.alert(
+      "Voice Search Unavailable",
+      "🎙️ Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
+    );
+    return;
+  }
+
+  try {
+    const supported = await SpeechRecognition.isAvailableAsync();
+    if (!supported) {
+      Alert.alert("Not Supported", "Your browser does not support speech recognition.");
+      return;
+    }
+
+    setIsListening(true);
+    Speech.speak(
+      "Listening. You can say something like show food deals or search electronics.",
+      { language: "en-US", rate: 1.0 }
+    );
+
+    const result = await SpeechRecognition.startAsync({
+      lang: "en-US",
+      interimResults: false,
+    });
+
+    if (result?.results?.[0]) {
+      const spokenText = result.results[0].transcript.trim();
+      setVoiceTranscript(spokenText);
+      setQ(spokenText);
+      fetchDeals(); // your existing fetch function
+    }
+  } catch (err) {
+    console.error("🎤 Voice error:", err);
+    Alert.alert("Error", "Something went wrong while using voice recognition.");
+  } finally {
+    setIsListening(false);
+  }
+};
+
+
   // Product categories - FIXED to match backend
   const categories = [
     { value: "all", label: "All" }, // make it a string for Picker reliability
@@ -308,7 +352,7 @@ const startVoiceSearch = async () => {
   />
 
   {/* 🎙 Mic Button beside search icon */}
-  <TouchableOpacity onPress={startVoiceSearch} style={{ paddingHorizontal: 6 }}>
+  <TouchableOpacity onPress={handleVoiceSearch} style={{ paddingHorizontal: 6 }}>
     <Ionicons
       name={isListening ? "mic" : "mic-outline"}
       size={18}
