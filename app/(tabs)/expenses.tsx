@@ -316,6 +316,14 @@ const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
 const [hasSpokenHint, setHasSpokenHint] = useState(false);
 const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+// ✏️ Edit/Delete expense states
+const [isEditMode, setIsEditMode] = useState(false);
+const [editAmount, setEditAmount] = useState("");
+const [editCategory, setEditCategory] = useState("");
+const [editNotes, setEditNotes] = useState("");
+const [editDate, setEditDate] = useState<Date | null>(null);
+const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+
 useEffect(() => {
   if (Platform.OS === "web") {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -564,6 +572,90 @@ if (/(tired|stressed|anxious|worried)/.test(lower)) {
     );
     return true;
   }
+
+  // 📊 Viewing expenses/history
+if (/(show|view|see|list|display).*(expense|transaction|history|spending)/.test(lower)) {
+  Speech.speak(
+    "You can view all your expenses in the Recent Expenses section below, or tap Show All to see everything.",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// ✏️ Editing/deleting expenses
+if (/(edit|change|modify|delete|remove).*(expense|transaction)/.test(lower)) {
+  Speech.speak(
+    "To edit or delete an expense, just tap on it in your Recent Expenses list.",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 📅 Date-based queries
+if (/(today|yesterday|this week|this month).*(expense|spent|spending)/.test(lower)) {
+  Speech.speak(
+    "You can filter your expenses by date using the filter options in the expenses view.",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 🏷️ Category questions
+if (/(what|which).*(categor|type)/.test(lower)) {
+  Speech.speak(
+    "You can categorize expenses as Food, Transport, Shopping, Bills, Entertainment, Health, Education, or Other.",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 🔢 Total spending inquiry
+if (/(total|how much did i|what did i).*(spend|spent)/.test(lower)) {
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  Speech.speak(
+    `You've spent a total of ${total.toFixed(2)} pesos so far.`,
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 🎯 Motivational boost
+if (/(motivate|encourage|inspire|good job|well done)/.test(lower)) {
+  setAssistantMood("happy");
+  Speech.speak(
+    "You're doing amazing! Keeping track of your expenses is a huge step toward financial wellness. Keep it up!",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 🔄 Undo/cancel
+if (/(undo|cancel|go back|mistake|wrong)/.test(lower)) {
+  Speech.speak(
+    "If you made a mistake adding an expense, you can tap on it to edit or delete it right away.",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 💡 Tips and suggestions
+if (/(tip|suggest|advice|save money|budget better)/.test(lower)) {
+  Speech.speak(
+    "Here's a tip: try setting a weekly budget and check your spending daily. Small expenses can add up quickly!",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
+
+// 😊 Compliments to the assistant
+if (/(thank you|thanks|good|great|awesome|love you|you're helpful)/.test(lower)) {
+  setAssistantMood("happy");
+  Speech.speak(
+    "Aw, you're welcome! I'm always here to help you stay on track.",
+    { language: "en-US", rate: 1.0 }
+  );
+  return true;
+}
 
   return false; // Not handled → let applyParsedVoice run
 }
@@ -1444,7 +1536,6 @@ if (!detectedAmount) {
     return;
   }
 
-
   const payload = {
     category: expenseCategory.startsWith("Others")
       ? expenseCategory
@@ -1474,10 +1565,10 @@ if (!detectedAmount) {
 
     // ✅ If online, proceed normally
     const res = await api.post("/expenses", payload);
+    
     // 🧠 Cache the latest expense for offline view
-      const updatedCache = [payload, ...(filteredExpenses || [])];
-      await AsyncStorage.setItem(`expensesCache_${user.id}`, JSON.stringify(updatedCache));
-
+    const updatedCache = [payload, ...(filteredExpenses || [])];
+    await AsyncStorage.setItem(`expensesCache_${user.id}`, JSON.stringify(updatedCache));
 
     if (res.data?.overspent && res.data.overspent > 0) {
       Alert.alert(
@@ -1511,6 +1602,74 @@ if (!detectedAmount) {
   }
 };
 
+// ✏️ Handle Edit Expense
+const handleEditExpense = async () => {
+  if (!selectedExpense || !editAmount || editCategory === "Select Category") {
+    Alert.alert("⚠️ Incomplete Fields", "Please fill in all required fields.");
+    return;
+  }
+
+  const user = await getToken();
+  if (!user?.id) return;
+
+  const payload = {
+    amount: parseFloat(editAmount),
+    category: editCategory,
+    notes: editNotes,
+    date: editDate?.toISOString() || selectedExpense.date,
+  };
+
+  try {
+    setIsLoading(true);
+    await api.put(`/expenses/${selectedExpense._id}`, payload);
+    
+    Alert.alert("✅ Updated", "Expense has been updated successfully!");
+    
+    setShowExpenseDetailModal(false);
+    setIsEditMode(false);
+    fetchExpenses();
+  } catch (err) {
+    console.error("❌ Failed to update expense:", err);
+    Alert.alert("❌ Error", "Failed to update expense. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// 🗑️ Handle Delete Expense
+const handleDeleteExpense = async () => {
+  if (!selectedExpense) return;
+
+  const confirmDelete = Platform.OS === "web"
+    ? window.confirm("Are you sure you want to delete this expense?")
+    : await new Promise((resolve) =>
+        Alert.alert(
+          "Delete Expense",
+          "Are you sure you want to delete this expense?",
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+            { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+          ]
+        )
+      );
+
+  if (!confirmDelete) return;
+
+  try {
+    setIsLoading(true);
+    await api.delete(`/expenses/${selectedExpense._id}`);
+    
+    Alert.alert("✅ Deleted", "Expense has been deleted.");
+    
+    setShowExpenseDetailModal(false);
+    fetchExpenses();
+  } catch (err) {
+    console.error("❌ Failed to delete expense:", err);
+    Alert.alert("❌ Error", "Failed to delete expense. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Update the fetchHistory function to use the history-specific dates
 const fetchHistory = async () => {
