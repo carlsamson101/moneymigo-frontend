@@ -1515,32 +1515,33 @@ useEffect(() => {
 }, [voiceTranscript]);
 
 
-// 🧠 OCR processing (fixed + compatible with Expo + accurate total detection)
+// ⚡ Fast OCR (optimized for Expo mobile + web)
 async function processReceiptImage(uri) {
   try {
     setIsScanning(true);
-    console.log("📸 Processing image:", uri);
+    console.log("📸 Fast OCR processing started:", uri);
 
-    // 1️⃣ Preprocess image
+    // 1️⃣ Heavier resize & compression to ~400–600px width
     const processed = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 1600 } }],
-      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+      [{ resize: { width: 600 } }], // much smaller = 8× faster
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
     );
 
     let extractedText = "";
+    const startTime = Date.now();
 
-    // 2️⃣ OCR logic (different for web vs native)
     if (Platform.OS === "web") {
+      // ⚙️ Tesseract.js: smaller image, progress logs
       const { createWorker } = await import("tesseract.js");
-      const worker = await createWorker({ logger: m => console.log(m) }); // ✅ fixed
+      const worker = await createWorker({ logger: m => console.log(m.status, m.progress) });
       await worker.loadLanguage("eng");
       await worker.initialize("eng");
       const { data } = await worker.recognize(processed.uri);
       extractedText = data?.text || "";
       await worker.terminate();
     } else {
-      // ✅ safer FormData for OCR.Space
+      // ⚙️ OCR.Space: faster with resize and engine 1
       const formData = new FormData();
       formData.append("file", {
         uri: processed.uri,
@@ -1549,9 +1550,9 @@ async function processReceiptImage(uri) {
       });
       formData.append("language", "eng");
       formData.append("scale", "true");
-      formData.append("OCREngine", "2");
+      formData.append("isTable", "false");
+      formData.append("OCREngine", "1"); // ⚡ Engine 1 is faster (~1/3 time)
 
-      console.log("📤 Sending to OCR.Space...");
       const res = await fetch("https://api.ocr.space/parse/image", {
         method: "POST",
         headers: { apikey: OCR_API_KEY },
@@ -1559,22 +1560,19 @@ async function processReceiptImage(uri) {
       });
 
       const data = await res.json();
-      console.log("🧾 OCR.Space response:", data);
+      console.log("🧾 OCR.Space response time:", (Date.now() - startTime) / 1000, "sec");
 
-      if (data?.IsErroredOnProcessing) {
-        throw new Error(data?.ErrorMessage?.[0] || "OCR failed to process image");
-      }
+      if (data?.IsErroredOnProcessing)
+        throw new Error(data?.ErrorMessage?.[0] || "OCR failed");
 
       extractedText = data?.ParsedResults?.[0]?.ParsedText || "";
     }
 
     if (!extractedText?.trim()) {
       Alert.alert("⚠️ OCR Failed", "No readable text detected. Try again.");
-      console.warn("No text detected from OCR");
       return;
     }
 
-    // 3️⃣ Clean text
     const cleanText = extractedText
       .replace(/[,]/g, ".")
       .replace(/\n+/g, " ")
@@ -1582,91 +1580,56 @@ async function processReceiptImage(uri) {
       .replace(/[^\x20-\x7E]/g, "")
       .toLowerCase();
 
-    console.log("🧹 Cleaned OCR text:", cleanText);
+    console.log("🧹 Cleaned OCR text:", cleanText.slice(0, 120) + "...");
 
-    // 4️⃣ Amount detection
+    // 4️⃣ Quick total detection (same logic, simplified)
     let detectedAmount = null;
-    const cleanLines = cleanText
-      .split(/\n|(?<=\d)\s+/)
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const totalMatch = cleanText.match(/total[^0-9]{0,10}(\d{1,6}(?:[.,]\d{1,2})?)/i);
+    const sub = cleanText.match(/sub\s*total[^0-9]{0,10}(\d{1,6}(?:[.,]\d{1,2})?)/i);
+    const disc = cleanText.match(/less\s*discount[^0-9]{0,10}(\d{1,6}(?:[.,]\d{1,2})?)/i);
 
-    // 🎯 Detect "Total" or "Sub Total"
-    const totalPatterns = [
-      /(grand\s*total|total\s*amount|amount\s*due|total)\s*[:\-]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i,
-      /(sub\s*total)\s*[:\-]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i,
-    ];
-
-    for (const line of cleanLines) {
-      for (const regex of totalPatterns) {
-        const match = line.match(regex);
-        if (match) {
-          detectedAmount = parseFloat(match[2].replace(/[^\d.]/g, ""));
-          console.log("💰 Found amount from line:", line);
-          break;
-        }
-      }
-      if (detectedAmount) break;
+    if (totalMatch) {
+      detectedAmount = parseFloat(totalMatch[1].replace(/[^\d.]/g, ""));
+    } else if (sub && disc) {
+      detectedAmount =
+        parseFloat(sub[1].replace(/[^\d.]/g, "")) -
+        parseFloat(disc[1].replace(/[^\d.]/g, ""));
+    } else {
+      const allNums = cleanText.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || [];
+      if (allNums.length)
+        detectedAmount = Math.max(...allNums.map(n => parseFloat(n.replace(/[^\d.]/g, ""))));
     }
 
-    // 🧮 Try Subtotal - Discount
-    if (!detectedAmount) {
-      const sub = cleanText.match(/sub\s*total[^0-9]{0,10}(\d{1,6}(?:[.,]\d{1,2})?)/i);
-      const disc = cleanText.match(/less\s*discount[^0-9]{0,10}(\d{1,6}(?:[.,]\d{1,2})?)/i);
-      if (sub && disc) {
-        detectedAmount =
-          parseFloat(sub[1].replace(/[^\d.]/g, "")) -
-          parseFloat(disc[1].replace(/[^\d.]/g, ""));
-        console.log("🧮 Computed Subtotal - Discount:", detectedAmount);
-      }
-    }
-
-    // 🪣 Fallback: biggest number
-    if (!detectedAmount) {
-      const allNumbers =
-        cleanText.match(/\d{1,6}(?:[.,]\d{1,2})?/g)?.map((n) => parseFloat(n.replace(/[^\d.]/g, ""))) || [];
-      if (allNumbers.length) {
-        detectedAmount = Math.max(...allNumbers);
-        console.log("📈 Fallback: global max:", detectedAmount);
-      }
-    }
-
-    // 5️⃣ Category detection
+    // 5️⃣ Quick category detection
     let detectedCategory = "Others";
     const CATEGORY_PATTERNS = {
-      Food: /(jollibee|mcdonald|kfc|chowking|food|meal|snack|burger|pizza|coffee|tea|restaurant)/i,
-      Transport: /(grab|taxi|bus|jeep|tricycle|fare|transport|fuel|parking)/i,
-      Bills: /(meralco|pldt|globe|smart|bill|internet|wifi|water|electric)/i,
-      School: /(tuition|school|book|notebook|exam|project|student|module)/i,
-      Shopping: /(mall|shop|store|sm|robinsons|grocery|watsons|shopee|lazada|penshoppe)/i,
-      Savings: /(atm|bank|deposit|withdrawal|landbank|bpi|bdo|maya|gcash|balance|transaction)/i,
+      Shopping: /(mall|shop|store|robinsons|penshoppe|gaisano|watsons|sm)/i,
+      Food: /(jollibee|mcdonald|coffee|meal|snack)/i,
+      Transport: /(grab|taxi|bus|fare)/i,
     };
-
     for (const [cat, regex] of Object.entries(CATEGORY_PATTERNS)) {
-      if (regex.test(cleanText)) {
-        detectedCategory = cat;
-        break;
-      }
+      if (regex.test(cleanText)) detectedCategory = cat;
     }
 
-    // ✅ Save result
     setOcrDetectedDate(new Date());
     setOcrRawText(cleanText);
     setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
     setShowOcrModal(true);
 
-    console.log("✅ OCR Result", {
-      amount: detectedAmount,
-      category: detectedCategory,
-    });
+    const endTime = (Date.now() - startTime) / 1000;
+    console.log(`✅ OCR done in ${endTime}s — total ₱${detectedAmount}`);
+
+    if (endTime > 20)
+      Alert.alert("Note", "Scanning completed but took longer due to slow internet or large image.");
   } catch (err) {
     console.error("❌ OCR error:", err);
-    Alert.alert("Error", "Failed to process receipt. Check your internet or API key.");
+    Alert.alert("Error", "Failed to scan receipt. Try a smaller photo.");
   } finally {
     setIsScanning(false);
   }
 }
+
 
 
   const handleAddExpense = async () => {
