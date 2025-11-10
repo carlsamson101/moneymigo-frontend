@@ -6,8 +6,7 @@ LogBox.ignoreLogs([
 ]);
 
 import React, { useEffect, useState, useCallback } from 'react';
-import * as SpeechRecognition from "expo-speech-recognition";
-import * as Speech from "expo-speech";
+
 import { Modal } from "react-native";
 import { router } from "expo-router";  
 import { Ionicons } from '@expo/vector-icons';
@@ -74,78 +73,8 @@ export default function DealsPage() {
     const [total, setTotal] = useState(0);
 const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 const [modalVisible, setModalVisible] = useState(false);
-const [isListening, setIsListening] = useState(false);
-const [voiceTranscript, setVoiceTranscript] = useState("");
 
-const handleVoiceSearch = async () => {
-  const isMobileWeb =
-    Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
 
-  if (!isMobileWeb) {
-    Alert.alert(
-      "🎙️ Voice Search Unavailable",
-      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
-    );
-    return;
-  }
-
-  try {
-    // 🔐 Ask for mic permission
-    if (navigator.permissions) {
-      const permissionStatus = await navigator.permissions.query({ name: "microphone" });
-      if (permissionStatus.state === "denied") {
-        Alert.alert("🎤 Permission Denied", "Allow microphone access in your browser settings.");
-        return;
-      }
-      if (permissionStatus.state !== "granted") {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((t) => t.stop());
-      }
-    }
-
-    const supported = await SpeechRecognition.isAvailableAsync();
-    if (!supported) {
-      Alert.alert("Not Supported", "Your browser does not support speech recognition.");
-      return;
-    }
-
-    setIsListening(true);
-    setVoiceTranscript("");
-
-    // ✅ Speak *after* tap, before recognition, with small delay
-    await new Promise((resolve) => {
-      Speech.speak("Listening. You can say something like show food deals or search electronics.", {
-        language: "en-US",
-        rate: 1.0,
-        onDone: resolve, // wait until speaking finishes before listening
-      });
-    });
-
-    console.log("🎤 Starting recognition...");
-    const result = await SpeechRecognition.startAsync({
-      lang: "en-US",
-      interimResults: false,
-    });
-
-    if (result?.results?.[0]) {
-      const spokenText = result.results[0].transcript.trim();
-      console.log("✅ Voice recognized:", spokenText);
-      setVoiceTranscript(spokenText);
-      setQ(spokenText);
-      fetchDeals();
-    } else {
-      Speech.speak("Sorry, I didn’t catch that. Try again.", {
-        language: "en-US",
-        rate: 1.0,
-      });
-    }
-  } catch (err) {
-    console.error("🎤 Voice error:", err);
-    Alert.alert("Error", "Something went wrong while using voice recognition.");
-  } finally {
-    setIsListening(false);
-  }
-};
 
 
   // Product categories - FIXED to match backend
@@ -223,69 +152,6 @@ useEffect(() => {
 const onRefresh = () => {
   fetchDeals(true);
   fetchTotal();
-};
-
-const handleVoiceCommand = (command) => {
-  const text = command.toLowerCase().trim();
-  console.log("🎤 Voice command:", text);
-
-  const categories = ["food", "beverage", "personal care", "household", "medicine", "electronics", "clothing", "tools"];
-  const matchedCategory = categories.find(cat => text.includes(cat));
-
-  if (matchedCategory) {
-    setSelectedCategory(matchedCategory);
-    setQ("");
-    fetchDeals();
-    Speech.speak(`Showing ${matchedCategory} deals`, { language: "en-US" });
-    return;
-  }
-
-  const match = text.match(/(?:search|find|look for)\s+(.+)/);
-  if (match && match[1]) {
-    const keyword = match[1].trim();
-    setQ(keyword);
-    setSelectedCategory(null);
-    fetchDeals();
-    Speech.speak(`Searching for ${keyword}`, { language: "en-US" });
-    return;
-  }
-
-  if (text.includes("clear") || text.includes("reset") || text.includes("all")) {
-    setQ("");
-    setSelectedCategory(null);
-    fetchDeals();
-    Speech.speak("Showing all deals", { language: "en-US" });
-    return;
-  }
-
-  Speech.speak("Sorry, I didn’t understand. Try saying search milk or show food deals.", { language: "en-US" });
-};
-
-const startVoiceSearch = async () => {
-  const available = await SpeechRecognition.requestPermissionsAsync();
-  if (!available.granted) {
-    Alert.alert("Permission needed", "Microphone access is required for voice search.");
-    return;
-  }
-
-  Speech.speak("You can say search milk or show food deals.", { language: "en-US", rate: 1.0 });
-
-  setIsListening(true);
-  SpeechRecognition.startAsync({ language: "en-US" });
-
-  SpeechRecognition.addListener("onSpeechResults", (event) => {
-    const result = event.value?.[0];
-    if (result) {
-      setVoiceTranscript(result);
-      handleVoiceCommand(result);
-    }
-  });
-
-  // stop after 4 seconds
-  setTimeout(() => {
-    SpeechRecognition.stopAsync();
-    setIsListening(false);
-  }, 4000);
 };
 
 
@@ -380,14 +246,6 @@ const startVoiceSearch = async () => {
     onSubmitEditing={() => fetchDeals()}
   />
 
-  {/* 🎙 Mic Button beside search icon */}
-  <TouchableOpacity onPress={handleVoiceSearch} style={{ paddingHorizontal: 6 }}>
-    <Ionicons
-      name={isListening ? "mic" : "mic-outline"}
-      size={18}
-      color={isListening ? "#1f4b81" : "#9CA3AF"}
-    />
-  </TouchableOpacity>
 
   {/* ❌ Clear Button */}
   {q.length > 0 && (
@@ -396,24 +254,7 @@ const startVoiceSearch = async () => {
     </TouchableOpacity>
   )}
 </View>
-
-{voiceTranscript && (
-  <View
-    style={{
-      alignSelf: "flex-end",
-      backgroundColor: "#1f4b81",
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      marginTop: 4,
-      marginRight: 10,
-      maxWidth: 200,
-    }}
-  >
-    <Text style={{ color: "white", fontSize: 12 }}>{voiceTranscript}</Text>
-  </View>
-)}
-      
+  
       <TouchableOpacity 
         style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
         onPress={() => fetchDeals()}

@@ -468,7 +468,7 @@ const startVoiceRecognition = async () => {
 
       Speech.speak(
         "You can say something like: add one hundred food note burger. The format is add plus amount plus category plus note. Note is optional.",
-        { language: "en-US", rate: 1.5 }
+        { language: "en-US", rate: 1.3 }
       );
 
       // hide the hint after 3.5 seconds
