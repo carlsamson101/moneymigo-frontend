@@ -1514,17 +1514,20 @@ useEffect(() => {
   }
 }, [voiceTranscript]);
 
-// 🧠 OCR processing (Expo-safe version using Tesseract.js only)
+// 🧠 Enhanced OCR processing with date detection and better amount extraction
 async function processReceiptImage(uri) {
   try {
     setIsScanning(true);
     console.log("📸 Processing image:", uri);
 
-    // 1️⃣ Enhance image for OCR accuracy
+    // 1️⃣ Enhance image for OCR accuracy (better preprocessing)
     const processed = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 1600 } }],
-      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+      [
+        { resize: { width: 2000 } }, // Higher resolution for better OCR
+        { rotate: 0 }, // Normalize rotation if needed
+      ],
+      { compress: 0.95, format: ImageManipulator.SaveFormat.JPEG, base64: false }
     );
 
     let extractedText = "";
@@ -1565,133 +1568,33 @@ async function processReceiptImage(uri) {
       return;
     }
 
-// 3️⃣ Clean up text for parsing (keep numbers readable)
-const cleanText = extractedText
-  .replace(/\n+/g, " ")
-  .replace(/\s{2,}/g, " ")
-  .replace(/[^\x20-\x7E]/g, "")
-  .toLowerCase();
+    // 3️⃣ Clean up text for parsing (preserve original for date detection)
+    const originalText = extractedText;
+    const cleanText = extractedText
+      .replace(/\n+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .replace(/[^\x20-\x7E]/g, "")
+      .toLowerCase();
 
-    // 4️⃣ Smarter amount detection (TOTAL/Subtotal/Discount aware)
-let detectedAmount = null;
+    // 4️⃣ 📅 SMART DATE DETECTION
+    let detectedDate = extractDateFromReceipt(originalText);
+    
+    // 5️⃣ 💰 IMPROVED AMOUNT DETECTION
+    let detectedAmount = extractAmountFromReceipt(cleanText);
 
-// split into lines-ish for context
-const cleanLines = cleanText
-  .split(/\n|(?<=\d)\s+/)
-  .map(l => l.trim())
-  .filter(Boolean);
+    // 6️⃣ 🏷️ SMART CATEGORY & TRANSACTION TYPE DETECTION
+    const { category: detectedCategory, type: transactionType } = 
+      detectCategoryAndType(cleanText);
 
-// helper to parse a numeric string like "1,195.00" or "1.075,50"
-const toNum = (s) => {
-  if (!s) return NaN;
-  // remove thousands separators (commas or dots when used as thousands)
-  const dropThousands = s
-    .replace(/(\d)[,](?=\d{3}\b)/g, "$1")   // 1,195 -> 1195
-    .replace(/(\d)[.](?=\d{3}\b)/g, "$1");  // 1.195 -> 1195
-  // convert remaining comma to decimal if any
-  const normalized = dropThousands.replace(/,/, ".");
-  return parseFloat(normalized.replace(/[^\d.]/g, ""));
-};
-
-// 4.1 Try direct TOTAL on the same line first
-let totalLine = cleanLines.find(l => /(grand\s*total|total\s*amount|amount\s*due|total)\b/.test(l));
-if (totalLine) {
-  const nums = totalLine.match(/\d{1,7}(?:[.,]\d{1,2})?/g);
-  if (nums && nums.length) {
-    detectedAmount = toNum(nums[nums.length - 1]);
-    console.log("💰 TOTAL (same line):", totalLine, "=>", detectedAmount);
-  }
-}
-
-// 4.2 If not found, look for TOTAL on one line and amount on the NEXT line
-if (!detectedAmount) {
-  for (let i = 0; i < cleanLines.length - 1; i++) {
-    if (/(grand\s*total|total\s*amount|amount\s*due|total)\b/.test(cleanLines[i])) {
-      const nextNums = cleanLines[i + 1].match(/\d{1,7}(?:[.,]\d{1,2})?/g);
-      if (nextNums && nextNums.length) {
-        detectedAmount = toNum(nextNums[nextNums.length - 1]);
-        console.log("💰 TOTAL (next line):", cleanLines[i], " + ", cleanLines[i+1], "=>", detectedAmount);
-        break;
-      }
-    }
-  }
-}
-
-// 4.3 Subtotal − Discount fallback (Penshoppe/Robinsons/Gaisano styles)
-if (!detectedAmount) {
-  const subMatch   = cleanText.match(/sub\s*total[^0-9]{0,12}(\d{1,7}(?:[.,]\d{1,2})?)/i);
-  const discMatch  = cleanText.match(/less\s*discount[^0-9]{0,12}(\d{1,7}(?:[.,]\d{1,2})?)/i);
-  if (subMatch && discMatch) {
-    const subtotal = toNum(subMatch[1]);
-    const discount = toNum(discMatch[1]);
-    if (isFinite(subtotal) && isFinite(discount)) {
-      detectedAmount = subtotal - discount;
-      console.log("🧮 Subtotal - Discount =", subtotal, "-", discount, "=>", detectedAmount);
-    }
-  }
-}
-
-// 4.4 Context fallback near money words
-if (!detectedAmount) {
-  const contextHits = [];
-  const contextRegex = /(withdrawal|amount|total|balance|deposit|cash\s*(rcvd|received|payment)|change)/i;
-
-  cleanLines.forEach((line, idx) => {
-    if (contextRegex.test(line)) {
-      const nums = (line.match(/\d{1,7}(?:[.,]\d{1,2})?/g) || []).map(toNum).filter(n => isFinite(n));
-      contextHits.push(...nums);
-      // also peek next line—some receipts break lines
-      if (cleanLines[idx + 1]) {
-        const nextNums = (cleanLines[idx + 1].match(/\d{1,7}(?:[.,]\d{1,2})?/g) || []).map(toNum).filter(n => isFinite(n));
-        contextHits.push(...nextNums);
-      }
-    }
-  });
-
-  if (contextHits.length) {
-    detectedAmount = Math.max(...contextHits);
-    console.log("📊 Context-based max:", detectedAmount);
-  }
-}
-
-// 4.5 Last resort: global max number
-if (!detectedAmount) {
-  const allNums = (cleanText.match(/\d{1,7}(?:[.,]\d{1,2})?/g) || [])
-    .map(toNum)
-    .filter(n => isFinite(n));
-  if (allNums.length) {
-    detectedAmount = Math.max(...allNums);
-    console.log("📈 Global max:", detectedAmount);
-  }
-}
-
-
-    // 5️⃣ Smart Category Detection (includes banks)
-    let detectedCategory = "Others";
- const CATEGORY_PATTERNS = {
-  Food: /(jollibee|mcdonald|kfc|chowking|food|meal|snack|burger|pizza|coffee|tea|restaurant)/i,
-  Transport: /(grab|taxi|bus|jeep|tricycle|fare|transport|fuel|parking)/i,
-  Bills: /(meralco|pldt|globe|smart|bill|internet|wifi|water|electric)/i,
-  School: /(tuition|school|book|notebook|exam|project|student|module)/i,
-  Shopping: /(mall|shop|store|sm|robinsons|gaisano|penshoppe|gaisano\s*capital|watsons|shopee|lazada)/i,
-  Savings: /(atm|bank|deposit|withdrawal|landbank|bpi|bdo|maya|gcash|balance|transaction\s*record|cash\s*withdrawal)/i,
-};
-
-    for (const [cat, regex] of Object.entries(CATEGORY_PATTERNS)) {
-      if (regex.test(cleanText)) {
-        detectedCategory = cat;
-        break;
-      }
-    }
-
-    // 🧮 Confidence calculation
-    let confidence = 0.6;
+    // 7️⃣ 🧮 Confidence calculation
+    let confidence = 0.5;
     if (detectedAmount && /total|withdrawal|deposit|balance/.test(cleanText))
       confidence += 0.25;
-    if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.15;
-    if (confidence > 1) confidence = 1;
+    if (detectedDate) confidence += 0.15;
+    if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.10;
+    confidence = Math.min(confidence, 1);
 
-   setOcrDetectedDate(new Date()); // Initialize with today's date
+    setOcrDetectedDate(detectedDate);
     setOcrRawText(cleanText);
     setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
@@ -1700,14 +1603,11 @@ if (!detectedAmount) {
     console.log("✅ OCR Result", {
       amount: detectedAmount,
       category: detectedCategory,
-      confidence,
+      type: transactionType,
+      date: detectedDate,
+      confidence
     });
 
-    console.log(
-  `Detected ${detectedCategory} transaction for ₱${
-    detectedAmount ? detectedAmount.toFixed(2) : "unknown"
-  }.`
-);
   } catch (err) {
     console.error("❌ OCR error:", err);
     Alert.alert("Error", "Failed to process receipt. Try again.");
@@ -1716,7 +1616,220 @@ if (!detectedAmount) {
   }
 }
 
+// 📅 Extract date from receipt text
+function extractDateFromReceipt(text) {
+  const today = new Date();
+  
+  // Common date patterns in receipts
+  const patterns = [
+    // MM/DD/YYYY or DD/MM/YYYY
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+    // MM/DD/YY or DD/MM/YY
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})\b/,
+    // YYYY-MM-DD (ISO format)
+    /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
+    // DD Mon YYYY (e.g., "15 Jan 2024")
+    /(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})/i,
+    // Mon DD, YYYY (e.g., "Jan 15, 2024")
+    /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})/i,
+  ];
 
+  const monthMap = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      try {
+        let date;
+        
+        if (match[0].match(/^[a-z]/i)) {
+          // Mon DD, YYYY format
+          const month = monthMap[match[1].toLowerCase().substring(0, 3)];
+          date = new Date(parseInt(match[3]), month, parseInt(match[2]));
+        } else if (match[0].match(/\d{1,2}\s+[a-z]/i)) {
+          // DD Mon YYYY format
+          const month = monthMap[match[2].toLowerCase().substring(0, 3)];
+          date = new Date(parseInt(match[3]), month, parseInt(match[1]));
+        } else if (match[1].length === 4) {
+          // YYYY-MM-DD format
+          date = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+        } else {
+          // Numeric formats - try both interpretations
+          const num1 = parseInt(match[1]);
+          const num2 = parseInt(match[2]);
+          let year = parseInt(match[3]);
+          
+          // Convert 2-digit year to 4-digit
+          if (year < 100) {
+            year += year > 50 ? 1900 : 2000;
+          }
+          
+          // For PH receipts, assume DD/MM/YYYY if day > 12
+          if (num1 > 12) {
+            date = new Date(year, num2 - 1, num1);
+          } else if (num2 > 12) {
+            date = new Date(year, num1 - 1, num2);
+          } else {
+            // Ambiguous - prefer DD/MM/YYYY for PH locale
+            date = new Date(year, num2 - 1, num1);
+          }
+        }
+        
+        // Validate date is reasonable (not future, not too old)
+        if (date && !isNaN(date.getTime())) {
+          const oneYearAgo = new Date(today);
+          oneYearAgo.setFullYear(today.getFullYear() - 1);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
+          
+          if (date >= oneYearAgo && date <= tomorrow) {
+            console.log("📅 Detected date:", date);
+            return date;
+          }
+        }
+      } catch (err) {
+        console.warn("Date parse error:", err);
+      }
+    }
+  }
+  
+  // Fallback to today if no date found
+  console.log("📅 No date detected, using today");
+  return today;
+}
+
+// 💰 Improved amount extraction (ATM-receipt aware)
+function extractAmountFromReceipt(cleanText) {
+  const cleanLines = cleanText
+    .split(/\s{2,}|\n/)
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  let detectedAmount = null;
+
+  // Exclusion patterns (numbers to IGNORE)
+  const IGNORE_PATTERNS = [
+    /card\s*no\.?\s*[:=]?\s*\*+\d+/i,
+    /account\s*no\.?\s*[:=]?\s*\d+/i,
+    /ref\.?\s*(no|num|#)\.?\s*[:=]?\s*\d+/i,
+    /receipt\s*(no|num|#)\.?\s*[:=]?\s*\d+/i,
+    /sequence\s*(no|num|#)\.?\s*[:=]?\s*\d+/i,
+    /trace\s*(no|num|#)\.?\s*[:=]?\s*\d+/i,
+    /\d{10,}/, // Long numbers (likely account/card numbers)
+  ];
+
+  // Priority 1: Explicit transaction keywords (with more variations)
+  const PRIORITY_PATTERNS = [
+    { regex: /(total\s*amount|total\s*due|amount\s*due|grand\s*total)\s*[:=]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i, priority: 1 },
+    { regex: /\btotal\b\s*[:=]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i, priority: 1 },
+    { regex: /(cash\s*withdrawal|withdrawal\s*amount)\s*[:=]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i, priority: 2 },
+    { regex: /(deposit\s*amount|cash\s*deposit)\s*[:=]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i, priority: 2 },
+    { regex: /(transaction\s*amount)\s*[:=]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i, priority: 3 },
+    { regex: /(amount\s*paid|paid\s*amount|cash\s*rcvd)\s*[:=]?\s*(\d{1,6}(?:[.,]\d{1,2})?)/i, priority: 3 },
+  ];
+
+  // Try keyword extraction with exclusion
+  for (const { regex, priority } of PRIORITY_PATTERNS.sort((a, b) => a.priority - b.priority)) {
+    for (const line of cleanLines) {
+      // Skip if line matches ignore patterns
+      if (IGNORE_PATTERNS.some(ignore => ignore.test(line))) continue;
+      
+      const match = line.match(regex);
+      if (match) {
+        // Handle both capture groups: sometimes group 1 is label, group 2 is number
+        // Sometimes only group 1 exists with the number
+        const amountStr = match[2] || match[1];
+        if (amountStr && /\d/.test(amountStr)) {
+          const amount = parseFloat(amountStr.replace(/[^\d.]/g, ""));
+          if (amount > 0 && amount < 1000000) {
+            detectedAmount = amount;
+            console.log(`💰 Found (Priority ${priority}):`, line, "→", amount);
+            return detectedAmount;
+          }
+        }
+      }
+    }
+  }
+
+  // Priority 2: Context-based (near keywords but not labeled)
+  if (!detectedAmount) {
+    const contextRegex = /(withdrawal|deposit|total|amount|paid)/i;
+    const amounts = [];
+
+    cleanLines.forEach((line, idx) => {
+      if (IGNORE_PATTERNS.some(ignore => ignore.test(line))) return;
+      
+      if (contextRegex.test(line)) {
+        const nums = (line.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || [])
+          .map(n => parseFloat(n.replace(/[^\d.]/g, "")))
+          .filter(n => n > 0 && n < 1000000);
+        amounts.push(...nums);
+        
+        // Check next line
+        if (cleanLines[idx + 1] && !IGNORE_PATTERNS.some(ig => ig.test(cleanLines[idx + 1]))) {
+          const nextNums = (cleanLines[idx + 1].match(/\d{1,6}(?:[.,]\d{1,2})?/g) || [])
+            .map(n => parseFloat(n.replace(/[^\d.]/g, "")))
+            .filter(n => n > 0 && n < 1000000);
+          amounts.push(...nextNums);
+        }
+      }
+    });
+
+    if (amounts.length > 0) {
+      detectedAmount = Math.max(...amounts);
+      console.log("📊 Context-based amount:", detectedAmount);
+      return detectedAmount;
+    }
+  }
+
+  // Priority 3: Fallback - largest reasonable number
+  if (!detectedAmount) {
+    const allNums = cleanLines
+      .filter(line => !IGNORE_PATTERNS.some(ig => ig.test(line)))
+      .flatMap(line => (line.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []))
+      .map(n => parseFloat(n.replace(/[^\d.]/g, "")))
+      .filter(n => n > 0 && n < 1000000);
+
+    if (allNums.length > 0) {
+      detectedAmount = Math.max(...allNums);
+      console.log("📈 Fallback: global max:", detectedAmount);
+    }
+  }
+
+  return detectedAmount;
+}
+
+// 🏷️ Detect category and transaction type
+function detectCategoryAndType(cleanText) {
+  let category = "Others";
+  let type = "expense"; // Default: expense (money out)
+
+  // Check for deposit/income indicators
+  if (/(deposit|cash\s*in|credit|income|salary|allowance)/i.test(cleanText)) {
+    type = "income";
+  }
+
+  const CATEGORY_PATTERNS = {
+    Food: /(jollibee|mcdonald|kfc|chowking|food|meal|snack|burger|pizza|coffee|tea|restaurant|cafe)/i,
+    Transport: /(grab|taxi|bus|jeep|tricycle|fare|transport|fuel|gasoline|parking)/i,
+    Bills: /(meralco|pldt|globe|smart|bill|internet|wifi|water|electric|utility)/i,
+    School: /(tuition|school|book|notebook|exam|project|student|module|supplies)/i,
+    Shopping: /(mall|shop|store|sm|robinsons|grocery|watsons|shopee|lazada|purchase)/i,
+    Savings: /(atm|bank|withdrawal|landbank|bpi|bdo|maya|gcash|balance|transaction\s*record)/i,
+  };
+
+  for (const [cat, regex] of Object.entries(CATEGORY_PATTERNS)) {
+    if (regex.test(cleanText)) {
+      category = cat;
+      break;
+    }
+  }
+
+  return { category, type };
+}
 
 
   const handleAddExpense = async () => {
