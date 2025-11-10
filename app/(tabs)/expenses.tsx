@@ -2838,8 +2838,7 @@ const HistorySection = (
               </Text>
             </View>
 
-          
-            {/* 📝 Notes */}
+          {/* 📝 Notes */}
 <View
   style={{
     flexDirection: "row",
@@ -2861,6 +2860,8 @@ const HistorySection = (
       : "No notes provided"}
   </Text>
 </View>
+
+          </View>
 
           {/* Close button */}
           <TouchableOpacity
@@ -2939,12 +2940,12 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: isMobile ? 60 : 10,
+    bottom: isMobile ? 60 : 7,
     right: 16,
     backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
     borderRadius: 50,
-    width: isMobile ? 35 : 60,
-    height: isMobile ? 35 : 60,
+    width: isMobile ? 35 : 45,
+    height: isMobile ? 35 : 45,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
