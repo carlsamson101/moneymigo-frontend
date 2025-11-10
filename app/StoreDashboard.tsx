@@ -5,6 +5,22 @@ declare global {
   }
 }
 
+
+// ✅ Universal speech helper for browser
+function speakWeb(text: string, options: { language?: string; rate?: number } = {}) {
+  if ('speechSynthesis' in window) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = options.language || 'en-PH';
+    utter.rate = options.rate || 1.0;
+    utter.pitch = 1.0;
+    window.speechSynthesis.cancel(); // stop any ongoing speech before starting new
+    window.speechSynthesis.speak(utter);
+  } else {
+    console.warn("Speech synthesis not supported in this browser.");
+  }
+}
+
+
 import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
 import {
@@ -333,7 +349,7 @@ const handleVoiceItemConversation = (spokenText) => {
   const lower = spokenText.toLowerCase().trim();
 
   if (/(hi|hello|hey)/i.test(lower)) {
-    Speech.speak(
+    speakWeb(
       "Hello! Ready to add items to your store? Just say: add item name at price per unit",
       { language: "en-US", rate: 1.2 }
     );
@@ -341,7 +357,7 @@ const handleVoiceItemConversation = (spokenText) => {
   }
 
   if (/(help|how|what)/i.test(lower)) {
-    Speech.speak(
+    speakWeb(
       "To add an item, say: add lucky me at 15 per piece category instant noodles",
       { language: "en-US", rate: 1.2 }
     );
@@ -368,7 +384,7 @@ const applyVoiceItemCommand = async (command) => {
   if (!parsed.itemName || !parsed.price || parsed.price <= 0) {
     const msg = "I didn't catch the item name or price. Please try again: add item name at price per unit";
     Alert.alert("Try Again", msg);
-    Speech.speak(msg, { language: "en-US", rate: 1.2 });
+    speakWeb(msg, { language: "en-US", rate: 1.2 });
     setVoiceTranscript("");
     return;
   }
@@ -379,7 +395,7 @@ const applyVoiceItemCommand = async (command) => {
   try {
     // Speak back what was understood
     const confirmation = `Adding ${parsed.itemName}, ${parsed.price} pesos per ${parsed.unit}`;
-    Speech.speak(confirmation, { language: "en-US", rate: 1.1 });
+    speakWeb(confirmation, { language: "en-US", rate: 1.1 });
 
     // Save to database
     await api.post("/storeItems", {
@@ -446,9 +462,9 @@ const startVoiceRecognition = async () => {
       if (!hasSpokenHint) {
         setHasSpokenHint(true);
         timeoutId = setTimeout(() => {
-          Speech.speak(
-            "Say: add item name at price per unit",
-            { language: "en-US", rate: 1.0 }
+         speakWeb(
+            "Say: add item name at price per unit and category",
+            { language: "en-US", rate: 1.2 }
           );
         }, 1000);
       }
