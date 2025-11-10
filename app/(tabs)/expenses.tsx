@@ -227,7 +227,17 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
- 
+useEffect(() => {
+  if (
+    Platform.OS === "web" &&
+    /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent)
+  ) {
+    Speech.speak("You can say something like: add ten food note burger.", {
+      language: "en-US",
+    });
+  }
+}, []);
+
 
 const [isListening, setIsListening] = useState(false);
 const [voiceTranscript, setVoiceTranscript] = useState("");
@@ -450,13 +460,11 @@ const startVoiceRecognition = async () => {
     recognition.interimResults = false;
     recognition.continuous = false;
 
-    recognition.onstart = () => {
-      console.log("🎤 Listening...");
-      setIsListening(true);
-      Speech?.speak?.("You can say something like: add ten food note burger.", {
-        language: "en-US",
-      });
-    };
+recognition.onstart = () => {
+  console.log("🎤 Listening...");
+  setIsListening(true);
+};
+
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
@@ -498,9 +506,30 @@ async function applyParsedVoice(command: string) {
 
 const entries = parseVoiceCommand(command);
 if (entries.length === 0) {
-  Alert.alert("No amount detected", "Try e.g. 'add 150 food note lunch'.");
-  setVoiceTranscript(""); // Clear transcript
+  const msg =
+    "Hmm, I didn’t quite get that. Try saying something like: add 150 food note burger.";
+  Alert.alert("Couldn’t Understand", msg);
+  Speech.speak(msg, { language: "en-US", rate: 1.0 });
+  setVoiceTranscript("");
   return;
+}
+
+// 🧠 Validate each entry with friendly feedback
+for (const e of entries) {
+  if (!e.amount || e.amount <= 0) {
+    const msg = "I didn’t catch the amount. Please say a valid number after 'add'.";
+    Alert.alert("Missing Amount", msg);
+    Speech.speak(msg, { language: "en-US", rate: 1.0 });
+    return;
+  }
+
+  if (!e.category || e.category === "Others") {
+    const msg =
+      "Hmm, I couldn’t detect a category. Try again, for example: add 50 to food note snacks.";
+    Alert.alert("Missing Category", msg);
+    Speech.speak(msg, { language: "en-US", rate: 1.0 });
+    return;
+  }
 }
 
 let total = 0;  // Continue normally
@@ -531,15 +560,15 @@ let added = 0;
     }
   }
 
-  if (added > 0) {
-    fetchExpenses();
-    const msg = `Added ${added} expense${added > 1 ? "s" : ""}, total ₱${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`;
-    console.log("✅", msg);
-    
-    // Clear transcript after 3 seconds
-    setTimeout(() => {
-      setVoiceTranscript("");
-    }, 3000);
+if (added > 0) {
+  fetchExpenses();
+  const msg = "Got it, an expense has been added.";
+  Speech.speak(msg, { language: "en-US", rate: 1.3 });
+  console.log("✅", msg);
+
+  setTimeout(() => {
+    setVoiceTranscript("");
+  }, 3000);
   } else {
     Alert.alert("Nothing added", "I didn't find a valid amount to save.");
     setVoiceTranscript(""); // Clear transcript
@@ -548,40 +577,58 @@ let added = 0;
 
 
 function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
-  // Allow forms like:
-  //  - "add 150 to food"
-  //  - "150 food"
-  //  - "record 80 transport note taxi"
-  //  - "₱300 bills yesterday"
-  //  - "50 groceries and 120 fuel"
+  if (!command) return [];
+
   const clauses = splitIntoClauses(command);
-
   const parsed: ParsedVoiceExpense[] = [];
+
   for (const clause of clauses) {
-    const lower = clause.toLowerCase();
+    const lower = clause.toLowerCase().trim();
 
-    // 1) amount
-    const amount = extractAmount(lower);
+    // 🎯 Match flexible formats:
+    // add 120 food note lunch
+    // add 120 to food note lunch
+    // add 120 to food yesterday note dinner
+    const match = lower.match(
+      /add\s+(\d+(?:\.\d+)?)\s*(?:to\s+)?(\w+)?(?:\s+(yesterday|today))?(?:\s+note\s+(.*))?/i
+    );
 
-    // 2) category
-    // try “add|record X (to|for|in) CATEGORY” first
+    let amount: number | null = null;
     let category = "Others";
-    const rel = lower.match(/\b(?:to|for|in)\s+([a-z ]+)\b/);
-    if (rel?.[1]) {
-      // take first word after “to/for/in” that matches a known alias
-      const candidate = rel[1].split(/\s+/).find(w => CATEGORY_LOOKUP[w]);
-      if (candidate) category = CATEGORY_LOOKUP[candidate];
+    let notes = "";
+    let dateISO: string | undefined = undefined;
+
+    if (match) {
+      amount = parseFloat(match[1]);
+      const rawCat = match[2] ? match[2].toLowerCase() : "";
+      const dateWord = match[3] ? match[3].toLowerCase() : "";
+      notes = match[4] ? match[4].trim() : "";
+
+      // 📅 Date keyword handling
+      if (dateWord === "yesterday") {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        dateISO = d.toISOString();
+      } else if (dateWord === "today") {
+        dateISO = new Date().toISOString();
+      }
+
+      // 🎨 Canonicalize category (use your CATEGORY_LOOKUP)
+      if (rawCat && CATEGORY_LOOKUP[rawCat]) {
+        category = CATEGORY_LOOKUP[rawCat];
+      } else if (!rawCat) {
+        category = "Others";
+      }
     } else {
+      // fallback — if structure not matched
+      amount = extractAmount(lower);
       category = extractCategory(lower);
+      notes = extractNotes(lower) || "";
+      dateISO = extractDateKeyword(lower);
     }
 
-    // 3) notes
-    const notes = extractNotes(clause);
-
-    // 4) date keyword
-    const dateISO = extractDateKeyword(clause);
-
-    if (amount) {
+    // 🧩 Push only valid entries
+    if (amount && !isNaN(amount)) {
       parsed.push({ amount, category, notes, dateISO });
     }
   }
@@ -2903,6 +2950,15 @@ const HistorySection = (
   />
 </TouchableOpacity>
 
+{Platform.OS === "web" &&
+ /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent) && (
+  <View style={styles.voiceHintBox}>
+    <Ionicons name="information-circle-outline" size={16} color="#1f4b81" />
+    <Text style={styles.voiceHintText}>
+      💡 You can say: “add 10 food note burger”. Format: add + amount + category + note (note is optional)
+    </Text>
+  </View>
+)}
 
   </View>
   );
@@ -3324,6 +3380,25 @@ chartCard: {
   shadowOpacity: 0.08,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 3 },
+},
+voiceHintBox: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  backgroundColor: "#EFF6FF",
+  borderColor: "#BFDBFE",
+  borderWidth: 1,
+  borderRadius: 10,
+  padding: 10,
+  marginHorizontal: 16,
+  marginTop: 10,
+  gap: 6,
+},
+voiceHintText: {
+  flex: 1,
+  color: "#1e3a8a",
+  fontSize: 13,
+  fontWeight: "500",
+  lineHeight: 18,
 },
 
 });
