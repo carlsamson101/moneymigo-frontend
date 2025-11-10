@@ -90,6 +90,19 @@ const STORE_UNIT_LOOKUP: Record<string, string> = Object.entries(STORE_UNIT_ALIA
   {} as Record<string, string>
 );
 
+// 🗣 Browser voice feedback for confirmations
+function speak(text: string) {
+  if ('speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-PH';  // or 'en-US'
+    utterance.rate = 1.1;
+    utterance.pitch = 1.0;
+    speechSynthesis.speak(utterance);
+  } else {
+    console.warn('Speech synthesis not supported in this browser.');
+  }
+}
+
 let DateTimePicker: any = () => null;
 if (Platform.OS !== 'web') {
   DateTimePicker = require('@react-native-community/datetimepicker').default;
@@ -379,9 +392,11 @@ const applyVoiceItemCommand = async (command) => {
     });
 
     Alert.alert(
-      "✅ Item Added", 
-      `${parsed.itemName}\n₱${parsed.price} per ${parsed.unit}\nCategory: ${parsed.category}`
-    );
+  "✅ Item Added",
+  `${parsed.itemName}\n₱${parsed.price} per ${parsed.unit}\nCategory: ${parsed.category}`
+);
+speak(`Successfully added ${parsed.itemName} at ${parsed.price} pesos per ${parsed.unit} in ${parsed.category}`);
+
     
     fetchItems(); // Refresh list
 
@@ -389,6 +404,7 @@ const applyVoiceItemCommand = async (command) => {
   } catch (err) {
     console.error("❌ Voice add failed:", err);
     Alert.alert("Error", "Failed to add item. Please try again.");
+    speak("Sorry, I could not add the item. Please try again.");
     setVoiceTranscript("");
   }
 };
