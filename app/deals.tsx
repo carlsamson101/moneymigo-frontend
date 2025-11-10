@@ -90,18 +90,13 @@ const handleVoiceSearch = async () => {
   }
 
   try {
-    // 🔐 Request microphone permission first
+    // 🔐 Ask for mic permission
     if (navigator.permissions) {
       const permissionStatus = await navigator.permissions.query({ name: "microphone" });
-
       if (permissionStatus.state === "denied") {
-        Alert.alert(
-          "🎤 Permission Denied",
-          "Please allow microphone access in your browser settings."
-        );
+        Alert.alert("🎤 Permission Denied", "Allow microphone access in your browser settings.");
         return;
       }
-
       if (permissionStatus.state !== "granted") {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((t) => t.stop());
@@ -114,15 +109,19 @@ const handleVoiceSearch = async () => {
       return;
     }
 
-    // 🎧 Start listening
     setIsListening(true);
     setVoiceTranscript("");
 
-    Speech.speak(
-      "Listening. You can say something like show food deals or search electronics.",
-      { language: "en-US", rate: 1.0 }
-    );
+    // ✅ Speak *after* tap, before recognition, with small delay
+    await new Promise((resolve) => {
+      Speech.speak("Listening. You can say something like show food deals or search electronics.", {
+        language: "en-US",
+        rate: 1.0,
+        onDone: resolve, // wait until speaking finishes before listening
+      });
+    });
 
+    console.log("🎤 Starting recognition...");
     const result = await SpeechRecognition.startAsync({
       lang: "en-US",
       interimResults: false,
@@ -130,10 +129,15 @@ const handleVoiceSearch = async () => {
 
     if (result?.results?.[0]) {
       const spokenText = result.results[0].transcript.trim();
-      console.log("🎤 Voice recognized:", spokenText);
+      console.log("✅ Voice recognized:", spokenText);
       setVoiceTranscript(spokenText);
       setQ(spokenText);
       fetchDeals();
+    } else {
+      Speech.speak("Sorry, I didn’t catch that. Try again.", {
+        language: "en-US",
+        rate: 1.0,
+      });
     }
   } catch (err) {
     console.error("🎤 Voice error:", err);

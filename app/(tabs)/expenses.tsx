@@ -439,13 +439,13 @@ const startVoiceRecognition = async () => {
   if (!isMobileWeb) {
     Alert.alert(
       "🎙️ Voice Input Unavailable",
-      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari)."
+      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
     );
     return;
   }
 
   try {
-    // ✅ Ask for mic permission
+    // 🔐 Request microphone permission
     if (navigator.permissions) {
       const permissionStatus = await navigator.permissions.query({ name: "microphone" });
       if (permissionStatus.state === "denied") {
@@ -461,29 +461,30 @@ const startVoiceRecognition = async () => {
       }
     }
 
-    // 🧠 Show hint & speak only the first time user taps mic
+    // 💬 Speak the hint *only once*, but don’t stop future clicks
     if (!hasShownTip) {
       setShowVoiceTip(true);
       setHasShownTip(true);
 
       Speech.speak(
         "You can say something like: add one hundred food note burger. The format is add plus amount plus category plus note. Note is optional.",
-        { language: "en-US", rate: 1.0 }
+        { language: "en-US", rate: 1.5 }
       );
 
-      // auto-hide tip after 3.5 seconds
+      // hide the hint after 3.5 seconds
       setTimeout(() => setShowVoiceTip(false), 3500);
-      return; // 🧠 stop here so it doesn’t immediately start listening
+      // ❌ Remove this line:
+      // return;   <-- this was stopping later clicks from working
     }
 
-    // 🎙️ Begin listening only on later clicks
+    // 🎧 Start listening
     setIsListening(true);
     setVoiceTranscript("");
 
     await SpeechRecognition.startAsync({ lang: "en-US", interimResults: false });
     console.log("✅ Listening started");
 
-    // stop automatically after ~4 seconds
+    // Auto-stop after 4 seconds
     setTimeout(async () => {
       await SpeechRecognition.stopAsync();
       console.log("🛑 Listening stopped (auto)");
@@ -2966,7 +2967,7 @@ const HistorySection = (
   <View
     style={{
       position: "absolute",
-      bottom: 70,
+      bottom: 5,
       alignSelf: "center",
       backgroundColor: "rgba(37,99,235,0.9)",
       paddingHorizontal: 12,
