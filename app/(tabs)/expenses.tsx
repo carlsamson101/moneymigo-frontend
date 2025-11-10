@@ -234,15 +234,24 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
-// 🎧 Unlock Audio Context after first user tap (required for Chrome/Safari mobile)
+// 🎧 Unlock audio for Speech.speak() on first tap
 useEffect(() => {
   if (Platform.OS === "web") {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
     const unlock = () => {
-      if (ctx.state === "suspended") ctx.resume();
+      if (ctx.state === "suspended") {
+        ctx.resume().then(() => {
+          console.log("🔓 Audio context unlocked");
+          Speech.speak("Audio is now active.", {
+            language: "en-US",
+            rate: 1.0,
+          });
+        });
+      }
       window.removeEventListener("click", unlock);
-      console.log("🔓 Audio context unlocked");
     };
+
     window.addEventListener("click", unlock);
   }
 }, []);
@@ -516,7 +525,7 @@ const startVoiceRecognition = async () => {
       setIsListening(true);
       setVoiceTranscript("");
       console.log("🎧 Listening...");
-      Speech.speak("Listening... You can say add one hundred food note burger.", {
+      Speech.speak("Listening... You can say something like add one hundred food note burger.", {
         language: "en-US",
         rate: 1.0,
       });
@@ -527,7 +536,6 @@ const startVoiceRecognition = async () => {
       console.log("🗣️ Heard:", spokenText);
       setVoiceTranscript(spokenText);
       applyParsedVoice(spokenText);
-      Speech.speak(`Got it. You said ${spokenText}`, { language: "en-US" });
     };
 
     recognition.onerror = (err: any) => {
@@ -3069,8 +3077,6 @@ const HistorySection = (
     </Text>
   </View>
 )}
-
-
   </View>
   );
   
@@ -3082,9 +3088,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f3f6fa',
   },
-  scrollContent: {
-    paddingBottom: 100,
-  },
+
   
   // Header Styles
   headerContainer: {

@@ -883,7 +883,7 @@ return (
               
                 <TouchableOpacity 
                  style={styles.backButton}
-                 onPress={() => router.push("/")}
+                onPress={() => router.back()}
                  activeOpacity={0.7}
                >
                  <View style={styles.backButtonCircle}>
