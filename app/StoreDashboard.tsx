@@ -24,7 +24,59 @@ import UniversalMap from "../components/UniversalMap";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { checkStoreAuth } from "../lib/checkStoreAuth";
 import { Platform } from 'react-native';
+// Voice Recognition Setup with proper typing
+let SpeechRecognition: any = null;
 
+if (Platform.OS === "web" && typeof window !== "undefined") {
+  SpeechRecognition =
+    (window as any).SpeechRecognition ||
+    (window as any).webkitSpeechRecognition ||
+    null;
+
+  if (SpeechRecognition) {
+    console.log("✅ Using Web SpeechRecognition API");
+  } else {
+    console.log("⚠️ Web SpeechRecognition not available on this browser");
+  }
+}
+
+// Category and Unit mappings for voice recognition
+const STORE_CATEGORY_ALIASES = {
+  "instant noodles": ["noodles", "noodle", "instant", "pancit", "lucky me"],
+  "canned goods": ["canned", "can", "sardines", "corned beef", "spam"],
+  "snacks": ["snack", "chips", "biscuit", "cookie", "candy"],
+  "beverages": ["beverage", "drink", "soda", "juice", "coffee", "water"],
+  "cooking essentials": ["cooking", "oil", "salt", "sugar", "flour"],
+  "personal care": ["personal", "soap", "shampoo", "toothpaste"],
+  "household": ["household", "cleaner", "tissue", "paper"],
+  "laundry": ["laundry", "detergent", "fabric"],
+  "medicine": ["medicine", "med", "paracetamol", "vitamins"],
+  "school supplies": ["school", "notebook", "pen", "pencil"],
+  "condiments": ["condiment", "sauce", "vinegar", "ketchup"],
+  "other": ["other", "others", "misc"],
+};
+
+const STORE_UNIT_ALIASES = {
+  "piece": ["piece", "pieces", "pc", "pcs"],
+  "kilo": ["kilo", "kilogram", "kg"],
+  "gram": ["gram", "grams", "g"],
+  "liter": ["liter", "liters", "l"],
+  "ml": ["ml", "milliliter"],
+  "pack": ["pack", "packs", "sachet"],
+  "dozen": ["dozen", "dozens"],
+  "other": ["other"],
+};
+
+// Create lookup maps
+const STORE_CATEGORY_LOOKUP = Object.entries(STORE_CATEGORY_ALIASES).reduce((acc, [canon, list]) => {
+  list.forEach(alias => acc[alias.toLowerCase()] = canon);
+  return acc;
+}, {});
+
+const STORE_UNIT_LOOKUP = Object.entries(STORE_UNIT_ALIASES).reduce((acc, [canon, list]) => {
+  list.forEach(alias => acc[alias.toLowerCase()] = canon);
+  return acc;
+}, {});
 
 let DateTimePicker: any = () => null;
 if (Platform.OS !== 'web') {
@@ -87,6 +139,11 @@ const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 const [startDate, setStartDate] = useState(new Date());
 const [endDate, setEndDate] = useState(new Date());
 
+// Add these to your existing useState declarations
+const [isListening, setIsListening] = useState(false);
+const [voiceTranscript, setVoiceTranscript] = useState("");
+const [hasSpokenHint, setHasSpokenHint] = useState(false);
+
   // Filter state
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
 
@@ -130,6 +187,211 @@ const fetchDeals = async () => {
     setDeals(res.data);
   } catch (err) {
     console.error("Fetch deals error:", err);
+  }
+};
+
+const parseVoiceItemCommand = (command) => {
+  const lower = command.toLowerCase().trim();
+  console.log("🎤 Parsing store item:", lower);
+
+  const result = {
+    itemName: "",
+    price: null,
+    unit: "piece",
+    category: "other"
+  };
+
+  // Extract price
+  const priceMatch = lower.match(/(?:at|price)\s+(\d+(?:\.\d{1,2})?)/i) ||
+                     lower.match(/(\d+(?:\.\d{1,2})?)\s*(?:pesos|php)/i) ||
+                     lower.match(/\b(\d+(?:\.\d{1,2})?)\b/);
+  
+  if (priceMatch) {
+    result.price = parseFloat(priceMatch[1]);
+  }
+
+  // Extract unit
+  const unitMatch = lower.match(/per\s+(\w+)/i);
+  if (unitMatch) {
+    const unitWord = unitMatch[1].toLowerCase();
+    result.unit = STORE_UNIT_LOOKUP[unitWord] || "piece";
+  }
+
+  // Extract category
+  const categoryMatch = lower.match(/category\s+(.+?)(?:\s+|$)/i);
+  if (categoryMatch) {
+    const categoryWords = categoryMatch[1].toLowerCase().split(/\s+/);
+    for (const word of categoryWords) {
+      if (STORE_CATEGORY_LOOKUP[word]) {
+        result.category = STORE_CATEGORY_LOOKUP[word];
+        break;
+      }
+    }
+  } else {
+    // Infer from item name
+    const words = lower.split(/[^a-z]+/).filter(Boolean);
+    for (const word of words) {
+      if (STORE_CATEGORY_LOOKUP[word]) {
+        result.category = STORE_CATEGORY_LOOKUP[word];
+        break;
+      }
+    }
+  }
+
+  // Extract item name
+  let itemNameMatch = lower.match(/^add\s+(.+?)\s+(?:at|price|\d)/i);
+  if (itemNameMatch) {
+    result.itemName = itemNameMatch[1].trim();
+  } else {
+    const words = lower.replace(/^add\s+/i, '').split(/\s+/);
+    result.itemName = words.slice(0, 3).join(' ');
+  }
+
+  return result;
+};
+
+const handleVoiceItemConversation = (spokenText) => {
+  const lower = spokenText.toLowerCase().trim();
+
+  if (/(hi|hello|hey)/i.test(lower)) {
+    Speech.speak(
+      "Hello! Ready to add items to your store? Just say: add item name at price per unit",
+      { language: "en-US", rate: 1.2 }
+    );
+    return true;
+  }
+
+  if (/(help|how|what)/i.test(lower)) {
+    Speech.speak(
+      "To add an item, say: add lucky me at 15 per piece category instant noodles",
+      { language: "en-US", rate: 1.2 }
+    );
+    return true;
+  }
+
+  return false;
+};
+
+const applyVoiceItemCommand = async (command) => {
+  console.log("🎤 Voice input:", command);
+
+  if (!storeName) {
+    Alert.alert("Error", "Store not loaded yet");
+    return;
+  }
+
+  const handled = handleVoiceItemConversation(command);
+  if (handled) return;
+
+  const parsed = parseVoiceItemCommand(command);
+
+  if (!parsed.itemName || !parsed.price || parsed.price <= 0) {
+    const msg = "I couldn't understand that. Please say: add item name at price per unit";
+    Alert.alert("Try Again", msg);
+    Speech.speak(msg, { language: "en-US", rate: 1.2 });
+    setVoiceTranscript("");
+    return;
+  }
+
+  try {
+    // Call your existing API
+    await api.post("/storeItems", {
+      storeName,
+      itemName: parsed.itemName,
+      price: parsed.price,
+      currency: "PHP",
+      unit: parsed.unit,
+      category: parsed.category,
+    });
+
+    const confirmation = `Added ${parsed.itemName} at ${parsed.price} pesos per ${parsed.unit}`;
+    Speech.speak(confirmation, { language: "en-US", rate: 1.2 });
+    
+    Alert.alert("✅ Success", confirmation);
+    fetchItems(); // Refresh list
+
+    setTimeout(() => setVoiceTranscript(""), 3000);
+  } catch (err) {
+    console.error("❌ Voice add failed:", err);
+    Alert.alert("Error", "Failed to add item");
+    setVoiceTranscript("");
+  }
+};
+
+const startVoiceRecognition = async () => {
+  console.log("🎤 Voice button clicked");
+
+  if (Platform.OS !== "web") {
+    Alert.alert(
+      "🎙️ Voice Input",
+      "Voice recognition only works in browser"
+    );
+    return;
+  }
+
+  if (!SpeechRecognition) {
+    Alert.alert("Not Supported", "Your browser doesn't support voice recognition.");
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+
+    const recognition = new SpeechRecognition();
+    window._storeRecognition = recognition;
+
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    let timeoutId = null;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceTranscript("");
+      console.log("🎧 Listening...");
+
+      if (!hasSpokenHint) {
+        setHasSpokenHint(true);
+        timeoutId = setTimeout(() => {
+          Speech.speak(
+            "Say: add item name at price per unit",
+            { language: "en-US", rate: 1.0 }
+          );
+        }, 1000);
+      }
+    };
+
+    recognition.onresult = (event) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      const spokenText = event.results[0][0].transcript.trim();
+      console.log("🗣️ Heard:", spokenText);
+      setVoiceTranscript(spokenText);
+      applyVoiceItemCommand(spokenText);
+    };
+
+    recognition.onerror = (err) => {
+      console.error("❌ Error:", err);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+
+    setTimeout(() => {
+      try {
+        recognition.stop();
+      } catch (e) {}
+    }, 8000);
+
+  } catch (err) {
+    console.error("❌ Voice error:", err);
+    Alert.alert("Error", "Failed to start voice recognition");
+    setIsListening(false);
   }
 };
 
@@ -639,6 +901,44 @@ const deleteDealHandler = async (dealId: string) => {
           </LinearGradient>
         </View>
       ))}
+
+      {/* Voice Listening Indicator */}
+{isListening && (
+  <View style={styles.voiceListeningBubble}>
+    <Text style={styles.voiceListeningText}>🎧 Listening...</Text>
+  </View>
+)}
+
+{/* Voice Transcript Bubble */}
+{voiceTranscript && (
+  <View style={styles.voiceTranscriptBubble}>
+    <View style={styles.voiceTranscriptHeader}>
+      <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
+      <Text style={styles.voiceTranscriptLabel}>Heard</Text>
+    </View>
+    <Text style={styles.voiceTranscriptText}>"{voiceTranscript}"</Text>
+  </View>
+)}
+
+{/* Voice FAB Button */}
+<TouchableOpacity
+  onPress={isListening ? () => {
+    setIsListening(false);
+    if (window._storeRecognition) window._storeRecognition.stop();
+  } : startVoiceRecognition}
+  activeOpacity={0.8}
+  style={[
+    styles.voiceFab,
+    isListening && styles.voiceFabActive
+  ]}
+>
+  <Ionicons 
+    name={isListening ? "mic-off" : "mic"} 
+    size={28} 
+    color="#fff" 
+  />
+</TouchableOpacity>
+
     </ScrollView>
   </View>
 )}
@@ -2474,5 +2774,67 @@ datePickerText: {
   fontSize: 15,
   color: "#1E293B",
   fontWeight: "500",
+},
+voiceListeningBubble: {
+  position: "absolute",
+  bottom: 100,
+  alignSelf: "center",
+  backgroundColor: "#16A9B8",
+  borderRadius: 12,
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  zIndex: 999,
+},
+voiceListeningText: {
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: "500",
+},
+voiceTranscriptBubble: {
+  position: "absolute",
+  bottom: 100,
+  alignSelf: "center",
+  backgroundColor: "#0D7C8A",
+  borderRadius: 12,
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  maxWidth: 280,
+  zIndex: 999,
+},
+voiceTranscriptHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 4,
+},
+voiceTranscriptLabel: {
+  color: "#4ade80",
+  fontSize: 11,
+  fontWeight: "600",
+  marginLeft: 4,
+},
+voiceTranscriptText: {
+  color: "#fff",
+  fontSize: 13,
+  lineHeight: 18,
+},
+voiceFab: {
+  position: "absolute",
+  bottom: 30,
+  right: 20,
+  backgroundColor: "#0D7C8A",
+  borderRadius: 50,
+  width: 56,
+  height: 56,
+  alignItems: "center",
+  justifyContent: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.3,
+  shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 8,
+  elevation: 5,
+  zIndex: 999,
+},
+voiceFabActive: {
+  backgroundColor: "#94A3B8",
 },
 });
