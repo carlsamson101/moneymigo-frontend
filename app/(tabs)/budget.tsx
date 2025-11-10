@@ -880,17 +880,24 @@ return (
   <View style={styles.backgroundCircle1} />
   <View style={styles.backgroundCircle2} />
   
-              
-                <TouchableOpacity 
-                 style={styles.backButton}
-                onPress={() => router.back()}
-                 activeOpacity={0.7}
-               >
-                 <View style={styles.backButtonCircle}>
-                   <Ionicons name="arrow-back" size={20} color="#e4e8efff" />
-                 </View>
-               </TouchableOpacity>
-  
+          <TouchableOpacity
+  style={{
+    position: "absolute",
+    top: 50, // adjust for safe area
+    left: 20,
+    zIndex: 999, // 👈 ensures it stays above chart
+    backgroundColor: "rgba(37, 99, 235, 0.9)",
+    padding: 8,
+    borderRadius: 20,
+  }}
+  onPress={() => {
+    if (router.canGoBack()) router.back();
+    else router.push("/(tabs)/home");
+  }}
+  activeOpacity={0.7}
+>
+  <Ionicons name="arrow-back" size={22} color="#fff" />
+</TouchableOpacity>
 
   <View style={styles.headerContent}>
     {/* Compact Title Section */}
