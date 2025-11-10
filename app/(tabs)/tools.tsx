@@ -138,7 +138,7 @@ export default function FinancialTipsPage() {
     Platform.OS === 'web' && styles.headerRowWeb
   ]}
 >
-  {Platform.OS !== 'web' && (
+  {Platform.OS == 'web' && (
     <TouchableOpacity
       style={styles.backButton}
       onPress={handleBackPress}

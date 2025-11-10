@@ -1638,7 +1638,7 @@ const HistorySection = (
               Platform.OS === 'web' && styles.headerRowWeb
             ]}
           >
-            {Platform.OS !== 'web' && (
+            {Platform.OS == 'web' && (
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}

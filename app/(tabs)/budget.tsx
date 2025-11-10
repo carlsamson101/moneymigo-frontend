@@ -709,7 +709,7 @@ const BudgetPieChart = ({ categories, getBudgetForCategory, OTHERS_KEY, totalBud
 
   const hasData = chartData.some((d) => d.value > 0);
   if (!hasData) {
-    chartData.push({ name: "No Allocations Yet", value: 1, color: "#444" });
+    chartData.push({ name: "No Allocations Yet", value: 1, color: "#fff8f8ff" });
   }
 
   /* 💻 Web version */
@@ -880,7 +880,7 @@ return (
   <View style={styles.backgroundCircle1} />
   <View style={styles.backgroundCircle2} />
   
-  {Platform.OS !== "web" && (
+  {Platform.OS == "web" && (
      <TouchableOpacity
           style={styles.backButton}
             onPress={() => router.back()}
@@ -2556,6 +2556,7 @@ chartHeading: {
   },
   summaryCardsColumn: {
   flexGrow: 1,
+  marginTop: 5,
   justifyContent: "center",
   alignSelf: width < 700 ? "center" : "flex-start",
   gap: 14,
@@ -2798,7 +2799,6 @@ unplannedSpendingText: {
       marginBottom: 10,
     },
     heading: {
-      ...styles.heading,
       textAlign: "center",           // ✅ text itself centered
       fontSize: 24,
       fontWeight: "700",
@@ -2836,6 +2836,7 @@ unplannedSpendingText: {
       ...styles.summaryCardsColumn,
       flexDirection: "column",
       alignItems: "center",
+      marginTop: 5,
       justifyContent: "center",
       width: "90%",
       gap: 6,
@@ -2912,6 +2913,7 @@ headerGradient: {
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
+      marginTop: 5,
       gap: 8,
       width: "90%",
     },
@@ -2970,6 +2972,7 @@ Object.assign(styles, {
 
   summaryCardsColumn: {
     justifyContent: "center",
+    marginTop: 5,
     alignItems: width < 800 ? "center" : "flex-start",
     gap: width < 500 ? 6 : 10,
     maxWidth: width < 700 ? "90%" : 340,

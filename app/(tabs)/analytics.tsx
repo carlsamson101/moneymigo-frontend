@@ -310,7 +310,7 @@ const getSpendingHealth = () => {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        {Platform.OS !== "web" && (
+        {Platform.OS == "web" && (
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.push("/")}

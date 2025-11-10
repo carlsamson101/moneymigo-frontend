@@ -570,7 +570,7 @@ const getCumulativeHistory = (goal) => {
 >
   {/* Navigation Row */}
   <View style={[styles.headerRow, Platform.OS === 'web' && styles.headerRowWeb]}>
-    {Platform.OS !== 'web' && (
+    {Platform.OS == 'web' && (
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
