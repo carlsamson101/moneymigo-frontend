@@ -284,6 +284,8 @@ const [showTranscript, setShowTranscript] = useState(false);
 // 💡 state at the top of your component
 const [showWarning, setShowWarning] = useState(false);
 const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
+const [showVoiceTip, setShowVoiceTip] = useState(false);
+const [hasShownTip, setHasShownTip] = useState(false);
 
 // 🔍 OCR confirmation states
 const [showOcrModal, setShowOcrModal] = useState(false);
@@ -434,62 +436,71 @@ function splitIntoClauses(text: string): string[] {
 }
 
 const startVoiceRecognition = async () => {
-  if (Platform.OS !== "web") {
+  const isMobileWeb =
+    Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
+
+  if (!isMobileWeb) {
     Alert.alert(
       "🎙️ Voice Input Unavailable",
-      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at:\nhttps://moneymigo-6qx2.onrender.com/"
-    );
-    return;
-  }
-
-  // ✅ Use native Web Speech API
-  const SpeechAPI =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechAPI) {
-    Alert.alert(
-      "⚠️ Not Supported",
-      "Your browser does not support speech recognition. Please use Chrome or Safari."
+      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari)."
     );
     return;
   }
 
   try {
-    const recognition = new SpeechAPI();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.continuous = false;
+    // 🎤 Microphone permission
+    if (navigator.permissions) {
+      const permissionStatus = await navigator.permissions.query({ name: "microphone" });
+      if (permissionStatus.state === "denied") {
+        Alert.alert(
+          "🎤 Permission Denied",
+          "Please allow microphone access in your browser settings."
+        );
+        return;
+      }
+      if (permissionStatus.state !== "granted") {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    }
 
-recognition.onstart = () => {
-  console.log("🎤 Listening...");
-  setIsListening(true);
-};
+    // 💬 Speak the tip and show visual hint on first click
+    if (!hasShownTip) {
+      setShowVoiceTip(true);
+      setHasShownTip(true);
+      Speech.speak(
+        "You can say something like: add one hundred food note burger. The format is add plus amount plus category plus note. Note is optional.",
+        { language: "en-US", rate: 1.0 }
+      );
 
+      // Hide hint after 3.5 s
+      setTimeout(() => setShowVoiceTip(false), 3500);
+      return;
+    }
 
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      console.log("✅ Voice recognized:", transcript);
-      setVoiceTranscript(transcript);
-      applyParsedVoice(transcript);
-      Speech?.speak?.(`You said: ${transcript}`);
+    // 🎙 Start listening
+    setIsListening(true);
+    setVoiceTranscript("");
+
+    await SpeechRecognition.startAsync({ lang: "en-US", interimResults: false });
+    console.log("✅ Listening started");
+
+    // Record for ~4 s
+    setTimeout(async () => {
+      await SpeechRecognition.stopAsync();
+      console.log("🛑 Listening stopped (auto)");
+    }, 4000);
+
+    SpeechRecognition.addListener("onResult", (event) => {
+      const text = event.transcription;
+      console.log("🎤 Voice recognized:", text);
+      setVoiceTranscript(text);
+      applyParsedVoice(text);
       setIsListening(false);
-    };
-
-    recognition.onerror = (event) => {
-      console.error("❌ Recognition error:", event.error);
-      setIsListening(false);
-      Alert.alert("Error", `Speech recognition error: ${event.error}`);
-    };
-
-    recognition.onend = () => {
-      console.log("🛑 Recognition ended");
-      setIsListening(false);
-    };
-
-    recognition.start();
+    });
   } catch (err) {
-    console.error("❌ Failed to start speech recognition:", err);
-    Alert.alert("Error", "Failed to access microphone. Please allow permission in your browser.");
+    console.error("❌ Failed to start voice recognition:", err);
+    setIsListening(false);
   }
 };
 
@@ -2827,28 +2838,29 @@ const HistorySection = (
               </Text>
             </View>
 
+          
             {/* 📝 Notes */}
-            {selectedExpense.notes ? (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginTop: 10,
-                }}
-              >
-                <Ionicons name="document-text-outline" size={20} color="#2563EB" />
-                <Text
-                  style={{
-                    fontSize: 15,
-                    marginLeft: 8,
-                    color: "#374151",
-                  }}
-                >
-                  {selectedExpense.notes}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+<View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  }}
+>
+  <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+  <Text
+    style={{
+      fontSize: 15,
+      marginLeft: 8,
+      color: "#374151",
+      fontStyle: selectedExpense.notes?.trim() ? "normal" : "italic",
+    }}
+  >
+    {selectedExpense.notes?.trim()
+      ? selectedExpense.notes
+      : "No notes provided"}
+  </Text>
+</View>
 
           {/* Close button */}
           <TouchableOpacity
@@ -2950,15 +2962,24 @@ const HistorySection = (
   />
 </TouchableOpacity>
 
-{Platform.OS === "web" &&
- /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent) && (
-  <View style={styles.voiceHintBox}>
-    <Ionicons name="information-circle-outline" size={16} color="#1f4b81" />
-    <Text style={styles.voiceHintText}>
-      💡 You can say: “add 10 food note burger”. Format: add + amount + category + note (note is optional)
+{showVoiceTip && (
+  <View
+    style={{
+      position: "absolute",
+      bottom: 70,
+      alignSelf: "center",
+      backgroundColor: "rgba(37,99,235,0.9)",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    }}
+  >
+    <Text style={{ color: "white", fontSize: 12, textAlign: "center" }}>
+      💡 Format: add + amount + category + note (optional)
     </Text>
   </View>
 )}
+
 
   </View>
   );
