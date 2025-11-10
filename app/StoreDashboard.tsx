@@ -78,16 +78,22 @@ const STORE_CATEGORY_ALIASES = {
 };
 
 
+// ✅ Voice-to-database unit mapping
 const STORE_UNIT_ALIASES = {
-  "piece": ["piece", "pieces", "pc", "pcs"],
-  "kilo": ["kilo", "kilogram", "kg"],
+  "piece": ["piece", "pieces", "pc", "pcs", "each", "one piece"],
+  "kilo": ["kilo", "kilogram", "kilograms", "kg"],
   "gram": ["gram", "grams", "g"],
-  "liter": ["liter", "liters", "l"],
-  "ml": ["ml", "milliliter"],
-  "pack": ["pack", "packs", "sachet"],
-  "dozen": ["dozen", "dozens"],
-  "other": ["other"],
+  "liter": ["liter", "liters", "l", "litre", "litres"],
+  "ml": ["ml", "milliliter", "milliliters", "millilitre", "millilitres"],
+  "pack": ["pack", "packs", "packet", "packets", "sachet", "bundle pack"],
+  "dozen": ["dozen", "dozens", "twelve"],
+  "tray": ["tray", "trays"],
+  "box": ["box", "boxes", "carton"],
+  "bundle": ["bundle", "bundles", "set"],
+  "sack": ["sack", "sacks", "bag"],
+  "other": ["other", "misc", "miscellaneous", "unknown"],
 };
+
 
 const STORE_CATEGORY_LOOKUP: Record<string, string> = Object.entries(STORE_CATEGORY_ALIASES).reduce(
   (acc, [canon, list]) => {
