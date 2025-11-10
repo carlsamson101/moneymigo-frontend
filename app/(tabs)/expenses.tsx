@@ -512,7 +512,7 @@ function handleVoiceConversation(spokenText) {
   if (/(hi|hello|hey|good (morning|afternoon|evening))/i.test(lower)) {
     Speech.speak(
       "Hey there! I'm really happy to see you again. You can add an expense by saying something like, add one hundred food note burger. Or if you just want to chat, say hi anytime.",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -521,7 +521,7 @@ function handleVoiceConversation(spokenText) {
   if (/(what can i do|help|how to use|how does this work|what do i say|guide me|confused|need help)/i.test(lower)) {
     Speech.speak(
       "No worries! You can track expenses by saying something like add one hundred food note burger, or add fifty transport note jeep. I can also help you scan receipts or check your spending.",
-      { language: "en-US", rate: 0.98 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -530,7 +530,7 @@ function handleVoiceConversation(spokenText) {
   if (/(receipt|scan|photo|picture|take a pic|camera|read my receipt|how to scan)/i.test(lower)) {
     Speech.speak(
       "You can tap the Scan Receipt button below to take a photo or upload one. I'll read the total amount automatically and help you save it as an expense.",
-      { language: "en-US", rate: 0.98 }
+      { language: "en-US", rate: 1.2 }
     );
     setAssistantMood("helpful");
     return true;
@@ -540,7 +540,7 @@ function handleVoiceConversation(spokenText) {
   if (/(budget|how much|spent|left|remaining|money left)/i.test(lower)) {
     Speech.speak(
       "You can check your remaining budget in the Budget Overview section. It updates automatically whenever you add a new expense.",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -550,12 +550,12 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("comforting");
     Speech.speak(
       "You are absolutely enough. You don't need to prove your worth to anyone. Your value isn't determined by what others think or see.",
-      { language: "en-US", rate: 0.93 }
+      { language: "en-US", rate: 1.1 }
     );
     setTimeout(() => {
       Speech.speak("You're worthy of love, respect, and all the good things life has to offer. Never forget that.", {
         language: "en-US",
-        rate: 0.93,
+        rate: 1.2,
       });
     }, 3500);
     return true;
@@ -566,12 +566,12 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("comforting");
     Speech.speak(
       "Hey, I'm really sorry you feel that way. You deserve kindness and respect. Not everyone will understand your value — but that doesn't mean you're not worth it.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     setTimeout(() => {
       Speech.speak("Take a deep breath, okay? You're doing your best, and I'm proud of you.", {
         language: "en-US",
-        rate: 0.99,
+        rate: 1.1,
       });
     }, 3500);
     return true;
@@ -581,7 +581,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("comforting");
     Speech.speak(
       "I know things can feel heavy sometimes. You're doing better than you think — maybe take a short break and have some water.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -591,7 +591,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("comforting");
     Speech.speak(
       "I know it's tough right now, but you've handled hard things before. Take it one step at a time, and don't forget to breathe.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -600,7 +600,7 @@ function handleVoiceConversation(spokenText) {
   if (/(can't sleep|insomnia|tired but can't sleep|wide awake)/i.test(lower)) {
     Speech.speak(
       "Having trouble sleeping? Try putting your phone away for a bit and taking some deep breaths. Your mind needs rest too.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -608,7 +608,7 @@ function handleVoiceConversation(spokenText) {
   if (/(all nighter|pulling an all nighter|staying up|not sleeping)/i.test(lower)) {
     Speech.speak(
       "I get it, sometimes we have to stay up. But please try to rest when you can — your health matters more than anything.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -617,7 +617,7 @@ function handleVoiceConversation(spokenText) {
   if (/(hungry|starving|what should i eat|food recommendation|craving)/i.test(lower)) {
     Speech.speak(
       "Sounds like it's time for a snack! Whatever you choose, maybe track it as a food expense so you can see your eating patterns.",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -626,7 +626,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("concerned");
     Speech.speak(
       "Hey, please don't skip meals. Your body and brain need fuel. Grab something small if you can, okay?",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -635,7 +635,7 @@ function handleVoiceConversation(spokenText) {
   if (/(broke|no money|out of money|can't afford|too expensive)/i.test(lower)) {
     Speech.speak(
       "Money can be really stressful. Let's look at your expenses together and see where we can make adjustments. You've got this.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -644,7 +644,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("happy");
     Speech.speak(
       "Nice! Fresh money coming in. Maybe now's a good time to set aside some savings before spending?",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -654,7 +654,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("comforting");
     Speech.speak(
       "I'm here with you. And remember — it's okay to reach out to people you care about. They probably miss you too.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -662,7 +662,7 @@ function handleVoiceConversation(spokenText) {
   if (/(had a fight|argument|we fought|got into a fight)/i.test(lower)) {
     Speech.speak(
       "Arguments happen. Give yourself some time to cool down, then maybe try talking it out when you're both ready.",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -671,7 +671,7 @@ function handleVoiceConversation(spokenText) {
   if (/(rainy|raining|bad weather|gloomy|dark outside)/i.test(lower)) {
     Speech.speak(
       "Rainy days can feel heavy. Stay cozy, maybe have some warm food — and remember to track that coffee expense!",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -681,7 +681,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("comforting");
     Speech.speak(
       "Life can feel overwhelming sometimes. But you're here, you're trying, and that takes real courage. One day at a time, okay?",
-      { language: "en-US", rate: 1.00 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -691,7 +691,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("happy");
     Speech.speak(
       "Happy birthday! I hope your day is filled with good food, great people, and maybe a few treats that won't break the budget!",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -700,7 +700,7 @@ function handleVoiceConversation(spokenText) {
     setAssistantMood("happy");
     Speech.speak(
       "That's amazing! I'm so proud of you! Celebrate this win — you earned it!",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
@@ -709,19 +709,20 @@ function handleVoiceConversation(spokenText) {
   if (/(bored|nothing to do|what should i do)/i.test(lower)) {
     Speech.speak(
       "Feeling bored? How about reviewing your spending goals or maybe treating yourself to something small you've been wanting?",
-      { language: "en-US", rate: 1.0 }
+      { language: "en-US", rate: 1.2 }
     );
     return true;
   }
 
-  if (/(tell me a joke|make me laugh|something funny)/i.test(lower)) {
-    setAssistantMood("happy");
-    Speech.speak(
-      "Why did the budget go to therapy? Because it had too many issues! Okay, I'll stick to helping with expenses.",
-      { language: "en-US", rate: 1.0 }
-    );
-    return true;
-  }
+ if (/\btell me a joke\b|\bmake me laugh\b|something funny/i.test(lower)) {
+  setAssistantMood("happy");
+  Speech.speak(
+    "Why did the budget go to therapy? Because it had too many issues! Haha... okay, I’ll stick to helping you save money instead.",
+    { language: "en-US", rate: 1.2 }
+  );
+  return true;
+}
+
 
   // 💬 Asking about the assistant
   if (/(how are you|who are you|what are you)/i.test(lower)) {
