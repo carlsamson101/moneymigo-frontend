@@ -79,19 +79,19 @@ const STORE_CATEGORY_ALIASES = {
 
 
 // ✅ Voice-to-database unit mapping
-const STORE_UNIT_ALIASES = {
-  "piece": ["piece", "pieces", "pc", "pcs", "each", "one piece"],
-  "kilo": ["kilo", "kilogram", "kilograms", "kg"],
-  "gram": ["gram", "grams", "g"],
-  "liter": ["liter", "liters", "l", "litre", "litres"],
-  "ml": ["ml", "milliliter", "milliliters", "millilitre", "millilitres"],
-  "pack": ["pack", "packs", "packet", "packets", "sachet", "bundle pack"],
-  "dozen": ["dozen", "dozens", "twelve"],
-  "tray": ["tray", "trays"],
-  "box": ["box", "boxes", "carton"],
-  "bundle": ["bundle", "bundles", "set"],
-  "sack": ["sack", "sacks", "bag"],
-  "other": ["other", "misc", "miscellaneous", "unknown"],
+const STORE_UNIT_ALIASES: Record<string, string[]> = {
+  piece: ["piece", "pieces", "pc", "pcs"],
+  kilo: ["kilo", "kilogram", "kilograms", "kg"],
+  gram: ["gram", "grams", "g"],
+  liter: ["liter", "liters", "l"],
+  ml: ["ml", "milliliter", "milliliters"],
+  pack: ["pack", "packs", "packet", "sachet"],
+  dozen: ["dozen", "dozens"],
+  tray: ["tray", "trays", "trey", "try", "train"], // 👈 add fuzzy variants here
+  box: ["box", "boxes", "carton"],
+  bundle: ["bundle", "bundles", "set"],
+  sack: ["sack", "sacks", "bag"],
+  other: ["other", "others"]
 };
 
 
@@ -104,13 +104,11 @@ const STORE_CATEGORY_LOOKUP: Record<string, string> = Object.entries(STORE_CATEG
 );
 
 
-const STORE_UNIT_LOOKUP: Record<string, string> = Object.entries(STORE_UNIT_ALIASES).reduce(
-  (acc, [canon, list]) => {
-    list.forEach((alias) => (acc[alias.toLowerCase()] = canon));
+const STORE_UNIT_LOOKUP: Record<string, string> =
+  Object.entries(STORE_UNIT_ALIASES).reduce((acc, [canon, list]) => {
+    list.forEach(a => acc[a.toLowerCase()] = canon);
     return acc;
-  },
-  {} as Record<string, string>
-);
+  }, {} as Record<string,string>);
 
 // 🗣 Browser voice feedback for confirmations
 function speak(text: string) {
@@ -248,106 +246,85 @@ function wordToNumber(word: string): number | null {
   return map[word.toLowerCase()] ?? null;
 }
 
-const parseVoiceItemCommand = (command) => {
+const parseVoiceItemCommand = (command: string) => {
   const lower = command.toLowerCase().trim();
-  console.log("🎤 Parsing store item:", lower);
+
+  // strip filler before "add"/"give me"/"please add"
+  let cleaned = lower.replace(/^.*?\b(add|give me|please add|insert|add item)\b\s*/, "");
+
+  // treat "7:30" like "7.30" (and allow decimal parsing)
+  cleaned = cleaned.replace(/(\d):(\d{1,2})\b/g, "$1.$2");
+
+  // normalize spaces
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
 
   const result = {
     itemName: "",
-    price: null,
+    price: null as number | null,
     unit: "piece",
     category: "other"
   };
 
-  // ✅ Extract price - EXPANDED patterns
-  // ✅ Extract price (supports number words too)
-const priceMatch =
-  lower.match(/(?:at|price|for|cost|costs|worth)\s+(\w+(?:\.\w+)?)/i) ||
-  lower.match(/(\w+(?:\.\w+)?)\s*(?:pesos|php|peso|piso|pisos)\s*(?:per|each)?/i);
+  // ---- price extraction (numbers → then words) ----
+  const pesoWords = "(?:pesos?|php|piso|pisos)";
+  let m: RegExpMatchArray | null = null;
 
-if (priceMatch) {
-  const rawPrice = priceMatch[1];
-  const numeric = parseFloat(rawPrice);
-  if (!isNaN(numeric)) {
-    result.price = numeric;
-  } else {
-    const fromWord = wordToNumber(rawPrice);
-    if (fromWord !== null) result.price = fromWord;
+  // numeric after keywords: "at 10", "price 10", "cost 10"
+  m = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+(\\d+(?:[.,]\\d{1,2})?)\\b`));
+  if (!m) {
+    // numeric with currency: "10 pesos"
+    m = cleaned.match(new RegExp(`\\b(\\d+(?:[.,]\\d{1,2})?)\\s*${pesoWords}\\b`));
   }
+  if (!m) {
+    // words after keywords: "at ten", "for twenty five pesos"
+    const mw = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+([a-z\\s-]+?)(?:\\s*${pesoWords}\\b|\\b)`));
+    if (mw) {
+      const wnum = wordToNumberPhrase(mw[1]);
+      if (wnum != null) result.price = wnum;
+    }
+  } else {
+    result.price = parseFloat(m[1].replace(",", "."));
+  }
+
+  // ---- unit extraction ----
+const u = cleaned.match(/\b(?:per|each|every|by)\s+([a-z]+)/i);
+if (u) {
+  const key = u[1].toLowerCase().replace(/[^a-z]/g, ""); // strip punctuation
+  // fuzzy lookup
+  const found = Object.keys(STORE_UNIT_LOOKUP).find(
+    k => key.startsWith(k) || k.startsWith(key)
+  );
+  if (found) result.unit = STORE_UNIT_LOOKUP[found];
 }
-  // ✅ Extract unit (after "per", "each", "every")
-  const unitMatch = lower.match(/(?:per|each|every)\s+(\w+)/i);
-  if (unitMatch) {
-    const unitWord = unitMatch[1].toLowerCase();
-    result.unit = STORE_UNIT_LOOKUP[unitWord] || "piece";
+
+  // ---- category extraction ----
+  const cat = cleaned.match(/\bcategory\s+([a-z\s]+)(?:$|\b)/i);
+  if (cat) {
+    result.category = cat[1].trim();
   }
 
-  // ✅ Extract category (after "category" keyword)
-  const categoryMatch = lower.match(/category\s+([a-z\s]+?)(?:\s*$)/i);
-  if (categoryMatch) {
-    const categoryPhrase = categoryMatch[1].trim().toLowerCase();
-    
-    // Try exact match first
-    if (STORE_CATEGORY_LOOKUP[categoryPhrase]) {
-      result.category = STORE_CATEGORY_LOOKUP[categoryPhrase];
-    } else {
-      // Try matching longest substring
-      const words = categoryPhrase.split(/\s+/);
-      for (let i = words.length; i > 0; i--) {
-        const phrase = words.slice(0, i).join(' ');
-        if (STORE_CATEGORY_LOOKUP[phrase]) {
-          result.category = STORE_CATEGORY_LOOKUP[phrase];
-          break;
-        }
-      }
-    }
-  } else {
-    // Infer category from item name keywords
-    const words = lower.split(/[^a-z]+/).filter(Boolean);
-    for (const word of words) {
-      if (STORE_CATEGORY_LOOKUP[word]) {
-        result.category = STORE_CATEGORY_LOOKUP[word];
-        break;
-      }
-    }
+  // ---- item name: everything before price/keywords/category ----
+  // cut off at the first price keyword or "category"
+  const SPLIT_AT = /\b(?:at|price|for|cost|costs|worth|is|are|category)\b/;
+  let namePart = cleaned.split(SPLIT_AT)[0].trim();
+
+  // remove trailing "per <unit>" if user said it before the price words
+  namePart = namePart.replace(/\b(?:per|each|every|by)\s+[a-z]+$/i, "").trim();
+
+  // fallback if empty
+  if (!namePart) {
+    const temp = cleaned.replace(/\bcategory\s+[a-z\s]+$/i, "").trim();
+    namePart = temp || "Unnamed Item";
   }
 
-  // ✅✅ IMPROVED: Extract item name
-  let cleanedText = lower.replace(/^add\s+/i, '');
-  
-  // Match everything before price indicators
-  let itemNameMatch = 
-    cleanedText.match(/^(.+?)\s+(?:at|price|for|cost|costs|worth|is|are)\s+\d/i) ||
-    cleanedText.match(/^(.+?)\s+\d+(?:\.\d+)?\s*(?:pesos|php|peso|piso)?(?:\s+per|\s+each)?/i);
-  
-  if (itemNameMatch) {
-    result.itemName = itemNameMatch[1]
-      .replace(/[()]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  } else {
-    // Fallback
-    const fallbackMatch = cleanedText.match(/^(.+?)\s+(?:category|per|each|$)/i);
-    if (fallbackMatch) {
-      result.itemName = fallbackMatch[1].replace(/[()]/g, '').trim();
-    } else {
-      const words = cleanedText.split(/\s+/).filter(Boolean);
-      result.itemName = words.slice(0, 6).join(' ').replace(/[()]/g, '');
-    }
-  }
+  // Title Case (keep common abbreviations)
+  result.itemName = namePart
+    .split(" ")
+    .filter(Boolean)
+    .map(w => (/^(ml|kg|g|l|pc|pcs)$/i.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
 
-  // ✅ Capitalize properly (Title Case)
-  result.itemName = result.itemName
-    .split(' ')
-    .map(word => {
-      // Keep common abbreviations uppercase
-      if (/^(ml|kg|g|l|pc|pcs)$/i.test(word)) {
-        return word.toUpperCase();
-      }
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(' ');
-
+  console.log("✅ Parsed item:", result);
   return result;
 };
 
@@ -386,24 +363,23 @@ const applyVoiceItemCommand = async (command) => {
 
   const parsed = parseVoiceItemCommand(command);
 
-  // Validation
+  // ✅ Validation
   if (!parsed.itemName || !parsed.price || parsed.price <= 0) {
-    const msg = "I didn't catch the item name or price. Please try again: add item name at price per unit";
+    const msg = "I didn't catch the item name or price. Please try again by saying: add item name at price per unit.";
     Alert.alert("Try Again", msg);
-    speakWeb(msg, { language: "en-US", rate: 1.2 });
+    speakWeb(msg, { language: "en-US", rate: 1.5 });
     setVoiceTranscript("");
     return;
   }
 
-  // ✅ Show parsed details for confirmation
   console.log("✅ Parsed item:", parsed);
 
   try {
-    // Speak back what was understood
-    const confirmation = `Adding ${parsed.itemName}, ${parsed.price} pesos per ${parsed.unit}`;
-    speakWeb(confirmation, { language: "en-US", rate: 1.1 });
+    // 🗣️ Speak clear confirmation once
+    const spoken = `Got it. Added ${parsed.itemName} for ${parsed.price} pesos per ${parsed.unit}, under ${parsed.category}.`;
+    speakWeb(spoken, { language: "en-US", rate: 1.5 });
 
-    // Save to database
+    // 💾 Save to database
     await api.post("/storeItems", {
       storeName,
       itemName: parsed.itemName,
@@ -413,20 +389,20 @@ const applyVoiceItemCommand = async (command) => {
       category: parsed.category,
     });
 
+    // 📱 UI Alert only (no extra voice)
     Alert.alert(
-  "✅ Item Added",
-  `${parsed.itemName}\n₱${parsed.price} per ${parsed.unit}\nCategory: ${parsed.category}`
-);
-speak(`Successfully added ${parsed.itemName} at ${parsed.price} pesos per ${parsed.unit} in ${parsed.category}`);
+      "✅ Item Added",
+      `${parsed.itemName}\n₱${parsed.price} per ${parsed.unit}\nCategory: ${parsed.category}`
+    );
 
-    
-    fetchItems(); // Refresh list
-
+    fetchItems(); // refresh product list
     setTimeout(() => setVoiceTranscript(""), 5000);
+
   } catch (err) {
     console.error("❌ Voice add failed:", err);
-    Alert.alert("Error", "Failed to add item. Please try again.");
-    speak("Sorry, I could not add the item. Please try again.");
+    const errMsg = "Sorry, I couldn’t add that item. Please try again.";
+    Alert.alert("Error", errMsg);
+    speakWeb(errMsg, { language: "en-US", rate: 1.5 });
     setVoiceTranscript("");
   }
 };
