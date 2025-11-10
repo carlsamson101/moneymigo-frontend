@@ -297,6 +297,8 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
 const [historyStartDate, setHistoryStartDate] = useState<Date | null>(null);
 const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 const [ocrDetectedNotes, setOcrDetectedNotes] = useState("");
+const [ocrDetectedDate, setOcrDetectedDate] = useState(new Date());
+const [showOcrDatePicker, setShowOcrDatePicker] = useState(false);
 
 const [isScanning, setIsScanning] = useState(false);
 const [showTranscript, setShowTranscript] = useState(false);
@@ -501,163 +503,174 @@ if (Platform.OS === "web") {
   }, []);
 
 
-  function handleVoiceConversation(spokenText) {
-  const lower = spokenText.toLowerCase();
+ function handleVoiceConversation(spokenText) {
+  const lower = spokenText.toLowerCase().trim();
 
-  // 👋 Greetings
-  if (/(hi|hello|hey)/.test(lower)) {
+  // 👋 Greetings & casual intros
+  if (/(hi|hello|hey|good (morning|afternoon|evening))/i.test(lower)) {
     Speech.speak(
-      "Hey there! I’m happy to see you again. You can add an expense by saying something like, add 150 food note lunch.",
+      "Hey there! I’m really happy to see you again. You can add an expense by saying something like, add one hundred food note burger. Or if you just want to chat, say hi anytime.",
       { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
   // ❓ Asking for help or guidance
-  if (/(what can i do|help|how to use|what do i say|guide me)/.test(lower)) {
+  if (/(what can i do|help|how to use|how does this work|what do i say|guide me|confused|need help)/i.test(lower)) {
     Speech.speak(
-      "I can help you track expenses. Try saying add one hundred food note burger, or add fifty transport note jeep.",
+      "No worries! You can track expenses by saying something like add one hundred food note burger, or add fifty transport note jeep. I can also help you scan receipts or check your spending.",
+      { language: "en-US", rate: 0.98 }
+    );
+    return true;
+  }
+
+  // 🧾 Receipt scanning and related queries
+  if (/(receipt|scan|photo|picture|take a pic|camera|read my receipt|how to scan)/i.test(lower)) {
+    Speech.speak(
+      "You can tap the Scan Receipt button below to take a photo or upload one. I’ll read the total amount automatically and help you save it as an expense.",
+      { language: "en-US", rate: 0.98 }
+    );
+    setAssistantMood("helpful");
+    return true;
+  }
+
+  // 💰 Budget and spending questions
+  if (/(budget|how much|spent|left|remaining|money left)/i.test(lower)) {
+    Speech.speak(
+      "You can check your remaining budget in the Budget Overview section. It updates automatically whenever you add a new expense.",
       { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 💰 Budget inquiry
-  if (/(budget|how much|spent|left)/.test(lower)) {
+  // 🧠 Emotional or personal comfort
+  if (/(someone doesn.?t like me|nobody likes me|i'm sad|im sad|i feel lonely|feeling down|i feel bad|i'm upset)/i.test(lower)) {
+    setAssistantMood("comforting");
     Speech.speak(
-      "You can check your remaining budget right here in the Budget Overview section.",
+      "Hey, I’m really sorry you feel that way. You deserve kindness and respect. Not everyone will understand your value — but that doesn’t mean you’re not worth it.",
+      { language: "en-US", rate: 0.93 }
+    );
+    setTimeout(() => {
+      Speech.speak("Take a deep breath, okay? You’re doing your best, and I’m proud of you.", {
+        language: "en-US",
+        rate: 0.93,
+      });
+    }, 3500);
+    return true;
+  }
+
+  if (/(tired|stressed|anxious|worried|burned out|overwhelmed)/i.test(lower)) {
+    setAssistantMood("comforting");
+    Speech.speak(
+      "I know things can feel heavy sometimes. You’re doing better than you think — maybe take a short break and have some water.",
+      { language: "en-US", rate: 0.93 }
+    );
+    return true;
+  }
+
+  // 💬 Asking about the assistant
+  if (/(how are you|who are you|what are you)/i.test(lower)) {
+    Speech.speak(
+      "I’m your MoneyMigo assistant — I help you track expenses and remind you to take care of yourself too.",
       { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 🧾 Receipt scanning
-  if (/(receipt|scan)/.test(lower)) {
+  // 📊 Viewing or listing expenses
+  if (/(show|view|see|list|display|check).*(expense|transaction|history|spending)/i.test(lower)) {
     Speech.speak(
-      "You can tap the scan receipt button to take a picture or upload one, and I’ll read the amount for you automatically.",
+      "You can view your expenses in the Recent Expenses section, or tap Show All to see your full history.",
       { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  if (/(someone doesn.?t like me|nobody likes me|i'm sad|im sad|i feel lonely|feeling down)/.test(lower)) {
-  setAssistantMood("comforting");
-  Speech.speak(
-    "Hey, I’m really sorry you feel that way. Remember, not everyone will see your worth — but that doesn’t mean you’re not valuable.",
-    { language: "en-US", rate: 0.95 }
-  );
-  setTimeout(() => {
-    Speech.speak("Take a deep breath, okay? You’ve got this. I believe in you.", {
-      language: "en-US",
-      rate: 0.95,
-    });
-  }, 3500);
-  return true;
-}
-
-if (/(tired|stressed|anxious|worried)/.test(lower)) {
-  setAssistantMood("comforting");
-  Speech.speak(
-    "I know things can be overwhelming sometimes. You’re doing better than you think. Take a short break — maybe grab some water or stretch a bit.",
-    { language: "en-US", rate: 0.95 }
-  );
-  return true;
-}
-
-  // 🤷 Default fallback
-  if (/(how are you|who are you)/.test(lower)) {
+  // ✏️ Editing or deleting expenses
+  if (/(edit|change|modify|delete|remove|fix).*(expense|transaction)/i.test(lower)) {
     Speech.speak(
-      "I’m your MoneyMigo assistant — here to help you manage your expenses and remind you to take care of yourself too.",
+      "To edit or delete an expense, just tap on it in your Recent Expenses list — it’s super easy.",
       { language: "en-US", rate: 1.0 }
     );
     return true;
   }
 
-  // 📊 Viewing expenses/history
-if (/(show|view|see|list|display).*(expense|transaction|history|spending)/.test(lower)) {
-  Speech.speak(
-    "You can view all your expenses in the Recent Expenses section below, or tap Show All to see everything.",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 📅 Date-based filters
+  if (/(today|yesterday|this week|this month|last week|recent).*(expense|spent|spending)/i.test(lower)) {
+    Speech.speak(
+      "You can filter your expenses by date using the options in the expenses view — try selecting today, this week, or this month.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
 
-// ✏️ Editing/deleting expenses
-if (/(edit|change|modify|delete|remove).*(expense|transaction)/.test(lower)) {
-  Speech.speak(
-    "To edit or delete an expense, just tap on it in your Recent Expenses list.",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 🏷️ Asking about categories
+  if (/(what|which).*(categor|type)/i.test(lower)) {
+    Speech.speak(
+      "You can categorize expenses as Food, Transport, Shopping, Bills, School, Savings, or Others. You can even create your own!",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
 
-// 📅 Date-based queries
-if (/(today|yesterday|this week|this month).*(expense|spent|spending)/.test(lower)) {
-  Speech.speak(
-    "You can filter your expenses by date using the filter options in the expenses view.",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 🔢 Spending totals
+  if (/(total|how much did i|what did i).*(spend|spent)/i.test(lower)) {
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    Speech.speak(
+      `You've spent a total of ${total.toFixed(2)} pesos so far. You’re keeping track like a pro!`,
+      { language: "en-US", rate: 0.97 }
+    );
+    return true;
+  }
 
-// 🏷️ Category questions
-if (/(what|which).*(categor|type)/.test(lower)) {
-  Speech.speak(
-    "You can categorize expenses as Food, Transport, Shopping, Bills, Entertainment, Health, Education, or Other.",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 💡 Financial tips
+  if (/(tip|suggest|advice|save money|budget better|spending advice)/i.test(lower)) {
+    Speech.speak(
+      "Here’s a tip: Try setting a weekly budget and check your spending daily. Even small savings add up over time.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
 
-// 🔢 Total spending inquiry
-if (/(total|how much did i|what did i).*(spend|spent)/.test(lower)) {
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-  Speech.speak(
-    `You've spent a total of ${total.toFixed(2)} pesos so far.`,
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 🎯 Motivation and encouragement
+  if (/(motivate|encourage|inspire|good job|well done|proud|great work)/i.test(lower)) {
+    setAssistantMood("happy");
+    Speech.speak(
+      "You're doing great! Every expense you track brings you closer to financial control. Keep it up!",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
 
-// 🎯 Motivational boost
-if (/(motivate|encourage|inspire|good job|well done)/.test(lower)) {
-  setAssistantMood("happy");
-  Speech.speak(
-    "You're doing amazing! Keeping track of your expenses is a huge step toward financial wellness. Keep it up!",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 😊 Gratitude
+  if (/(thank you|thanks|good|great|awesome|love you|you're helpful|appreciate)/i.test(lower)) {
+    setAssistantMood("happy");
+    Speech.speak(
+      "Aw, you’re so sweet! I’m always happy to help you out.",
+      { language: "en-US", rate: 0.98 }
+    );
+    return true;
+  }
 
-// 🔄 Undo/cancel
-if (/(undo|cancel|go back|mistake|wrong)/.test(lower)) {
-  Speech.speak(
-    "If you made a mistake adding an expense, you can tap on it to edit or delete it right away.",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 🔄 Undo / mistake
+  if (/(undo|cancel|go back|mistake|wrong)/i.test(lower)) {
+    Speech.speak(
+      "If you added something by mistake, you can tap that expense to edit or delete it.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
 
-// 💡 Tips and suggestions
-if (/(tip|suggest|advice|save money|budget better)/.test(lower)) {
-  Speech.speak(
-    "Here's a tip: try setting a weekly budget and check your spending daily. Small expenses can add up quickly!",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
+  // 🧭 Default fallback (for any other random phrase)
+  if (lower.length < 6 || /(hmm|uh|huh|okay|idk|i don't know|nothing)/i.test(lower)) {
+    Speech.speak(
+      "Hmm, I’m not sure what you meant. You can say add one hundred food note burger, or just ask me what I can do.",
+      { language: "en-US", rate: 0.96 }
+    );
+    return true;
+  }
 
-// 😊 Compliments to the assistant
-if (/(thank you|thanks|good|great|awesome|love you|you're helpful)/.test(lower)) {
-  setAssistantMood("happy");
-  Speech.speak(
-    "Aw, you're welcome! I'm always here to help you stay on track.",
-    { language: "en-US", rate: 1.0 }
-  );
-  return true;
-}
-
-  return false; // Not handled → let applyParsedVoice run
+  return false; // let applyParsedVoice handle it
 }
 
 
@@ -685,7 +698,7 @@ const startVoiceRecognition = async () => {
       return;
     }
 
-    // 🧠 Ensure mic permission first
+    // ✅ Mic permission first
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((t) => t.stop());
     console.log("✅ Microphone active");
@@ -698,38 +711,36 @@ const startVoiceRecognition = async () => {
     recognition.interimResults = false;
     recognition.continuous = false;
 
-   recognition.onstart = () => {
-  setIsListening(true);
-  setVoiceTranscript("");
-  console.log("🎧 Listening...");
+    let timeoutId: any = null;
 
-  Speech.speak("Listening...", { language: "en-US", rate: 1.0 });
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceTranscript("");
+      console.log("🎧 Listening started...");
 
-  if (!hasSpokenHint) {
-    setHasSpokenHint(true);
-    setTimeout(() => {
-      Speech.speak(
-        "You can say something like add one hundred food note burger.",
-        { language: "en-US", rate: 1.0 }
-      );
-    }, 700);
-  }
-};
+      // 🕐 Wait 1.2s before hint (avoid mic cutoff)
+      if (!hasSpokenHint) {
+        setHasSpokenHint(true);
+        timeoutId = setTimeout(() => {
+          Speech.speak(
+            "You can say something like add one hundred food note burger.",
+            { language: "en-US", rate: 1.0 }
+          );
+        }, 1000);
+      }
+    };
 
     recognition.onresult = (event) => {
-  const spokenText = event.results[0][0].transcript.trim();
-  console.log("🗣️ Heard:", spokenText);
-  setVoiceTranscript(spokenText);
+      if (timeoutId) clearTimeout(timeoutId); // stop hint if speech ends early
+      const spokenText = event.results[0][0].transcript.trim();
+      console.log("🗣️ Heard:", spokenText);
+      setVoiceTranscript(spokenText);
 
-  // 🧠 First, check if it's a conversational query
-  const handled = handleVoiceConversation(spokenText);
-  if (!handled) {
-    // Otherwise, treat as expense command
-    applyParsedVoice(spokenText);
-  }
-};
+      const handled = handleVoiceConversation(spokenText);
+      if (!handled) applyParsedVoice(spokenText);
+    };
 
-    recognition.onerror = (err: any) => {
+    recognition.onerror = (err) => {
       console.error("❌ Recognition error:", err);
       Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
       Alert.alert("Error", "Failed to process your speech. Try again.");
@@ -737,17 +748,29 @@ const startVoiceRecognition = async () => {
     };
 
     recognition.onend = () => {
-      console.log("🛑 Recognition ended");
+      console.log("🛑 Recognition ended automatically.");
       setIsListening(false);
     };
 
+    // ✅ Start recognition instantly
     recognition.start();
+
+    // 🕓 Auto-stop after 6 seconds of listening
+    setTimeout(() => {
+      try {
+        recognition.stop();
+        console.log("🕑 Auto-stopped after 6s");
+      } catch (e) {
+        console.warn("⚠️ Could not auto-stop:", e);
+      }
+    }, 6000);
   } catch (err) {
     console.error("❌ Voice error:", err);
     Alert.alert("Error", "Failed to start voice recognition. Please try again.");
     setIsListening(false);
   }
 };
+
 
 
 
@@ -764,7 +787,7 @@ async function applyParsedVoice(command: string) {
 const entries = parseVoiceCommand(command);
 if (entries.length === 0) {
   const msg =
-    "Hmm, I didn’t quite get that. Try saying something like: add 150 food note burger.";
+    "Hmm, I didn’t quite get that. You can say something like add one hundred food note burger. Or, if you just want to talk, you can say hi or ask for help.";
   Alert.alert("Couldn’t Understand", msg);
   Speech.speak(msg, { language: "en-US", rate: 1.0 });
   setVoiceTranscript("");
@@ -1487,7 +1510,7 @@ if (!detectedAmount) {
     if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.15;
     if (confidence > 1) confidence = 1;
 
-    // 6️⃣ Set preview modal
+   setOcrDetectedDate(new Date()); // Initialize with today's date
     setOcrRawText(cleanText);
     setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
@@ -1511,6 +1534,20 @@ if (!detectedAmount) {
     setIsScanning(false);
   }
 }
+
+// Helper function to format date for input value
+const formatDateInputValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to parse date from input
+const parseDateLocal = (dateString) => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
 
 
   const handleAddExpense = async () => {
@@ -2523,7 +2560,7 @@ const HistorySection = (
     </Pressable>
     </Modal>
 
-    {/* 🧠 Enhanced OCR Confirmation Modal */}
+  {/* 🧠 Enhanced OCR Confirmation Modal */}
 <Modal visible={showOcrModal} transparent animationType="fade">
   <Pressable style={styles.modalOverlay} onPress={() => setShowOcrModal(false)}>
     <Pressable onPress={() => {}} style={[styles.modalContainer, { width: '90%', maxWidth: 380, padding: 18 }]}>
@@ -2555,6 +2592,92 @@ const HistorySection = (
 
       {/* Compact Form */}
       <View style={{ gap: 10, marginBottom: 12 }}>
+        {/* Date Picker - Same as Transaction Modal */}
+        <View style={{ width: '100%' }}>
+          <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4, fontWeight: '600' }}>
+            Date
+          </Text>
+          {Platform.OS === 'web' ? (
+            <View style={{
+              backgroundColor: '#F8FAFC',
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#CBD5E1',
+              padding: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <Ionicons name="calendar-outline" size={16} color="#6366F1" style={{ marginRight: 8 }} />
+              <input
+                type="date"
+                value={ocrDetectedDate ? formatDateInputValue(ocrDetectedDate) : ''}
+                onChange={e => setOcrDetectedDate(e.target.value ? parseDateLocal(e.target.value) : new Date())}
+                min={min ? formatDateInputValue(min) : undefined}
+                max={max ? formatDateInputValue(max) : undefined}
+                style={{
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  fontSize: '15px',
+                  fontFamily: 'inherit',
+                  color: '#1E293B',
+                  outline: 'none',
+                  flex: 1,
+                  cursor: 'pointer',
+                }}
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity 
+                onPress={() => setShowOcrDatePicker(true)} 
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <Ionicons name="calendar-outline" size={16} color="#6366F1" style={{ marginRight: 10 }} />
+                  <Text style={{ 
+                    fontSize: 14, 
+                    color: ocrDetectedDate ? '#1E293B' : '#94A3B8',
+                    fontWeight: ocrDetectedDate ? '500' : '400'
+                  }}>
+                    {ocrDetectedDate ? ocrDetectedDate.toLocaleDateString('en-US', { 
+                      weekday: 'short', 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    }) : 'Select Date'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+              
+              {showOcrDatePicker && (
+                <DateTimePicker
+                  value={ocrDetectedDate || new Date()}
+                  mode="date"
+                  display="default"
+                  minimumDate={min}
+                  maximumDate={new Date(max.getTime() - 86400000)}
+                  onChange={(event, selectedDate) => {
+                    setShowOcrDatePicker(false);
+                    if (event.type === 'set' && selectedDate) {
+                      setOcrDetectedDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+            </>
+          )}
+        </View>
+
         {/* Amount Input */}
         <View>
           <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
@@ -2584,7 +2707,7 @@ const HistorySection = (
           </Text>
           <TouchableOpacity
             onPress={() => {
-              setCategoryModalVisible(true); // just open picker
+              setCategoryModalVisible(true);
             }}
             style={{
               borderWidth: 1,
@@ -2605,36 +2728,37 @@ const HistorySection = (
           </TouchableOpacity>
         </View>
 
-            {/* Notes Input (optional) */}
-<View>
-  <Text
-    style={{
-      fontSize: 12,
-      color: "#64748B",
-      marginBottom: 4,
-      fontWeight: "600",
-    }}
-  >
-    Notes (optional)
-  </Text>
-  <TextInput
-    value={ocrDetectedNotes}
-    onChangeText={setOcrDetectedNotes}
-    placeholder="Add a short note..."
-    multiline
-    style={{
-      borderWidth: 1,
-      borderColor: "#CBD5E1",
-      borderRadius: 8,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      fontSize: 15,
-      backgroundColor: "#FFFFFF",
-      minHeight: 40,
-      textAlignVertical: "top",
-    }}
-  />
-</View>
+        {/* Notes Input (optional) */}
+        <View>
+          <Text
+            style={{
+              fontSize: 12,
+              color: "#64748B",
+              marginBottom: 4,
+              fontWeight: "600",
+            }}
+          >
+            Notes (optional)
+          </Text>
+          <TextInput
+            value={ocrDetectedNotes}
+            onChangeText={setOcrDetectedNotes}
+            placeholder="Add a short note..."
+            multiline
+            style={{
+              borderWidth: 1,
+              borderColor: "#CBD5E1",
+              borderRadius: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              fontSize: 15,
+              backgroundColor: "#FFFFFF",
+              minHeight: 40,
+              textAlignVertical: "top",
+            }}
+          />
+        </View>
+
         {/* Collapsible Extracted Text */}
         <TouchableOpacity
           onPress={() => setOthersExpanded(!othersExpanded)}
@@ -2676,103 +2800,103 @@ const HistorySection = (
         </TouchableOpacity>
       </View>
 
-     {/* Action Buttons */}
-<View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-  {/* Cancel Button */}
-  <TouchableOpacity
-    style={{
-      flex: 1,
-      backgroundColor: "#F1F5F9",
-      borderRadius: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: 100,
-    }}
-    onPress={() => setShowOcrModal(false)}
-  >
-    <Text
-      style={{
-        color: "#475569",
-        fontWeight: "600",
-        fontSize: 14,
-        textAlign: "center",
-      }}
-    >
-      Cancel
-    </Text>
-  </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+        {/* Cancel Button */}
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#F1F5F9",
+            borderRadius: 10,
+            paddingVertical: 12,
+            paddingHorizontal: 8,
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 100,
+          }}
+          onPress={() => setShowOcrModal(false)}
+        >
+          <Text
+            style={{
+              color: "#475569",
+              fontWeight: "600",
+              fontSize: 14,
+              textAlign: "center",
+            }}
+          >
+            Cancel
+          </Text>
+        </TouchableOpacity>
 
-  {/* Save Button */}
-  <TouchableOpacity
-    style={{
-      flex: 1,
-      borderRadius: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: 100,
-      overflow: "hidden",
-      shadowColor: "#2563EB",
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 3,
-    }}
-    onPress={async () => {
-      const amount = parseFloat(ocrDetectedAmount);
+        {/* Save Button */}
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#2563EB",
+            borderRadius: 10,
+            paddingVertical: 12,
+            paddingHorizontal: 8,
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 100,
+            shadowColor: "#2563EB",
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 3,
+          }}
+          onPress={async () => {
+            const amount = parseFloat(ocrDetectedAmount);
 
-      if (!amount || amount <= 0) {
-        Alert.alert("⚠️ Invalid Amount", "Please enter a valid amount.");
-        return;
-      }
+            if (!amount || amount <= 0) {
+              Alert.alert("⚠️ Invalid Amount", "Please enter a valid amount.");
+              return;
+            }
 
-      if (!ocrDetectedCategory || ocrDetectedCategory === "Select Category") {
-        Alert.alert("⚠️ Incomplete Fields", "Please select a valid category.");
-        return;
-      }
+            if (!ocrDetectedCategory || ocrDetectedCategory === "Select Category") {
+              Alert.alert("⚠️ Incomplete Fields", "Please select a valid category.");
+              return;
+            }
 
-      try {
-        setExpenseAmount(ocrDetectedAmount);
-        setExpenseCategory(ocrDetectedCategory);
-        setExpenseNotes(ocrDetectedNotes?.trim() || "");
+            if (!ocrDetectedDate) {
+              Alert.alert("⚠️ Invalid Date", "Please select a valid date.");
+              return;
+            }
 
-        setShowOcrModal(false);
+            try {
+              setExpenseAmount(ocrDetectedAmount);
+              setExpenseCategory(ocrDetectedCategory);
+              setExpenseNotes(ocrDetectedNotes?.trim() || "");
+              setCustomDate(ocrDetectedDate); // Set the selected date
 
-        setTimeout(async () => {
-          await handleAddExpense();
-        }, 200);
-      } catch (err) {
-        console.error("❌ Save error:", err);
-        Alert.alert("Error", "Failed to save expense from scanned receipt.");
-      }
-    }}
-  >
-    <View
-      style={{
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: "linear-gradient(90deg, #2563EB, #1E40AF)", // Web-like gradient fallback
-      }}
-    />
-    <Text
-      style={{
-        color: "#FFFFFF",
-        fontWeight: "600",
-        fontSize: 14,
-        textAlign: "center",
-      }}
-      numberOfLines={1}
-    >
-      Save Expense
-    </Text>
-  </TouchableOpacity>
-</View>
+              setShowOcrModal(false);
 
+              setTimeout(async () => {
+                await handleAddExpense();
+              }, 200);
+            } catch (err) {
+              console.error("❌ Save error:", err);
+              Alert.alert("Error", "Failed to save expense from scanned receipt.");
+            }
+          }}
+        >
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontWeight: "600",
+              fontSize: 14,
+              textAlign: "center",
+            }}
+            numberOfLines={1}
+          >
+            Save Expense
+          </Text>
+        </TouchableOpacity>
+      </View>
     </Pressable>
   </Pressable>
 </Modal>
+
 
           {/* Category Picker Modal */}
 <Modal
@@ -3047,18 +3171,27 @@ const HistorySection = (
         </Pressable>
       </Modal>
 
-      {/* Expense Detail Modal */}
+     /* Replace your existing Expense Detail Modal with this updated version */
+
+{/* Expense Detail Modal */}
 <Modal
   visible={showExpenseDetailModal}
   transparent
   animationType="slide"
-  onRequestClose={() => setShowExpenseDetailModal(false)}
+  onRequestClose={() => {
+    setShowExpenseDetailModal(false);
+    setIsEditMode(false);
+  }}
 >
   <Pressable
     style={styles.modalOverlay}
-    onPress={() => setShowExpenseDetailModal(false)}
+    onPress={() => {
+      if (!isEditMode) {
+        setShowExpenseDetailModal(false);
+      }
+    }}
   >
-    <View style={[styles.modalContainer, { alignItems: "stretch" }]}>
+    <Pressable style={[styles.modalContainer, { alignItems: "stretch" }]} onPress={() => {}}>
       {selectedExpense && (
         <>
           <Text
@@ -3070,144 +3203,316 @@ const HistorySection = (
               color: "#1E293B",
             }}
           >
-            Expense Details
+            {isEditMode ? "Edit Expense" : "Expense Details"}
           </Text>
 
-          <View
-            style={{
-              backgroundColor: "#F9FAFB",
-              borderRadius: 16,
-              padding: 16,
-              marginBottom: 16,
-              borderWidth: 1,
-              borderColor: "#E5E7EB",
-            }}
-          >
-            {/* 💰 Amount */}
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-              <MaterialCommunityIcons name="currency-php" size={20} color="#2563EB" />
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "600",
-                  marginLeft: 8,
-                  color: selectedExpense.overspent ? "#dc2626" : "#1E293B",
-                }}
-              >
-                ₱
-                {Number(selectedExpense.amount || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
-              </Text>
-            </View>
-
-            {/* 🏷 Category */}
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-              {getCategoryIconComponent(selectedExpense.category || "Others")}
-              <Text
-                style={{
-                  fontSize: 15,
-                  marginLeft: 8,
-                  color: selectedExpense.overspent ? "#b91c1c" : "#1E293B",
-                  fontWeight: selectedExpense.overspent ? "600" : "400",
-                }}
-              >
-                {capitalize(selectedExpense.category || "Others")}
-              </Text>
-            </View>
-
-            {/* ⚠️ Overspend (only show if > 0) */}
-            {selectedExpense.overspent && selectedExpense.overspent > 0 && (
+          {!isEditMode ? (
+            // VIEW MODE
+            <>
               <View
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "#fee2e2",
-                  paddingVertical: 6,
-                  paddingHorizontal: 10,
-                  borderRadius: 8,
-                  marginBottom: 10,
+                  backgroundColor: "#F9FAFB",
+                  borderRadius: 16,
+                  padding: 16,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
                 }}
               >
-                <Ionicons name="warning-outline" size={18} color="#b91c1c" />
-                <Text
+                {/* 💰 Amount */}
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                  <MaterialCommunityIcons name="currency-php" size={20} color="#2563EB" />
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "600",
+                      marginLeft: 8,
+                      color: selectedExpense.overspent ? "#dc2626" : "#1E293B",
+                    }}
+                  >
+                    ₱
+                    {Number(selectedExpense.amount || 0).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                  </Text>
+                </View>
+
+                {/* 🏷 Category */}
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                  {getCategoryIconComponent(selectedExpense.category || "Others")}
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      marginLeft: 8,
+                      color: selectedExpense.overspent ? "#b91c1c" : "#1E293B",
+                      fontWeight: selectedExpense.overspent ? "600" : "400",
+                    }}
+                  >
+                    {capitalize(selectedExpense.category || "Others")}
+                  </Text>
+                </View>
+
+                {/* ⚠️ Overspend (only show if > 0) */}
+                {selectedExpense.overspent && selectedExpense.overspent > 0 && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      backgroundColor: "#fee2e2",
+                      paddingVertical: 6,
+                      paddingHorizontal: 10,
+                      borderRadius: 8,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <Ionicons name="warning-outline" size={18} color="#b91c1c" />
+                    <Text
+                      style={{
+                        color: "#b91c1c",
+                        marginLeft: 8,
+                        fontWeight: "600",
+                        fontSize: 14,
+                      }}
+                    >
+                      Overspent this period by ₱
+                      {Number(selectedExpense.overspent).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                      })}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 📅 Date */}
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Ionicons name="calendar-outline" size={20} color="#2563EB" />
+                  <Text style={{ fontSize: 15, marginLeft: 8 }}>
+                    {selectedExpense.date
+                      ? (() => {
+                          const d = new Date(selectedExpense.date);
+                          const dateStr = d.toLocaleDateString([], {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          });
+                          const timeStr =
+                            d.getHours() === 0 && d.getMinutes() === 0
+                              ? ""
+                              : `, ${d.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}`;
+                          return dateStr + timeStr;
+                        })()
+                      : "No date available"}
+                  </Text>
+                </View>
+
+                {/* 📝 Notes */}
+                <View
                   style={{
-                    color: "#b91c1c",
-                    marginLeft: 8,
-                    fontWeight: "600",
-                    fontSize: 14,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 10,
                   }}
                 >
-                  Overspent this period by ₱
-                  {Number(selectedExpense.overspent).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })}
-                </Text>
+                  <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      marginLeft: 8,
+                      color: "#374151",
+                      fontStyle: selectedExpense.notes?.trim() ? "normal" : "italic",
+                    }}
+                  >
+                    {selectedExpense.notes?.trim()
+                      ? selectedExpense.notes
+                      : "No notes provided"}
+                  </Text>
+                </View>
               </View>
-            )}
 
-            {/* 📅 Date */}
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons name="calendar-outline" size={20} color="#2563EB" />
-              <Text style={{ fontSize: 15, marginLeft: 8 }}>
-                {selectedExpense.date
-                  ? (() => {
-                      const d = new Date(selectedExpense.date);
-                      const dateStr = d.toLocaleDateString([], {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      });
-                      const timeStr =
-                        d.getHours() === 0 && d.getMinutes() === 0
-                          ? ""
-                          : `, ${d.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}`;
-                      return dateStr + timeStr;
-                    })()
-                  : "No date available"}
-              </Text>
-            </View>
+              {/* Action Buttons - View Mode */}
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    { flex: 1, backgroundColor: "#2563EB", flexDirection: "row", alignItems: "center", justifyContent: "center" }
+                  ]}
+                  onPress={() => {
+                    setIsEditMode(true);
+                    setEditAmount(selectedExpense.amount.toString());
+                    setEditCategory(selectedExpense.category);
+                    setEditNotes(selectedExpense.notes || "");
+                    setEditDate(new Date(selectedExpense.date));
+                  }}
+                >
+                  <Ionicons name="create-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.submitText}>Edit</Text>
+                </TouchableOpacity>
 
-          {/* 📝 Notes */}
-<View
-  style={{
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-  }}
->
-  <Ionicons name="document-text-outline" size={20} color="#2563EB" />
-  <Text
-    style={{
-      fontSize: 15,
-      marginLeft: 8,
-      color: "#374151",
-      fontStyle: selectedExpense.notes?.trim() ? "normal" : "italic",
-    }}
-  >
-    {selectedExpense.notes?.trim()
-      ? selectedExpense.notes
-      : "No notes provided"}
-  </Text>
-</View>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    { flex: 1, backgroundColor: "#DC2626", flexDirection: "row", alignItems: "center", justifyContent: "center" }
+                  ]}
+                  onPress={handleDeleteExpense}
+                  disabled={isLoading}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.submitText}>{isLoading ? "Deleting..." : "Delete"}</Text>
+                </TouchableOpacity>
+              </View>
 
-          </View>
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: "#94A3B8" }]}
+                onPress={() => setShowExpenseDetailModal(false)}
+              >
+                <Text style={styles.submitText}>Close</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            // EDIT MODE
+            <>
+              <View style={{ gap: 12, marginBottom: 16 }}>
+                {/* Amount Input */}
+                <View>
+                  <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
+                    Amount (₱)
+                  </Text>
+                  <TextInput
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    style={styles.input}
+                  />
+                </View>
 
-          {/* Close button */}
-          <TouchableOpacity
-            style={[styles.submitButton, styles.primaryBtn]}
-            onPress={() => setShowExpenseDetailModal(false)}
-          >
-            <Text style={styles.submitText}>Close</Text>
-          </TouchableOpacity>
+                {/* Category Picker */}
+                <View>
+                  <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
+                    Category
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setExpenseCategory(editCategory);
+                      setCategoryModalVisible(true);
+                    }}
+                    style={[styles.input, { justifyContent: 'center' }]}
+                  >
+                    <Text style={{ color: editCategory === 'Select Category' ? '#64748B' : '#1E293B' }}>
+                      {editCategory}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Notes Input */}
+                <View>
+                  <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
+                    Notes (optional)
+                  </Text>
+                  <TextInput
+                    value={editNotes}
+                    onChangeText={setEditNotes}
+                    placeholder="Add notes..."
+                    multiline
+                    style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
+                  />
+                </View>
+
+                {/* Date Picker */}
+                <View>
+                  <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
+                    Date
+                  </Text>
+                  {Platform.OS === 'web' ? (
+                    <View style={styles.input}>
+                      <input
+                        type="date"
+                        value={editDate ? editDate.toISOString().slice(0, 10) : ''}
+                        onChange={(e) => setEditDate(e.target.value ? new Date(e.target.value) : null)}
+                        style={{
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          fontSize: '16px',
+                          outline: 'none',
+                          width: '100%',
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => setShowEditDatePicker(true)}
+                        style={styles.input}
+                      >
+                        <Text>{editDate ? editDate.toLocaleDateString() : 'Select Date'}</Text>
+                      </TouchableOpacity>
+                      {showEditDatePicker && (
+                        <DateTimePicker
+                          value={editDate || new Date()}
+                          mode="date"
+                          display="default"
+                          onChange={(event: any, date?: Date) => {
+                            setShowEditDatePicker(false);
+                            if (event.type === 'set' && date) setEditDate(date);
+                          }}
+                        />
+                      )}
+                    </>
+                  )}
+                </View>
+              </View>
+
+              {/* Action Buttons - Edit Mode */}
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                <TouchableOpacity
+                  style={[styles.submitButton, { flex: 1, backgroundColor: "#16A34A" }]}
+                  onPress={() => {
+                    // Update the edited values back to the category picker
+                    if (expenseCategory !== editCategory) {
+                      setEditCategory(expenseCategory);
+                    }
+                    handleEditExpense();
+                  }}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.submitText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.submitButton, { flex: 1, backgroundColor: "#94A3B8" }]}
+                  onPress={() => {
+                    setIsEditMode(false);
+                    setEditAmount("");
+                    setEditCategory("");
+                    setEditNotes("");
+                    setEditDate(null);
+                  }}
+                >
+                  <Text style={styles.submitText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </>
       )}
-    </View>
+    </Pressable>
   </Pressable>
 </Modal>
+
+{/* Update Category Modal to sync with edit mode */}
+{categoryModalVisible && isEditMode && (
+  <Modal
+    visible={categoryModalVisible}
+    transparent
+    animationType="fade"
+    onRequestClose={() => {
+      setCategoryModalVisible(false);
+      setEditCategory(expenseCategory);
+    }}
+  />
+)}
 
 {isListening && (
   <View
