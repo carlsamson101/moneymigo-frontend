@@ -27,10 +27,13 @@ let SpeechRecognition: any = null;
 
 if (Platform.OS === "web") {
   try {
-    Speech = require("expo-speech");
-    SpeechRecognition = require("expo-speech-recognition");
+    const ExpoSpeech = require("expo-speech");
+    const ExpoSpeechRecognition = require("expo-speech-recognition");
+    Speech = ExpoSpeech.default || ExpoSpeech;
+    SpeechRecognition = ExpoSpeechRecognition.default || ExpoSpeechRecognition;
+    console.log("✅ Speech modules loaded successfully");
   } catch (e) {
-    console.log("🧩 Web-only: Speech modules not available natively");
+    console.log("❌ Speech modules not available:", e);
   }
 }
 
@@ -226,8 +229,6 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 };
 
 export default function ExpensesPage() {
-
-
 
   useEffect(() => {
   if (Platform.OS === "web") {
@@ -447,6 +448,21 @@ function splitIntoClauses(text: string): string[] {
 }
 
 const startVoiceRecognition = async () => {
+  console.log("🎤 Voice button clicked");
+  console.log("Platform:", Platform.OS);
+  console.log("Speech available:", !!Speech);
+  console.log("SpeechRecognition available:", !!SpeechRecognition);
+  console.log("User agent:", Platform.OS === "web" ? navigator.userAgent : "N/A");
+
+  // Check if modules are loaded
+  if (!Speech || !SpeechRecognition) {
+    Alert.alert(
+      "🎙️ Voice Not Available",
+      "Speech recognition is not supported in this environment. Please use Chrome or Safari on mobile."
+    );
+    return;
+  }
+
   const isMobileWeb =
     Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
 
@@ -461,22 +477,37 @@ const startVoiceRecognition = async () => {
   try {
     // 🧩 Ensure permissions
     if (navigator.permissions) {
-      const permissionStatus = await navigator.permissions.query({ name: "microphone" });
-      if (permissionStatus.state === "denied") {
-        Alert.alert(
-          "🎤 Permission Denied",
-          "Please allow microphone access in your browser settings."
-        );
-        return;
-      }
-
-      if (permissionStatus.state !== "granted") {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((t) => t.stop());
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: "microphone" as any });
+        if (permissionStatus.state === "denied") {
+          Alert.alert(
+            "🎤 Permission Denied",
+            "Please allow microphone access in your browser settings."
+          );
+          return;
+        }
+      } catch (err) {
+        console.log("⚠️ Permissions API not fully supported, trying direct access");
       }
     }
 
+    // Request mic access
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      console.log("✅ Microphone access granted");
+    } catch (err) {
+      console.error("❌ Microphone access denied:", err);
+      Alert.alert(
+        "🎤 Microphone Access Required",
+        "Please allow microphone access when prompted by your browser."
+      );
+      return;
+    }
+
     const supported = await SpeechRecognition.isAvailableAsync();
+    console.log("Speech recognition supported:", supported);
+    
     if (!supported) {
       Alert.alert("Not Supported", "Your browser does not support speech recognition.");
       return;
@@ -487,18 +518,25 @@ const startVoiceRecognition = async () => {
     setVoiceTranscript("");
     setIsListening(true);
 
-    // 🗣️ Small delay before listening
-    Speech.speak("Listening. You can say something like add one hundred food note burger.", {
-      language: "en-US",
-      rate: 1.0,
-    });
+    // 🗣️ Give audio feedback
+    try {
+      await Speech.speak("Listening. You can say something like add one hundred food note burger.", {
+        language: "en-US",
+        rate: 1.0,
+      });
+    } catch (err) {
+      console.log("⚠️ Speech output not available, continuing without audio feedback");
+    }
 
     setTimeout(async () => {
       try {
+        console.log("🎤 Starting recognition...");
         const result = await SpeechRecognition.startAsync({
           lang: "en-US",
           interimResults: false,
         });
+
+        console.log("Recognition result:", result);
 
         if (result?.results?.[0]) {
           const spokenText = result.results[0].transcript.trim();
@@ -506,15 +544,20 @@ const startVoiceRecognition = async () => {
           setVoiceTranscript(spokenText);
           applyParsedVoice(spokenText);
         } else {
-          Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
+          console.log("⚠️ No transcript in result");
+          try {
+            await Speech.speak("Sorry, I didn't catch that.", { language: "en-US" });
+          } catch (err) {
+            Alert.alert("No Speech Detected", "Please try speaking again.");
+          }
         }
       } catch (innerErr) {
         console.error("❌ Voice recognition error:", innerErr);
-        Alert.alert("Error", "Unable to start voice recognition.");
+        Alert.alert("Error", "Unable to start voice recognition. Please try again.");
       } finally {
         setIsListening(false);
       }
-    }, 1000);
+    }, 1500);
   } catch (err) {
     console.error("❌ Speech error:", err);
     Alert.alert("Error", "Something went wrong while accessing the microphone.");
@@ -2946,13 +2989,16 @@ const HistorySection = (
   </View>
 )}
 
-{/* Microphone FAB Button */}
+/* Microphone FAB Button */
 <TouchableOpacity
   onPress={() => {
+    console.log("🎤 Microphone button pressed");
     if (!isListening) {
       startVoiceRecognition();
     } else {
+      console.log("🛑 Stopping listening");
       setIsListening(false);
+      setVoiceTranscript("");
     }
   }}
   activeOpacity={0.8}
@@ -2960,25 +3006,38 @@ const HistorySection = (
     position: "absolute",
     bottom: isMobile ? 60 : 5,
     right: 16,
-    backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
+    backgroundColor: isListening ? "#ef4444" : "#1f4b81",
     borderRadius: 50,
-    width: isMobile ? 35 : 45,
-    height: isMobile ? 35 : 45,
+    width: isMobile ? 45 : 50,
+    height: isMobile ? 45 : 50,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 8,
     zIndex: 200,
+    borderWidth: isListening ? 3 : 0,
+    borderColor: isListening ? "#fca5a5" : "transparent",
   }}
 >
   <Ionicons 
-    name={isListening ? "mic-off" : "mic"} 
-    size={28} 
+    name={isListening ? "mic" : "mic-outline"} 
+    size={26} 
     color="#fff" 
   />
+  {isListening && (
+    <View style={{
+      position: "absolute",
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      borderWidth: 2,
+      borderColor: "#ef4444",
+      opacity: 0.5,
+    }} />
+  )}
 </TouchableOpacity>
 
 {showVoiceTip && (
