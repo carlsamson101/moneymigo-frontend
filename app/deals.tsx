@@ -78,22 +78,46 @@ const [isListening, setIsListening] = useState(false);
 const [voiceTranscript, setVoiceTranscript] = useState("");
 
 const handleVoiceSearch = async () => {
-  if (Platform.OS !== "web") {
+  const isMobileWeb =
+    Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
+
+  if (!isMobileWeb) {
     Alert.alert(
-      "Voice Search Unavailable",
-      "🎙️ Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
+      "🎙️ Voice Search Unavailable",
+      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
     );
     return;
   }
 
   try {
+    // 🔐 Request microphone permission first
+    if (navigator.permissions) {
+      const permissionStatus = await navigator.permissions.query({ name: "microphone" });
+
+      if (permissionStatus.state === "denied") {
+        Alert.alert(
+          "🎤 Permission Denied",
+          "Please allow microphone access in your browser settings."
+        );
+        return;
+      }
+
+      if (permissionStatus.state !== "granted") {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    }
+
     const supported = await SpeechRecognition.isAvailableAsync();
     if (!supported) {
       Alert.alert("Not Supported", "Your browser does not support speech recognition.");
       return;
     }
 
+    // 🎧 Start listening
     setIsListening(true);
+    setVoiceTranscript("");
+
     Speech.speak(
       "Listening. You can say something like show food deals or search electronics.",
       { language: "en-US", rate: 1.0 }
@@ -106,9 +130,10 @@ const handleVoiceSearch = async () => {
 
     if (result?.results?.[0]) {
       const spokenText = result.results[0].transcript.trim();
+      console.log("🎤 Voice recognized:", spokenText);
       setVoiceTranscript(spokenText);
       setQ(spokenText);
-      fetchDeals(); // your existing fetch function
+      fetchDeals();
     }
   } catch (err) {
     console.error("🎤 Voice error:", err);

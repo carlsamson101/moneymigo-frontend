@@ -227,16 +227,6 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
 
 export default function ExpensesPage() {
 
-useEffect(() => {
-  if (
-    Platform.OS === "web" &&
-    /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent)
-  ) {
-    Speech.speak("You can say something like: add ten food note burger.", {
-      language: "en-US",
-    });
-  }
-}, []);
 
 
 const [isListening, setIsListening] = useState(false);
@@ -292,6 +282,13 @@ const [showOcrModal, setShowOcrModal] = useState(false);
 const [ocrRawText, setOcrRawText] = useState("");
 const [ocrDetectedAmount, setOcrDetectedAmount] = useState("");
 const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
+
+
+const [hasSpokenHint, setHasSpokenHint] = useState(false);
+
+useEffect(() => {
+  // don't speak automatically — wait for user action
+}, []);
 
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
@@ -442,13 +439,13 @@ const startVoiceRecognition = async () => {
   if (!isMobileWeb) {
     Alert.alert(
       "🎙️ Voice Input Unavailable",
-      "🎙️ Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
+      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari)."
     );
     return;
   }
 
   try {
-    // 🎤 Microphone permission
+    // ✅ Ask for mic permission
     if (navigator.permissions) {
       const permissionStatus = await navigator.permissions.query({ name: "microphone" });
       if (permissionStatus.state === "denied") {
@@ -464,28 +461,29 @@ const startVoiceRecognition = async () => {
       }
     }
 
-    // 💬 Speak the tip and show visual hint on first click
+    // 🧠 Show hint & speak only the first time user taps mic
     if (!hasShownTip) {
       setShowVoiceTip(true);
       setHasShownTip(true);
+
       Speech.speak(
         "You can say something like: add one hundred food note burger. The format is add plus amount plus category plus note. Note is optional.",
         { language: "en-US", rate: 1.0 }
       );
 
-      // Hide hint after 3.5 s
+      // auto-hide tip after 3.5 seconds
       setTimeout(() => setShowVoiceTip(false), 3500);
-      return;
+      return; // 🧠 stop here so it doesn’t immediately start listening
     }
 
-    // 🎙 Start listening
+    // 🎙️ Begin listening only on later clicks
     setIsListening(true);
     setVoiceTranscript("");
 
     await SpeechRecognition.startAsync({ lang: "en-US", interimResults: false });
     console.log("✅ Listening started");
 
-    // Record for ~4 s
+    // stop automatically after ~4 seconds
     setTimeout(async () => {
       await SpeechRecognition.stopAsync();
       console.log("🛑 Listening stopped (auto)");
@@ -503,6 +501,7 @@ const startVoiceRecognition = async () => {
     setIsListening(false);
   }
 };
+
 
 
 async function applyParsedVoice(command: string) {
@@ -1638,7 +1637,7 @@ const HistorySection = (
               Platform.OS === 'web' && styles.headerRowWeb
             ]}
           >
-            {Platform.OS == 'web' && (
+            {Platform.OS !== 'web' && (
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
@@ -2940,7 +2939,7 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: isMobile ? 60 : 7,
+    bottom: isMobile ? 60 : 5,
     right: 16,
     backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
     borderRadius: 50,
