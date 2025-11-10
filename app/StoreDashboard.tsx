@@ -1,3 +1,9 @@
+// ✅ Extend the Window interface to include our custom property
+declare global {
+  interface Window {
+    _storeRecognition?: any;
+  }
+}
 
 import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
@@ -67,18 +73,22 @@ const STORE_UNIT_ALIASES = {
   "other": ["other"],
 };
 
-// ✅ Updated lookup to handle multi-word phrases
-const STORE_CATEGORY_LOOKUP = Object.entries(STORE_CATEGORY_ALIASES).reduce((acc, [canon, list]) => {
-  list.forEach(alias => {
-    acc[alias.toLowerCase()] = canon;
-  });
-  return acc;
-}, {});
+const STORE_CATEGORY_LOOKUP: Record<string, string> = Object.entries(STORE_CATEGORY_ALIASES).reduce(
+  (acc, [canon, list]) => {
+    list.forEach((alias) => (acc[alias.toLowerCase()] = canon));
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
-const STORE_UNIT_LOOKUP = Object.entries(STORE_UNIT_ALIASES).reduce((acc, [canon, list]) => {
-  list.forEach(alias => acc[alias.toLowerCase()] = canon);
-  return acc;
-}, {});
+
+const STORE_UNIT_LOOKUP: Record<string, string> = Object.entries(STORE_UNIT_ALIASES).reduce(
+  (acc, [canon, list]) => {
+    list.forEach((alias) => (acc[alias.toLowerCase()] = canon));
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
 let DateTimePicker: any = () => null;
 if (Platform.OS !== 'web') {
@@ -192,6 +202,17 @@ const fetchDeals = async () => {
   }
 };
 
+// ✅ Converts spoken number words (one, two, seven, etc.) to numeric value
+function wordToNumber(word: string): number | null {
+  const map: Record<string, number> = {
+    zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+    sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20
+  };
+  return map[word.toLowerCase()] ?? null;
+}
+
 const parseVoiceItemCommand = (command) => {
   const lower = command.toLowerCase().trim();
   console.log("🎤 Parsing store item:", lower);
@@ -204,16 +225,21 @@ const parseVoiceItemCommand = (command) => {
   };
 
   // ✅ Extract price - EXPANDED patterns
-  const priceMatch = 
-    lower.match(/(?:at|price|for|cost|costs|worth)\s+(\d+(?:\.\d{1,2})?)/i) ||  // "at 13" or "worth 13"
-    lower.match(/(\d+(?:\.\d{1,2})?)\s*(?:pesos|php|peso|piso|pisos)\s*(?:per|each)?/i) || // "13 pesos"
-    lower.match(/(?:is|are)\s+(\d+(?:\.\d{1,2})?)/i) ||                         // "is 13"
-    lower.match(/(\d+(?:\.\d{1,2})?)\s+(?:per|each|every)\s+/i);               // "13 per"
-  
-  if (priceMatch) {
-    result.price = parseFloat(priceMatch[1]);
-  }
+  // ✅ Extract price (supports number words too)
+const priceMatch =
+  lower.match(/(?:at|price|for|cost|costs|worth)\s+(\w+(?:\.\w+)?)/i) ||
+  lower.match(/(\w+(?:\.\w+)?)\s*(?:pesos|php|peso|piso|pisos)\s*(?:per|each)?/i);
 
+if (priceMatch) {
+  const rawPrice = priceMatch[1];
+  const numeric = parseFloat(rawPrice);
+  if (!isNaN(numeric)) {
+    result.price = numeric;
+  } else {
+    const fromWord = wordToNumber(rawPrice);
+    if (fromWord !== null) result.price = fromWord;
+  }
+}
   // ✅ Extract unit (after "per", "each", "every")
   const unitMatch = lower.match(/(?:per|each|every)\s+(\w+)/i);
   if (unitMatch) {
@@ -359,7 +385,7 @@ const applyVoiceItemCommand = async (command) => {
     
     fetchItems(); // Refresh list
 
-    setTimeout(() => setVoiceTranscript(""), 3000);
+    setTimeout(() => setVoiceTranscript(""), 5000);
   } catch (err) {
     console.error("❌ Voice add failed:", err);
     Alert.alert("Error", "Failed to add item. Please try again.");
