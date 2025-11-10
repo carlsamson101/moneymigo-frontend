@@ -40,21 +40,21 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
   }
 }
 
-// Category and Unit mappings for voice recognition
 const STORE_CATEGORY_ALIASES = {
-  "instant noodles": ["noodles", "noodle", "instant", "pancit", "lucky me"],
-  "canned goods": ["canned", "can", "sardines", "corned beef", "spam"],
-  "snacks": ["snack", "chips", "biscuit", "cookie", "candy"],
-  "beverages": ["beverage", "drink", "soda", "juice", "coffee", "water"],
-  "cooking essentials": ["cooking", "oil", "salt", "sugar", "flour"],
-  "personal care": ["personal", "soap", "shampoo", "toothpaste"],
+  "instant noodles": ["noodles", "noodle", "instant", "pancit", "lucky me", "instant noodles"],
+  "canned goods": ["canned", "can", "sardines", "corned beef", "spam", "canned goods"],
+  "snacks": ["snack", "snacks", "chips", "biscuit", "cookie", "candy", "chocolate"],
+  "beverages": ["beverage", "beverages", "drink", "drinks", "soda", "juice", "coffee", "tea", "water"],
+  "cooking essentials": ["cooking", "oil", "salt", "sugar", "flour", "spices", "egg", "eggs", "cooking essentials"],
+  "personal care": ["personal", "soap", "shampoo", "toothpaste", "deodorant", "personal care"],
   "household": ["household", "cleaner", "tissue", "paper"],
-  "laundry": ["laundry", "detergent", "fabric"],
-  "medicine": ["medicine", "med", "paracetamol", "vitamins"],
-  "school supplies": ["school", "notebook", "pen", "pencil"],
-  "condiments": ["condiment", "sauce", "vinegar", "ketchup"],
+  "laundry": ["laundry", "detergent", "fabric", "softener"],
+  "medicine": ["medicine", "med", "paracetamol", "biogesic", "vitamins"],
+  "school supplies": ["school", "notebook", "pen", "pencil", "paper", "school supplies"],
+  "condiments": ["condiment", "condiments", "sauce", "vinegar", "ketchup", "soy sauce"],
   "other": ["other", "others", "misc"],
 };
+
 
 const STORE_UNIT_ALIASES = {
   "piece": ["piece", "pieces", "pc", "pcs"],
@@ -67,9 +67,11 @@ const STORE_UNIT_ALIASES = {
   "other": ["other"],
 };
 
-// Create lookup maps
+// ✅ Updated lookup to handle multi-word phrases
 const STORE_CATEGORY_LOOKUP = Object.entries(STORE_CATEGORY_ALIASES).reduce((acc, [canon, list]) => {
-  list.forEach(alias => acc[alias.toLowerCase()] = canon);
+  list.forEach(alias => {
+    acc[alias.toLowerCase()] = canon;
+  });
   return acc;
 }, {});
 
@@ -201,34 +203,45 @@ const parseVoiceItemCommand = (command) => {
     category: "other"
   };
 
-  // Extract price
-  const priceMatch = lower.match(/(?:at|price)\s+(\d+(?:\.\d{1,2})?)/i) ||
-                     lower.match(/(\d+(?:\.\d{1,2})?)\s*(?:pesos|php)/i) ||
-                     lower.match(/\b(\d+(?:\.\d{1,2})?)\b/);
+  // ✅ Extract price - EXPANDED patterns
+  const priceMatch = 
+    lower.match(/(?:at|price|for|cost|costs|worth)\s+(\d+(?:\.\d{1,2})?)/i) ||  // "at 13" or "worth 13"
+    lower.match(/(\d+(?:\.\d{1,2})?)\s*(?:pesos|php|peso|piso|pisos)\s*(?:per|each)?/i) || // "13 pesos"
+    lower.match(/(?:is|are)\s+(\d+(?:\.\d{1,2})?)/i) ||                         // "is 13"
+    lower.match(/(\d+(?:\.\d{1,2})?)\s+(?:per|each|every)\s+/i);               // "13 per"
   
   if (priceMatch) {
     result.price = parseFloat(priceMatch[1]);
   }
 
-  // Extract unit
-  const unitMatch = lower.match(/per\s+(\w+)/i);
+  // ✅ Extract unit (after "per", "each", "every")
+  const unitMatch = lower.match(/(?:per|each|every)\s+(\w+)/i);
   if (unitMatch) {
     const unitWord = unitMatch[1].toLowerCase();
     result.unit = STORE_UNIT_LOOKUP[unitWord] || "piece";
   }
 
-  // Extract category
-  const categoryMatch = lower.match(/category\s+(.+?)(?:\s+|$)/i);
+  // ✅ Extract category (after "category" keyword)
+  const categoryMatch = lower.match(/category\s+([a-z\s]+?)(?:\s*$)/i);
   if (categoryMatch) {
-    const categoryWords = categoryMatch[1].toLowerCase().split(/\s+/);
-    for (const word of categoryWords) {
-      if (STORE_CATEGORY_LOOKUP[word]) {
-        result.category = STORE_CATEGORY_LOOKUP[word];
-        break;
+    const categoryPhrase = categoryMatch[1].trim().toLowerCase();
+    
+    // Try exact match first
+    if (STORE_CATEGORY_LOOKUP[categoryPhrase]) {
+      result.category = STORE_CATEGORY_LOOKUP[categoryPhrase];
+    } else {
+      // Try matching longest substring
+      const words = categoryPhrase.split(/\s+/);
+      for (let i = words.length; i > 0; i--) {
+        const phrase = words.slice(0, i).join(' ');
+        if (STORE_CATEGORY_LOOKUP[phrase]) {
+          result.category = STORE_CATEGORY_LOOKUP[phrase];
+          break;
+        }
       }
     }
   } else {
-    // Infer from item name
+    // Infer category from item name keywords
     const words = lower.split(/[^a-z]+/).filter(Boolean);
     for (const word of words) {
       if (STORE_CATEGORY_LOOKUP[word]) {
@@ -238,14 +251,41 @@ const parseVoiceItemCommand = (command) => {
     }
   }
 
-  // Extract item name
-  let itemNameMatch = lower.match(/^add\s+(.+?)\s+(?:at|price|\d)/i);
+  // ✅✅ IMPROVED: Extract item name
+  let cleanedText = lower.replace(/^add\s+/i, '');
+  
+  // Match everything before price indicators
+  let itemNameMatch = 
+    cleanedText.match(/^(.+?)\s+(?:at|price|for|cost|costs|worth|is|are)\s+\d/i) ||
+    cleanedText.match(/^(.+?)\s+\d+(?:\.\d+)?\s*(?:pesos|php|peso|piso)?(?:\s+per|\s+each)?/i);
+  
   if (itemNameMatch) {
-    result.itemName = itemNameMatch[1].trim();
+    result.itemName = itemNameMatch[1]
+      .replace(/[()]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   } else {
-    const words = lower.replace(/^add\s+/i, '').split(/\s+/);
-    result.itemName = words.slice(0, 3).join(' ');
+    // Fallback
+    const fallbackMatch = cleanedText.match(/^(.+?)\s+(?:category|per|each|$)/i);
+    if (fallbackMatch) {
+      result.itemName = fallbackMatch[1].replace(/[()]/g, '').trim();
+    } else {
+      const words = cleanedText.split(/\s+/).filter(Boolean);
+      result.itemName = words.slice(0, 6).join(' ').replace(/[()]/g, '');
+    }
   }
+
+  // ✅ Capitalize properly (Title Case)
+  result.itemName = result.itemName
+    .split(' ')
+    .map(word => {
+      // Keep common abbreviations uppercase
+      if (/^(ml|kg|g|l|pc|pcs)$/i.test(word)) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 
   return result;
 };
@@ -285,16 +325,24 @@ const applyVoiceItemCommand = async (command) => {
 
   const parsed = parseVoiceItemCommand(command);
 
+  // Validation
   if (!parsed.itemName || !parsed.price || parsed.price <= 0) {
-    const msg = "I couldn't understand that. Please say: add item name at price per unit";
+    const msg = "I didn't catch the item name or price. Please try again: add item name at price per unit";
     Alert.alert("Try Again", msg);
     Speech.speak(msg, { language: "en-US", rate: 1.2 });
     setVoiceTranscript("");
     return;
   }
 
+  // ✅ Show parsed details for confirmation
+  console.log("✅ Parsed item:", parsed);
+
   try {
-    // Call your existing API
+    // Speak back what was understood
+    const confirmation = `Adding ${parsed.itemName}, ${parsed.price} pesos per ${parsed.unit}`;
+    Speech.speak(confirmation, { language: "en-US", rate: 1.1 });
+
+    // Save to database
     await api.post("/storeItems", {
       storeName,
       itemName: parsed.itemName,
@@ -304,16 +352,17 @@ const applyVoiceItemCommand = async (command) => {
       category: parsed.category,
     });
 
-    const confirmation = `Added ${parsed.itemName} at ${parsed.price} pesos per ${parsed.unit}`;
-    Speech.speak(confirmation, { language: "en-US", rate: 1.2 });
+    Alert.alert(
+      "✅ Item Added", 
+      `${parsed.itemName}\n₱${parsed.price} per ${parsed.unit}\nCategory: ${parsed.category}`
+    );
     
-    Alert.alert("✅ Success", confirmation);
     fetchItems(); // Refresh list
 
     setTimeout(() => setVoiceTranscript(""), 3000);
   } catch (err) {
     console.error("❌ Voice add failed:", err);
-    Alert.alert("Error", "Failed to add item");
+    Alert.alert("Error", "Failed to add item. Please try again.");
     setVoiceTranscript("");
   }
 };
@@ -392,6 +441,19 @@ const startVoiceRecognition = async () => {
     console.error("❌ Voice error:", err);
     Alert.alert("Error", "Failed to start voice recognition");
     setIsListening(false);
+  }
+};
+
+// Helper to stop recognition safely
+const stopVoiceRecognition = () => {
+  setIsListening(false);
+  try {
+    if ((window as any)._storeRecognition) {
+      (window as any)._storeRecognition.stop();
+      console.log("🛑 Voice recognition stopped");
+    }
+  } catch (err) {
+    console.warn("⚠️ Failed to stop recognition:", err);
   }
 };
 
@@ -671,96 +733,97 @@ const deleteDealHandler = async (dealId: string) => {
   contentContainerStyle={{ paddingBottom: 120 }} // prevent cutoff at bottom
 >
         {/* Header with Gradient */}
-        <LinearGradient
-          colors={['#0D7C8A', '#16A9B8']}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        >
-          <View style={styles.headerTop}>
-            <View style={styles.headerLeft}>
-              <View style={styles.storeIconCircle}>
-                <Ionicons name="storefront" size={28} color="#16A9B8" />
-              </View>
-              <View>
-                <Text style={styles.headerTitle}>{storeName}</Text>
-                <Text style={styles.headerSubtitle}>Store Dashboard</Text>
-              </View>
-            </View>
-
-            {/* ===== Logout Button ===== */}
-<TouchableOpacity
-  onPress={() => setConfirmVisible(true)}
-  style={styles.logoutButton}
+       <LinearGradient
+  colors={['#0D7C8A', '#16A9B8']}
+  style={styles.header}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 0 }}
 >
-  <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-</TouchableOpacity>
+  <View style={styles.headerTop}>
+    <View style={styles.headerLeft}>
+      <View style={styles.storeIconCircle}>
+        <Ionicons name="storefront" size={28} color="#16A9B8" />
+      </View>
+      <View style={styles.storeNameContainer}>
+        <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+          {storeName}
+        </Text>
+        <Text style={styles.headerSubtitle}>Store Dashboard</Text>
+      </View>
+    </View>
 
-{/* ===== Logout Confirmation Modal ===== */}
-<Modal transparent visible={confirmVisible} animationType="fade">
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      <Ionicons name="alert-circle-outline" size={42} color="#EF4444" />
-      <Text style={[styles.modalTitle, { marginTop: 12 }]}>Confirm Logout</Text>
-      <Text style={styles.modalMessage}>
-        Are you sure you want to log out of this store account?
-      </Text>
+    {/* ===== Logout Button ===== */}
+    <TouchableOpacity
+      onPress={() => setConfirmVisible(true)}
+      style={styles.logoutButton}
+    >
+      <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+    </TouchableOpacity>
+  </View>
 
-      <View style={styles.modalActions}>
-        <TouchableOpacity
-          style={[styles.modalButton, styles.cancelBtn]}
-          onPress={() => setConfirmVisible(false)}
-        >
-          <Text style={styles.modalCancelText}>Cancel</Text>
-        </TouchableOpacity>
+  {/* ===== Logout Confirmation Modal ===== */}
+  <Modal transparent visible={confirmVisible} animationType="fade">
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContainer}>
+        <Ionicons name="alert-circle-outline" size={42} color="#EF4444" />
+        <Text style={[styles.modalTitle, { marginTop: 12 }]}>Confirm Logout</Text>
+        <Text style={styles.modalMessage}>
+          Are you sure you want to log out of this store account?
+        </Text>
 
-        <TouchableOpacity
-          style={[styles.modalButton, { backgroundColor: "#EF4444" }]}
-          onPress={async () => {
-            try {
-              await AsyncStorage.multiRemove([
-                "storeToken",
-                "storeName",
-                "storeId",
-              ]);
-              setConfirmVisible(false);
-              setTimeout(() => router.replace("/storeAuth"), 100);
-            } catch (err) {
-              console.error("❌ Logout failed:", err);
-              Alert.alert("Error", "Failed to log out properly.");
-            }
-          }}
-        >
-          <Text style={styles.modalDeleteText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.modalActions}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelBtn]}
+            onPress={() => setConfirmVisible(false)}
+          >
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: "#EF4444" }]}
+            onPress={async () => {
+              try {
+                await AsyncStorage.multiRemove([
+                  "storeToken",
+                  "storeName",
+                  "storeId",
+                ]);
+                setConfirmVisible(false);
+                setTimeout(() => router.replace("/storeAuth"), 100);
+              } catch (err) {
+                console.error("❌ Logout failed:", err);
+                Alert.alert("Error", "Failed to log out properly.");
+              }
+            }}
+          >
+            <Text style={styles.modalDeleteText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+
+  {/* Location & Stats Row */}
+  <View style={styles.headerBottom}>
+    <View style={styles.locationContainer}>
+      <Ionicons name="location" size={16} color="#16A9B8" />
+      {location ? (
+        <Text style={styles.locationText} numberOfLines={1}>
+          {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+        </Text>
+      ) : (
+        <Text style={styles.noLocationText}>No location set</Text>
+      )}
+    </View>
+
+    <View style={styles.statsContainer}>
+      <View style={styles.statBadge}>
+        <Ionicons name="cube" size={16} color="#A4C639" />
+        <Text style={styles.statText}>{items.length} Items</Text>
       </View>
     </View>
   </View>
-</Modal>
-
-          </View>
-
-          {/* Location & Stats Row */}
-          <View style={styles.headerBottom}>
-            <View style={styles.locationContainer}>
-              <Ionicons name="location" size={16} color="#16A9B8" />
-              {location ? (
-                <Text style={styles.locationText}>
-                  {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
-                </Text>
-              ) : (
-                <Text style={styles.noLocationText}>No location set</Text>
-              )}
-            </View>
-
-            <View style={styles.statsContainer}>
-              <View style={styles.statBadge}>
-                <Ionicons name="cube" size={16} color="#A4C639" />
-                <Text style={styles.statText}>{items.length} Items</Text>
-              </View>
-            </View>
-          </View>
-        </LinearGradient>
+</LinearGradient>
 
         {/* Action Buttons Row */}
         <View style={styles.actionRow}>
@@ -901,43 +964,6 @@ const deleteDealHandler = async (dealId: string) => {
           </LinearGradient>
         </View>
       ))}
-
-      {/* Voice Listening Indicator */}
-{isListening && (
-  <View style={styles.voiceListeningBubble}>
-    <Text style={styles.voiceListeningText}>🎧 Listening...</Text>
-  </View>
-)}
-
-{/* Voice Transcript Bubble */}
-{voiceTranscript && (
-  <View style={styles.voiceTranscriptBubble}>
-    <View style={styles.voiceTranscriptHeader}>
-      <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
-      <Text style={styles.voiceTranscriptLabel}>Heard</Text>
-    </View>
-    <Text style={styles.voiceTranscriptText}>"{voiceTranscript}"</Text>
-  </View>
-)}
-
-{/* Voice FAB Button */}
-<TouchableOpacity
-  onPress={isListening ? () => {
-    setIsListening(false);
-    if (window._storeRecognition) window._storeRecognition.stop();
-  } : startVoiceRecognition}
-  activeOpacity={0.8}
-  style={[
-    styles.voiceFab,
-    isListening && styles.voiceFabActive
-  ]}
->
-  <Ionicons 
-    name={isListening ? "mic-off" : "mic"} 
-    size={28} 
-    color="#fff" 
-  />
-</TouchableOpacity>
 
     </ScrollView>
   </View>
@@ -1754,6 +1780,40 @@ const deleteDealHandler = async (dealId: string) => {
         </Modal>
 
         
+      {/* Voice Listening Indicator */}
+{isListening && (
+  <View style={styles.voiceListeningBubble}>
+    <Text style={styles.voiceListeningText}>🎧 Listening...</Text>
+  </View>
+)}
+
+{/* Voice Transcript Bubble */}
+{voiceTranscript && (
+  <View style={styles.voiceTranscriptBubble}>
+    <View style={styles.voiceTranscriptHeader}>
+      <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
+      <Text style={styles.voiceTranscriptLabel}>Heard</Text>
+    </View>
+    <Text style={styles.voiceTranscriptText}>"{voiceTranscript}"</Text>
+  </View>
+)}
+
+{/* Voice FAB Button */}
+<TouchableOpacity
+  onPress={isListening ? stopVoiceRecognition : startVoiceRecognition}
+  activeOpacity={0.8}
+  style={[
+    styles.voiceFab,
+    isListening && styles.voiceFabActive
+  ]}
+>
+  <Ionicons 
+    name={isListening ? "mic-off" : "mic"} 
+    size={28} 
+    color="#fff" 
+  />
+</TouchableOpacity>
+
 </ScrollView>
     </>
   );
@@ -1795,9 +1855,9 @@ const styles = StyleSheet.create({
     color: "white",
   },
 
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
+ header: {
+    paddingHorizontal: 16, // ✅ Reduced from 20 for mobile
+    paddingTop: Platform.OS === 'ios' ? 50 : 40, // ✅ Adjust for status bar
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -1819,12 +1879,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1, // ✅ Allow it to shrink
+    marginRight: 8, // ✅ Space before logout button
   },
 
+
   storeIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48, // ✅ Reduced from 56 for mobile
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     justifyContent: "center",
     alignItems: "center",
@@ -1833,17 +1896,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    flexShrink: 0, // ✅ Prevent icon from shrinking
+  },
+
+  // ✅ NEW: Container for store name to handle overflow
+  storeNameContainer: {
+    flex: 1, // ✅ Take remaining space
+    marginRight: 4,
   },
 
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20, // ✅ Reduced from 24 for mobile
     fontWeight: "800",
     color: "white",
     marginBottom: 2,
+    flexShrink: 1, // ✅ Allow text to shrink if needed
   },
 
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 13, // ✅ Reduced from 14
     color: "rgba(255, 255, 255, 0.9)",
     fontWeight: "500",
   },
@@ -1860,6 +1931,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    flexShrink: 0, // ✅ Prevent button from shrinking
   },
 
   headerBottom: {
@@ -1869,50 +1941,74 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.2)",
+    flexWrap: "wrap", // ✅ Wrap on small screens
+    gap: 8, // ✅ Add spacing when wrapped
   },
 
   locationContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10, // ✅ Reduced from 12
+    paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
+    maxWidth: "60%", // ✅ Prevent overflow
   },
 
   locationText: {
-    fontSize: 12,
+    fontSize: 11, // ✅ Reduced from 12
     fontWeight: "600",
     color: "#16A9B8",
-    fontFamily: "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    flexShrink: 1,
   },
 
   noLocationText: {
-    fontSize: 12,
+    fontSize: 11, // ✅ Reduced from 12
     fontWeight: "500",
     color: "#64748B",
   },
+
+
 
   statsContainer: {
     flexDirection: "row",
     gap: 12,
   },
 
-  statBadge: {
+statBadge: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10, // ✅ Reduced from 12
     paddingVertical: 6,
     borderRadius: 8,
     gap: 6,
   },
 
   statText: {
-    fontSize: 13,
+    fontSize: 12, // ✅ Reduced from 13
     fontWeight: "600",
     color: "#A4C639",
+  },
+
+  // Modal styles remain the same
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16, // ✅ Add padding for mobile
+  },
+
+  modalContainer: {
+    width: "90%", // ✅ Responsive width
+    maxWidth: 400, // ✅ Max width for larger screens
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
   },
 
   actionRow: {
@@ -2323,12 +2419,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.2)",
-  justifyContent: "center",
-  alignItems: "center",
-},
 
   addItemModal: {
     width: "90%",
@@ -2392,10 +2482,11 @@ modalOverlay: {
   },
 
   modalTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 4,
+    marginBottom: 8,
+    textAlign: "center",
   },
 
   modalSubtitle: {
@@ -2414,10 +2505,18 @@ modalOverlay: {
     maxHeight: 350,
   },
 
+modalMessage: {
+    fontSize: 14,
+    color: "#475569",
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+
   modalActions: {
     flexDirection: "row",
+    width: "100%",
     gap: 12,
-    marginTop: 20,
   },
 
   modalCancelBtn: {
@@ -2575,20 +2674,6 @@ modalOverlay: {
     gap: 2,
   },
 
-modalContainer: {
-  width: "85%",
-  backgroundColor: "#fff",
-  borderRadius: 16,
-  padding: 20,
-  alignItems: "center",
-},
-
-modalMessage: {
-  fontSize: 15,
-  color: "#475569",
-  textAlign: "center",
-  marginBottom: 20,
-},
 
 modalButton: {
   flex: 1,
@@ -2597,7 +2682,6 @@ modalButton: {
   alignItems: "center",
 },
 cancelBtn: { backgroundColor: "#E2E8F0" },
-modalCancelText: { color: "#1E293B", fontWeight: "600" },
 modalDeleteText: { color: "#fff", fontWeight: "600" },
 
 // Add these to your existing styles object
