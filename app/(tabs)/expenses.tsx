@@ -312,6 +312,7 @@ const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
 
 
 const [hasSpokenHint, setHasSpokenHint] = useState(false);
+const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
 useEffect(() => {
   if (Platform.OS === "web") {
@@ -522,19 +523,24 @@ const startVoiceRecognition = async () => {
     recognition.continuous = false;
 
     recognition.onstart = () => {
-      setIsListening(true);
-      setVoiceTranscript("");
-      console.log("🎧 Listening...");
-      // ✅ Delay slightly so mic is fully ready before TTS starts
-  setTimeout(() => {
-    Speech.speak(
-      "Listening... You can say something like add one hundred food note burger.",
-      {
-        language: "en-US",
-        rate: 1.0,
-      }
-    );
-  }, 500); // 500–700ms works best across Android and iOS
+  setIsListening(true);
+  setVoiceTranscript("");
+  console.log("🎧 Listening...");
+
+  if (!hasSpokenHint) {
+    setHasSpokenHint(true);
+    setTimeout(() => {
+      Speech.speak(
+        "Listening... You can say something like add one hundred food note burger.",
+        {
+          language: "en-US",
+          rate: 1.0,
+        }
+      );
+    }, 500);
+  } else {
+    console.log("ℹ️ Hint already spoken this session");
+  }
 };
 
     recognition.onresult = (event: any) => {
@@ -707,6 +713,18 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
 
   return parsed;
 }
+
+// 🧠 Track and reset spoken hint when account changes
+useEffect(() => {
+  (async () => {
+    const token = await getToken();
+    if (token?.id !== currentUserId) {
+      setCurrentUserId(token?.id || null);
+      setHasSpokenHint(false);
+      console.log("🔄 Reset voice hint (new user or logout)");
+    }
+  })();
+}, [currentUserId]);
 
 
   function getPeriodDateRange(period: string, startDate: Date | null, endDate: Date | null) {
@@ -1129,6 +1147,7 @@ async function pickFromGallery() {
     Alert.alert("Error", "Failed to open gallery. Please try again.");
   }
 }
+
 
 useEffect(() => {
   if (voiceTranscript) {
