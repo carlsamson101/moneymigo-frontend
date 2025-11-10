@@ -709,7 +709,7 @@ const BudgetPieChart = ({ categories, getBudgetForCategory, OTHERS_KEY, totalBud
 
   const hasData = chartData.some((d) => d.value > 0);
   if (!hasData) {
-    chartData.push({ name: "No Allocations Yet", value: 1, color: "#fff8f8ff" });
+    chartData.push({ name: "No Allocations Yet", value: 1, color: "#656363ff" });
   }
 
   /* 💻 Web version */
@@ -747,7 +747,7 @@ const BudgetPieChart = ({ categories, getBudgetForCategory, OTHERS_KEY, totalBud
                   return [`₱${value.toLocaleString()} (${percent}%)`, name];
                 }}
                 contentStyle={{
-                  backgroundColor: "#222",
+                  backgroundColor: "#969292ff",
                   border: "none",
                   borderRadius: 8,
                   color: "#fff",

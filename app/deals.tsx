@@ -239,7 +239,7 @@ const onRefresh = () => {
   {/* 🧠 Input */}
   <TextInput
     style={styles.searchInput}
-    placeholder="Search items or say 'show food deals'..."
+    placeholder="Search items'..."
     placeholderTextColor="#9CA3AF"
     value={q}
     onChangeText={setQ}

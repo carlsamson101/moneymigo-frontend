@@ -229,6 +229,20 @@ export default function ExpensesPage() {
 
 
 
+  useEffect(() => {
+  if (Platform.OS === "web") {
+    // 🔈 Light-touch priming so Chrome unlocks audio context
+    const audio = new AudioContext();
+    const resume = () => {
+      if (audio.state === "suspended") {
+        audio.resume();
+      }
+      window.removeEventListener("click", resume);
+    };
+    window.addEventListener("click", resume);
+  }
+}, []);
+
 const [isListening, setIsListening] = useState(false);
 const [voiceTranscript, setVoiceTranscript] = useState("");
 
@@ -445,7 +459,7 @@ const startVoiceRecognition = async () => {
   }
 
   try {
-    // 🔐 Request microphone permission
+    // 🧩 Ensure permissions
     if (navigator.permissions) {
       const permissionStatus = await navigator.permissions.query({ name: "microphone" });
       if (permissionStatus.state === "denied") {
@@ -455,54 +469,58 @@ const startVoiceRecognition = async () => {
         );
         return;
       }
+
       if (permissionStatus.state !== "granted") {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((t) => t.stop());
       }
     }
 
-    // 💬 Speak the hint *only once*, but don’t stop future clicks
-    if (!hasShownTip) {
-      setShowVoiceTip(true);
-      setHasShownTip(true);
-
-      Speech.speak(
-        "You can say something like: add one hundred food note burger. The format is add plus amount plus category plus note. Note is optional.",
-        { language: "en-US", rate: 1.3 }
-      );
-
-      // hide the hint after 3.5 seconds
-      setTimeout(() => setShowVoiceTip(false), 3500);
-      // ❌ Remove this line:
-      // return;   <-- this was stopping later clicks from working
+    const supported = await SpeechRecognition.isAvailableAsync();
+    if (!supported) {
+      Alert.alert("Not Supported", "Your browser does not support speech recognition.");
+      return;
     }
 
-    // 🎧 Start listening
-    setIsListening(true);
+    // 🧹 Reset previous listener if any
+    SpeechRecognition.removeAllListeners();
     setVoiceTranscript("");
+    setIsListening(true);
 
-    await SpeechRecognition.startAsync({ lang: "en-US", interimResults: false });
-    console.log("✅ Listening started");
-
-    // Auto-stop after 4 seconds
-    setTimeout(async () => {
-      await SpeechRecognition.stopAsync();
-      console.log("🛑 Listening stopped (auto)");
-    }, 4000);
-
-    SpeechRecognition.addListener("onResult", (event) => {
-      const text = event.transcription;
-      console.log("🎤 Voice recognized:", text);
-      setVoiceTranscript(text);
-      applyParsedVoice(text);
-      setIsListening(false);
+    // 🗣️ Small delay before listening
+    Speech.speak("Listening. You can say something like add one hundred food note burger.", {
+      language: "en-US",
+      rate: 1.0,
     });
+
+    setTimeout(async () => {
+      try {
+        const result = await SpeechRecognition.startAsync({
+          lang: "en-US",
+          interimResults: false,
+        });
+
+        if (result?.results?.[0]) {
+          const spokenText = result.results[0].transcript.trim();
+          console.log("🎤 Recognized:", spokenText);
+          setVoiceTranscript(spokenText);
+          applyParsedVoice(spokenText);
+        } else {
+          Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
+        }
+      } catch (innerErr) {
+        console.error("❌ Voice recognition error:", innerErr);
+        Alert.alert("Error", "Unable to start voice recognition.");
+      } finally {
+        setIsListening(false);
+      }
+    }, 1000);
   } catch (err) {
-    console.error("❌ Failed to start voice recognition:", err);
+    console.error("❌ Speech error:", err);
+    Alert.alert("Error", "Something went wrong while accessing the microphone.");
     setIsListening(false);
   }
 };
-
 
 
 async function applyParsedVoice(command: string) {
