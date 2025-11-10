@@ -250,17 +250,6 @@ useEffect(() => {
   }
 }, []);
 
-useEffect(() => {
-  if (Platform.OS === "web") {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const unlock = () => {
-      if (ctx.state === "suspended") ctx.resume();
-      window.removeEventListener("click", unlock);
-    };
-    window.addEventListener("click", unlock);
-  }
-}, []);
-
 const [isListening, setIsListening] = useState(false);
 const [voiceTranscript, setVoiceTranscript] = useState("");
 
@@ -317,6 +306,17 @@ const [ocrDetectedCategory, setOcrDetectedCategory] = useState("Others");
 
 
 const [hasSpokenHint, setHasSpokenHint] = useState(false);
+
+useEffect(() => {
+  if (Platform.OS === "web") {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const unlock = () => {
+      if (ctx.state === "suspended") ctx.resume();
+      window.removeEventListener("click", unlock);
+    };
+    window.addEventListener("click", unlock);
+  }
+}, []);
 
 useEffect(() => {
   // don't speak automatically — wait for user action
@@ -467,30 +467,36 @@ function splitIntoClauses(text: string): string[] {
 const startVoiceRecognition = async () => {
   console.log("🎤 Voice button clicked");
 
-  const isMobileWeb =
-    Platform.OS === "web" && /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
-
-  if (!isMobileWeb) {
+  if (Platform.OS !== "web") {
     Alert.alert(
       "🎙️ Voice Input Unavailable",
-      "Speech recognition works only on mobile browsers (e.g., Chrome or Safari).\n\nAccess it at https://moneymigo-6qx2.onrender.com"
+      "Voice recognition works only in the web version (mobile Chrome/Safari)."
     );
     return;
   }
 
   try {
-    // ✅ Stop any previous recognition
+    const isMobileWeb = /Mobile|iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (!isMobileWeb) {
+      Alert.alert("🎙️ Voice Input", "Try using mobile Chrome or Safari browser.");
+      return;
+    }
+
+    // 🧹 Stop any ongoing recognition
     try {
       await SpeechRecognition.stopAsync();
-      SpeechRecognition.removeAllListeners();
     } catch {}
 
-    // ✅ Ask for mic access
+    // 🎤 Request mic permission
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((t) => t.stop());
-    console.log("✅ Microphone ready");
+    console.log("✅ Microphone access granted");
 
-    // ✅ Verify SpeechRecognition availability
+    // 🧠 Ensure speech synthesis isn’t running
+    try {
+      await Speech.stop();
+    } catch {}
+
     const supported = await SpeechRecognition.isAvailableAsync();
     if (!supported) {
       Alert.alert("Not Supported", "Your browser does not support speech recognition.");
@@ -499,42 +505,40 @@ const startVoiceRecognition = async () => {
 
     setVoiceTranscript("");
     setIsListening(true);
+    console.log("🎧 Listening...");
 
-    console.log("🎧 Starting recognition...");
-    const resultPromise = SpeechRecognition.startAsync({
+    // 🎙 Start listening immediately — no delay, no speech conflict
+    const result = await SpeechRecognition.startAsync({
       lang: "en-US",
       interimResults: false,
     });
 
-    // 🕐 Delay the speech hint slightly AFTER mic starts
-    setTimeout(() => {
-      Speech.speak("Listening... You can say add one hundred food note burger.", {
-        language: "en-US",
-        rate: 1.0,
-      });
-    }, 500);
-
-    const result = await resultPromise;
-    console.log("🎤 Recognition result:", result);
+    console.log("🗣️ Voice result:", result);
 
     if (result?.results?.[0]) {
       const spokenText = result.results[0].transcript.trim();
       setVoiceTranscript(spokenText);
       applyParsedVoice(spokenText);
+
+      // ✅ Speak feedback *after* mic is done
+      Speech.speak(`Got it. You said ${spokenText}`, {
+        language: "en-US",
+        rate: 1.0,
+      });
     } else {
       Speech.speak("Sorry, I didn’t catch that.", { language: "en-US" });
     }
   } catch (err) {
     console.error("❌ Voice error:", err);
-    Alert.alert("Error", "Failed to start voice recognition.");
+    Alert.alert("Error", "Failed to start voice recognition. Please try again.");
   } finally {
     setIsListening(false);
     try {
       await SpeechRecognition.stopAsync();
-      SpeechRecognition.removeAllListeners();
     } catch {}
   }
 };
+
 
 
 
@@ -1671,7 +1675,7 @@ const HistorySection = (
               Platform.OS === 'web' && styles.headerRowWeb
             ]}
           >
-            {Platform.OS !== 'web' && (
+            {Platform.OS == 'web' && (
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
@@ -2973,7 +2977,7 @@ const HistorySection = (
   activeOpacity={0.8}
   style={{
     position: "absolute",
-    bottom: isMobile ? 60 : 5,
+    bottom: isMobile ? 60 : 10,
     right: 16,
     backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
     borderRadius: 50,

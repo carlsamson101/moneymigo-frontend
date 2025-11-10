@@ -880,15 +880,17 @@ return (
   <View style={styles.backgroundCircle1} />
   <View style={styles.backgroundCircle2} />
   
-  {Platform.OS == "web" && (
-     <TouchableOpacity
-          style={styles.backButton}
-            onPress={() => router.back()}
-          activeOpacity={0.8}
-             >
-             <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-  )}
+              
+                <TouchableOpacity 
+                 style={styles.backButton}
+                 onPress={() => router.push("/")}
+                 activeOpacity={0.7}
+               >
+                 <View style={styles.backButtonCircle}>
+                   <Ionicons name="arrow-back" size={20} color="#e4e8efff" />
+                 </View>
+               </TouchableOpacity>
+  
 
   <View style={styles.headerContent}>
     {/* Compact Title Section */}

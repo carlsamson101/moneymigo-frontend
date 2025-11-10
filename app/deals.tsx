@@ -211,7 +211,7 @@ const onRefresh = () => {
     {/* Header - Fixed at top */}
     <LinearGradient colors={['#1f4b81ff', '#7fb1d6ff']} style={styles.header}>
       <View style={styles.headerRow}>
-        {isMobile && (
+        
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
@@ -219,7 +219,7 @@ const onRefresh = () => {
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-        )}
+        
         
         <View style={styles.headerContent}>
           <Text style={styles.title}>Marketplace</Text>

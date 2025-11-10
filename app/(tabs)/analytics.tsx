@@ -310,7 +310,7 @@ const getSpendingHealth = () => {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        {Platform.OS == "web" && (
+       
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.push("/")}
@@ -320,7 +320,7 @@ const getSpendingHealth = () => {
               <Ionicons name="arrow-back" size={20} color="#e4e8efff" />
             </View>
           </TouchableOpacity>
-        )}
+        
         
         <View style={styles.headerContent}>
           <Text style={styles.title}>Tracker</Text>
