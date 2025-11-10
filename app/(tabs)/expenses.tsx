@@ -257,6 +257,8 @@ useEffect(() => {
 }, []);
 
 const [isListening, setIsListening] = useState(false);
+const [assistantMood, setAssistantMood] = useState("neutral"); 
+
 const [voiceTranscript, setVoiceTranscript] = useState("");
 
   const router = useRouter();
@@ -485,6 +487,88 @@ if (Platform.OS === "web") {
   };
 }
 
+ // 🎤 Warm up speech synthesis early (avoids lag)
+  useEffect(() => {
+    Speech.speak("", { language: "en-US" }); // pre-initialize speech engine
+  }, []);
+
+
+  function handleVoiceConversation(spokenText) {
+  const lower = spokenText.toLowerCase();
+
+  // 👋 Greetings
+  if (/(hi|hello|hey)/.test(lower)) {
+    Speech.speak(
+      "Hey there! I’m happy to see you again. You can add an expense by saying something like, add 150 food note lunch.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  // ❓ Asking for help or guidance
+  if (/(what can i do|help|how to use|what do i say|guide me)/.test(lower)) {
+    Speech.speak(
+      "I can help you track expenses. Try saying add one hundred food note burger, or add fifty transport note jeep.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  // 💰 Budget inquiry
+  if (/(budget|how much|spent|left)/.test(lower)) {
+    Speech.speak(
+      "You can check your remaining budget right here in the Budget Overview section.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  // 🧾 Receipt scanning
+  if (/(receipt|scan)/.test(lower)) {
+    Speech.speak(
+      "You can tap the scan receipt button to take a picture or upload one, and I’ll read the amount for you automatically.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  if (/(someone doesn.?t like me|nobody likes me|i'm sad|im sad|i feel lonely|feeling down)/.test(lower)) {
+  setAssistantMood("comforting");
+  Speech.speak(
+    "Hey, I’m really sorry you feel that way. Remember, not everyone will see your worth — but that doesn’t mean you’re not valuable.",
+    { language: "en-US", rate: 0.95 }
+  );
+  setTimeout(() => {
+    Speech.speak("Take a deep breath, okay? You’ve got this. I believe in you.", {
+      language: "en-US",
+      rate: 0.95,
+    });
+  }, 3500);
+  return true;
+}
+
+if (/(tired|stressed|anxious|worried)/.test(lower)) {
+  setAssistantMood("comforting");
+  Speech.speak(
+    "I know things can be overwhelming sometimes. You’re doing better than you think. Take a short break — maybe grab some water or stretch a bit.",
+    { language: "en-US", rate: 0.95 }
+  );
+  return true;
+}
+
+  // 🤷 Default fallback
+  if (/(how are you|who are you)/.test(lower)) {
+    Speech.speak(
+      "I’m your MoneyMigo assistant — here to help you manage your expenses and remind you to take care of yourself too.",
+      { language: "en-US", rate: 1.0 }
+    );
+    return true;
+  }
+
+  return false; // Not handled → let applyParsedVoice run
+}
+
+
 
 const startVoiceRecognition = async () => {
   console.log("🎤 Voice button clicked");
@@ -522,33 +606,36 @@ const startVoiceRecognition = async () => {
     recognition.interimResults = false;
     recognition.continuous = false;
 
-    recognition.onstart = () => {
+   recognition.onstart = () => {
   setIsListening(true);
   setVoiceTranscript("");
   console.log("🎧 Listening...");
+
+  Speech.speak("Listening...", { language: "en-US", rate: 1.0 });
 
   if (!hasSpokenHint) {
     setHasSpokenHint(true);
     setTimeout(() => {
       Speech.speak(
-        "Listening... You can say something like add one hundred food note burger.",
-        {
-          language: "en-US",
-          rate: 1.0,
-        }
+        "You can say something like add one hundred food note burger.",
+        { language: "en-US", rate: 1.0 }
       );
-    }, 500);
-  } else {
-    console.log("ℹ️ Hint already spoken this session");
+    }, 700);
   }
 };
 
-    recognition.onresult = (event: any) => {
-      const spokenText = event.results[0][0].transcript.trim();
-      console.log("🗣️ Heard:", spokenText);
-      setVoiceTranscript(spokenText);
-      applyParsedVoice(spokenText);
-    };
+    recognition.onresult = (event) => {
+  const spokenText = event.results[0][0].transcript.trim();
+  console.log("🗣️ Heard:", spokenText);
+  setVoiceTranscript(spokenText);
+
+  // 🧠 First, check if it's a conversational query
+  const handled = handleVoiceConversation(spokenText);
+  if (!handled) {
+    // Otherwise, treat as expense command
+    applyParsedVoice(spokenText);
+  }
+};
 
     recognition.onerror = (err: any) => {
       console.error("❌ Recognition error:", err);
