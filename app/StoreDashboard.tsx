@@ -427,6 +427,18 @@ const startVoiceRecognition = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(t => t.stop());
 
+    // ✅ Speak welcome message BEFORE starting recognition (only first time)
+    if (!hasSpokenHint) {
+      setHasSpokenHint(true);
+      speakWeb(
+        "Welcome to your store! I'm your store assistant, designed to make your job easier. To add items, say: add item name at price per unit and category",
+        { language: "en-US", rate: 1.2 }
+      );
+      
+      // ✅ Wait for speech to finish before starting mic
+      await new Promise(resolve => setTimeout(resolve, 4500));
+    }
+
     const recognition = new SpeechRecognition();
     window._storeRecognition = recognition;
 
@@ -434,26 +446,13 @@ const startVoiceRecognition = async () => {
     recognition.interimResults = false;
     recognition.continuous = false;
 
-    let timeoutId = null;
-
     recognition.onstart = () => {
       setIsListening(true);
       setVoiceTranscript("");
       console.log("🎧 Listening...");
-
-      if (!hasSpokenHint) {
-        setHasSpokenHint(true);
-        timeoutId = setTimeout(() => {
-         speakWeb(
-          "Welcome to your store! I'm your store assistant, designed to make your job easier. To add items, say: add [item name] at [price] per [unit] and [category]",
-          { language: "en-US", rate: 1.2 }
-          );
-        }, 4000);
-      }
     };
 
     recognition.onresult = (event) => {
-      if (timeoutId) clearTimeout(timeoutId);
       const spokenText = event.results[0][0].transcript.trim();
       console.log("🗣️ Heard:", spokenText);
       setVoiceTranscript(spokenText);
@@ -483,6 +482,7 @@ const startVoiceRecognition = async () => {
     setIsListening(false);
   }
 };
+
 
 // Helper to stop recognition safely
 const stopVoiceRecognition = () => {
