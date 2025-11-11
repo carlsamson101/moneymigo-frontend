@@ -445,8 +445,7 @@ const startVoiceRecognition = async () => {
         setHasSpokenHint(true);
         timeoutId = setTimeout(() => {
          speakWeb(
-            "Say: add item name at price per unit and category",
-            { language: "en-US", rate: 1.2 }
+          "Welcome to your store! 👋 I'm your store assistant, designed to make your job easier. To add items, say: add [item name] at [price] per [unit] and [category]"            { language: "en-US", rate: 1.2 }
           );
         }, 1000);
       }
