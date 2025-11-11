@@ -1837,7 +1837,29 @@ const deleteDealHandler = async (dealId: string) => {
   </View>
 )}
 
-{/* Voice FAB Button */}
+
+
+</ScrollView>
+
+{/* Voice Listening Indicator */}
+{isListening && (
+  <View style={styles.voiceListeningBubble}>
+    <Text style={styles.voiceListeningText}>🎧 Listening...</Text>
+  </View>
+)}
+
+{/* Voice Transcript Bubble */}
+{voiceTranscript && (
+  <View style={styles.voiceTranscriptBubble}>
+    <View style={styles.voiceTranscriptHeader}>
+      <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
+      <Text style={styles.voiceTranscriptLabel}>Heard</Text>
+    </View>
+    <Text style={styles.voiceTranscriptText}>"{voiceTranscript}"</Text>
+  </View>
+)}
+
+{/* Voice FAB Button - NOW OUTSIDE ScrollView */}
 <TouchableOpacity
   onPress={isListening ? stopVoiceRecognition : startVoiceRecognition}
   activeOpacity={0.8}
@@ -1852,8 +1874,6 @@ const deleteDealHandler = async (dealId: string) => {
     color="#fff" 
   />
 </TouchableOpacity>
-
-</ScrollView>
     </>
   );
 };
@@ -2941,23 +2961,23 @@ voiceTranscriptText: {
   lineHeight: 18,
 },
 voiceFab: {
-  position: "absolute",
-  bottom: 30,
+  position: 'absolute',
+  bottom: 20,
   right: 20,
-  backgroundColor: "#0D7C8A",
-  borderRadius: 50,
-  width: 56,
-  height: 56,
-  alignItems: "center",
-  justifyContent: "center",
-  shadowColor: "#000",
-  shadowOpacity: 0.3,
-  shadowOffset: { width: 0, height: 4 },
-  shadowRadius: 8,
-  elevation: 5,
-  zIndex: 999,
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: '#007AFF',
+  justifyContent: 'center',
+  alignItems: 'center',
+  elevation: 5, // Android shadow
+  shadowColor: '#000', // iOS shadow
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 3.84,
+  zIndex: 999, // Ensures it stays on top
 },
 voiceFabActive: {
-  backgroundColor: "#94A3B8",
+  backgroundColor: '#FF3B30',
 },
 });
