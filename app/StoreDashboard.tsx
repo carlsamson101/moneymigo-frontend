@@ -1818,27 +1818,6 @@ const deleteDealHandler = async (dealId: string) => {
           </Pressable>
         </Modal>
 
-        
-      {/* Voice Listening Indicator */}
-{isListening && (
-  <View style={styles.voiceListeningBubble}>
-    <Text style={styles.voiceListeningText}>🎧 Listening...</Text>
-  </View>
-)}
-
-{/* Voice Transcript Bubble */}
-{voiceTranscript && (
-  <View style={styles.voiceTranscriptBubble}>
-    <View style={styles.voiceTranscriptHeader}>
-      <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
-      <Text style={styles.voiceTranscriptLabel}>Heard</Text>
-    </View>
-    <Text style={styles.voiceTranscriptText}>"{voiceTranscript}"</Text>
-  </View>
-)}
-
-
-
 </ScrollView>
 
 {/* Voice Listening Indicator */}
