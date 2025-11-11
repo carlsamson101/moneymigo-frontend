@@ -432,11 +432,11 @@ const startVoiceRecognition = async () => {
       setHasSpokenHint(true);
       speakWeb(
         "Welcome to your store! I'm your store assistant, designed to make your job easier. To add items, say: add item name at price per unit and category",
-        { language: "en-US", rate: 1.2 }
+        { language: "en-US", rate: 1.4 }
       );
       
       // ✅ Wait for speech to finish before starting mic
-      await new Promise(resolve => setTimeout(resolve, 4500));
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
     const recognition = new SpeechRecognition();
