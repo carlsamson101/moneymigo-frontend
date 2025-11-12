@@ -886,6 +886,8 @@ const deleteDealHandler = async (dealId: string) => {
   <Ionicons name="log-out-outline" size={20} color="#EF4444" />
 </TouchableOpacity>
 
+ </View> 
+
 {/* ===== Logout Confirmation Modal ===== */}
 <Modal transparent visible={confirmVisible} animationType="fade">
   <View style={styles.modalOverlay}>
@@ -2750,10 +2752,6 @@ modalMessage: {
     color: "white",
   },
 
-
-  
-  
-  
   imageGradient: {
     flex: 1,
     justifyContent: "center",
