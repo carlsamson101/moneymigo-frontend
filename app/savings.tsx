@@ -570,15 +570,14 @@ const getCumulativeHistory = (goal) => {
 >
   {/* Navigation Row */}
   <View style={[styles.headerRow, Platform.OS === 'web' && styles.headerRowWeb]}>
-    {Platform.OS == 'web' && (
-      <TouchableOpacity
+=      <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
         <Ionicons name="arrow-back" size={24} color="#ffffff" />
       </TouchableOpacity>
-    )}
+    
     <Text style={styles.mainHeading}>Savings Goals</Text>
   </View>
 

@@ -234,7 +234,6 @@ export default function AppInfoPage() {
               <Ionicons name="download" size={28} color="#FFFFFF" />
               <View style={styles.downloadCTAText}>
                 <Text style={styles.downloadCTATitle}>Download APK Now</Text>
-                <Text style={styles.downloadCTASubtitle}>Free • 25MB • Android 5.0+</Text>
               </View>
             </View>
             <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
@@ -272,7 +271,7 @@ export default function AppInfoPage() {
             <View style={styles.stepNumber}>
               <Text style={styles.stepNumberText}>4</Text>
             </View>
-            <Text style={styles.stepText}>Enjoy the premium experience! 🎉</Text>
+            <Text style={styles.stepText}>Enjoy the premium experience! </Text>
           </View>
         </View>
       </ScrollView>

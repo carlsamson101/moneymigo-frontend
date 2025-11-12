@@ -138,7 +138,6 @@ export default function FinancialTipsPage() {
     Platform.OS === 'web' && styles.headerRowWeb
   ]}
 >
-  {Platform.OS == 'web' && (
     <TouchableOpacity
       style={styles.backButton}
       onPress={handleBackPress}
@@ -146,7 +145,7 @@ export default function FinancialTipsPage() {
     >
       <Ionicons name="arrow-back" size={24} color="#ffffff" />
     </TouchableOpacity>
-  )}
+  
 
   <Text style={styles.mainHeading}>Financial Tips</Text>
 </View>

@@ -2202,7 +2202,6 @@ const HistorySection = (
               Platform.OS === 'web' && styles.headerRowWeb
             ]}
           >
-            {Platform.OS == 'web' && (
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
@@ -2210,7 +2209,7 @@ const HistorySection = (
               >
                 <Ionicons name="arrow-back" size={24} color="#ffffff" />
               </TouchableOpacity>
-            )}
+            
 
             <Text style={styles.mainHeading}>Expenses</Text>
           </View>
