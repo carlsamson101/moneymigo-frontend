@@ -229,7 +229,7 @@ const [hasSpokenHint, setHasSpokenHint] = useState(false);
   try {
     await AsyncStorage.multiRemove(["storeToken", "storeName"]);
     Alert.alert("Logged out", "You’ve been signed out successfully.");
-    router.replace("/StoreAuth"); // or whatever your login route is
+    router.replace("/storeAuth"); // or whatever your login route is
   } catch (err) {
     console.error("Logout error:", err);
     Alert.alert("Error", "Failed to log out properly.");
