@@ -23,7 +23,7 @@ LogBox.ignoreLogs([
     Alert,
   } from 'react-native';
   import { Ionicons, MaterialIcons} from '@expo/vector-icons';
-  import { MaterialCommunityIcons } from '@expo/vector-icons';
+  import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
   import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getBudgetHistory } from '../../lib/api';
 import { Image } from "react-native";
@@ -1947,6 +1947,7 @@ useEffect(() => {
 </View>
 
          {/* Dropdown Menu */}
+{/* Professional Dropdown Menu */}
 <Modal
   visible={menuVisible}
   transparent
@@ -1955,12 +1956,15 @@ useEffect(() => {
 >
   <Pressable style={styles.modalOverlayProfile} onPress={() => setMenuVisible(false)}>
     <View style={styles.menuDropdownProfile}>
+      
       <TouchableOpacity 
         style={styles.menuItemContainer}
         onPress={() => { router.push('/profile'); setMenuVisible(false); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.menuIcon}>👤</Text>
+        <View style={styles.iconWrapper}>
+          <Ionicons name="person-outline" size={20} color="#4B5563" />
+        </View>
         <Text style={styles.menuItemText}>Manage Profile</Text>
       </TouchableOpacity>
 
@@ -1969,8 +1973,21 @@ useEffect(() => {
         onPress={() => { router.push("/gettingStarted"); setMenuVisible(false); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.menuIcon}>✨</Text>
+        <View style={styles.iconWrapper}>
+          <Ionicons name="rocket-outline" size={20} color="#4B5563" />
+        </View>
         <Text style={styles.menuItemText}>Getting Started</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItemContainer}
+        onPress={() => { router.push("/downloadPage"); setMenuVisible(false); }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.iconWrapper}>
+          <Ionicons name="download-outline" size={20} color="#4B5563" />
+        </View>
+        <Text style={styles.menuItemText}>Download App</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -1978,19 +1995,23 @@ useEffect(() => {
         onPress={() => { router.push("/feedbacksurvey"); setMenuVisible(false); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.menuIcon}>📝</Text>
-        <Text style={styles.menuItemText}> Feedback & Survey</Text>
+        <View style={styles.iconWrapper}>
+          <MaterialIcons name="feedback" size={20} color="#4B5563" />
+        </View>
+        <Text style={styles.menuItemText}>Feedback & Survey</Text>
       </TouchableOpacity>
       
       <View style={styles.menuDivider} />
       
       <TouchableOpacity
-        style={styles.menuItemContainer}
+        style={[styles.menuItemContainer, styles.logoutButton]}
         onPress={() => { setMenuVisible(false); logout(); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.menuIcon}>🚪</Text>
-        <Text style={[styles.menuItemText, { color: '#DC2626' }]}>Logout</Text>
+        <View style={[styles.iconWrapper, styles.logoutIconWrapper]}>
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+        </View>
+        <Text style={[styles.menuItemText, styles.logoutText]}>Logout</Text>
       </TouchableOpacity>
     </View>
   </Pressable>
@@ -4914,25 +4935,66 @@ menuDivider: {
   marginHorizontal: 12,
 },
 
- modalOverlayProfile: {
+  modalOverlayProfile: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-start',
+    alignItems: 'flex-start',
     paddingTop: 60,
     paddingLeft: 16,
   },
   menuDropdownProfile: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    width: 220,
-    shadowColor: '#1f4b81',
+    paddingVertical: 8,
+    minWidth: 240,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: '#d1e3f5',
-    overflow: 'hidden',
+  },
+  menuItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 6,
+    borderRadius: 8,
+    minHeight: 48,
+    backgroundColor: 'transparent',
+  },
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1F2937',
+    flex: 1,
+    letterSpacing: 0.2,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+    marginHorizontal: 16,
+  },
+  logoutButton: {
+    backgroundColor: '#FEF2F2',
+  },
+  logoutIconWrapper: {
+    backgroundColor: '#FEE2E2',
+  },
+  logoutText: {
+    color: '#DC2626',
+    fontWeight: '600',
   },
 });
 

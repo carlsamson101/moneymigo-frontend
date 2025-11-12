@@ -1035,8 +1035,7 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
     // add 120 food note lunch
     // add 120 to food note lunch
     // add 120 to food yesterday note dinner
-   const match = lower.match(/add\s+(\d+(?:\.\d+)?)\s*(?:to|in)?\s*([a-zA-Z ]+)?(?:\s+(yesterday|today))?(?:\s+note\s+(.+))?/i);
-
+    const match = lower.match(/add\s+(\d+(?:\.\d+)?)\s*(?:to|in)?\s*([a-zA-Z ]+)?(?:\s+(yesterday|today))?(?:\s+note\s+(.+))?/i);
 
     let amount: number | null = null;
     let category = "Others";
@@ -1045,11 +1044,17 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
 
     if (match) {
       amount = parseFloat(match[1]);
-      const rawCat = match[2] ? match[2].toLowerCase() : "";
+
+      // 🧹 Clean up raw category text (remove filler words like 'in', 'to', 'note')
+      const rawCat = (match[2] || "")
+        .toLowerCase()
+        .replace(/\b(in|to|for|at|on|note)\b/g, "")
+        .trim();
+
       const dateWord = match[3] ? match[3].toLowerCase() : "";
       notes = match[4] ? match[4].trim() : "";
 
-      // 📅 Date keyword handling
+      // 📅 Handle date keywords
       if (dateWord === "yesterday") {
         const d = new Date();
         d.setDate(d.getDate() - 1);
@@ -1058,18 +1063,30 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
         dateISO = new Date().toISOString();
       }
 
-      // 🎨 Canonicalize category (use your CATEGORY_LOOKUP)
+      // 🧭 Smart category mapping
+      let matchedCategory = null;
+
+      // 1️⃣ Exact match
       if (rawCat && CATEGORY_LOOKUP[rawCat]) {
-        category = CATEGORY_LOOKUP[rawCat];
-      } else if (!rawCat) {
-        category = "Others";
+        matchedCategory = CATEGORY_LOOKUP[rawCat];
+      } else if (rawCat) {
+        // 2️⃣ Fuzzy match through aliases
+        for (const [alias, canon] of Object.entries(CATEGORY_LOOKUP)) {
+          if (
+            rawCat.includes(alias) ||
+            alias.includes(rawCat) ||
+            rawCat.split(" ").some((w) => alias === w)
+          ) {
+            matchedCategory = canon;
+            break;
+          }
+        }
       }
-    } else {
-      // fallback — if structure not matched
-      amount = extractAmount(lower);
-      category = extractCategory(lower);
-      notes = extractNotes(lower) || "";
-      dateISO = extractDateKeyword(lower);
+
+      // 3️⃣ Default fallback
+      category = matchedCategory || "Others";
+
+      console.log("🎯 Detected category:", rawCat, "→", category);
     }
 
     // 🧩 Push only valid entries
