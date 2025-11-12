@@ -297,8 +297,6 @@ if (u) {
   if (found) result.unit = STORE_UNIT_LOOKUP[found];
 }
 
-  // ---- category extraction ----
-  const cat = cleaned.match(/\bcategory\s+([a-z\s]+)(?:$|\b)/i);
  // ---- category extraction ----
 let matchedCategory = null;
 
