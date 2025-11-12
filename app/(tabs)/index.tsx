@@ -363,19 +363,6 @@ const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     
 // (Removed invalid top-level await code. Avatar upload is handled in handleAvatarUpload.)
 
-const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
-const budgetLeft = Math.max(budgetAmount - totalSpent, 0);
-
-console.log('💰 Budget Debug:', {
-  budgetAmount,
-  totalSpent,
-  budgetLeft,
-  transactionCount: transactions.length,
-  period: budgetPeriod,
-  dateRange: startDate && endDate ? `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}` : 'N/A'
-});
-
-
 useFocusEffect(
   useCallback(() => {
       const fetchUser = async () => {
@@ -928,30 +915,13 @@ const reloadUserProfile = async () => {
 
 };
 
-// 🔧 FIX 3: Update fetchExpensesForCurrentPeriod to filter by date range
 const fetchExpensesForCurrentPeriod = async () => {
   const token = await getToken();
   if (!token?.id) return;
 
   try {
-    // ✅ Get all expenses first
-    const data = await getCachedData(
-      `/expenses/user/${token.id}`, 
-      `expenses_${token.id}`
-    );
-    
-    // ✅ Filter by current period date range
-    const { min, max } = getPeriodDateRange(budgetPeriod, startDate, endDate);
-    
-    const filtered = data.filter(expense => {
-      const expenseDate = new Date(expense.date);
-      expenseDate.setHours(0, 0, 0, 0);
-      return expenseDate >= min && expenseDate < max;
-    });
-    
-    console.log(`📊 Filtered ${filtered.length} expenses for period ${min.toLocaleDateString()} - ${max.toLocaleDateString()}`);
-    
-    setTransactions(filtered);
+    const data = await getCachedData(`/expenses/user/${token.id}`, `expenses_${token.id}`);
+    setTransactions(data);
   } catch {
     console.log("⚠️ Offline: showing cached expenses");
   }
@@ -969,36 +939,25 @@ const categoryIcons: any = {
 };
 
 
-// 🔧 FIX 1: Update fetchRemainingBudget to send date range
-const fetchRemainingBudget = async () => {
+// Fetch remaining budget
+  const fetchRemainingBudget = async () => {
   try {
     const user = await getToken();
     if (!user || !user.id) return;
-    
-    // ✅ Get the correct date range for the period
-    const { min, max } = getPeriodDateRange(budgetPeriod, startDate, endDate);
-    
-    console.log('📊 Fetching balance with:', { 
-      period: budgetPeriod, 
-      min: min.toISOString(), 
-      max: max.toISOString() 
-    });
-    
+    // 🔥 Log period sent
+    console.log('[FETCH BUDGET] period:', budgetPeriod);
+
     const res = await api.get('/auth/balance', {
       params: {
         userId: user.id,
         period: (budgetPeriod ?? '').toLowerCase(),
-        startDate: min.toISOString(),
-        endDate: max.toISOString(),
       },
     });
-    
     setRemainingBudget(res.data.remainingBudget);
     setBudgetAmount(res.data.budgetAmount);
-  } catch (err) {
-    console.error('❌ Error fetching balance:', err);
-  }
+  } catch (err) {}
 };
+
 
 const updateBudgetPeriod = async (
   newPeriod: string,
@@ -1048,19 +1007,12 @@ const end = await AsyncStorage.getItem('customBudgetPeriodEnd');
   };
 };
 
-// 🔧 FIX 2: Update fetchTotalExpense to use correct date range
 const fetchTotalExpense = async () => {
   const token = await getToken();
   if (!token || !token.id || !budgetPeriod) return;
 
-  // ✅ Get the correct min/max for the period
+  // Get the correct min/max for the period!
   const { min, max } = getPeriodDateRange(budgetPeriod, startDate, endDate);
-
-  console.log('📊 Fetching expenses with:', { 
-    period: budgetPeriod, 
-    min: min.toISOString(), 
-    max: max.toISOString() 
-  });
 
   const params = {
     userId: token.id,
@@ -1073,9 +1025,13 @@ const fetchTotalExpense = async () => {
     const res = await api.get('/expenses/total', { params });
     setTotalExpense(res.data.total || 0);
   } catch (err) {
-    console.error('❌ Error fetching total expense:', err);
+    console.error('Error fetching total expense:', err);
   }
 };
+
+
+
+
 
     // Fetch balance (not used in UI)
     const fetchBalance = async () => {
@@ -2112,7 +2068,7 @@ useEffect(() => {
         style={{ 
           fontSize: (() => {
             // ✅ Auto-resize based on amount length
-            const amount = budgetLeft || 0; // 🔥 Changed from remainingBudget to budgetLeft
+            const amount = remainingBudget || 0;
             const digitCount = Math.floor(Math.log10(Math.abs(amount))) + 1;
             
             if (digitCount >= 7) return isMobile ? 12 : 14; // 1,000,000+
@@ -2122,15 +2078,15 @@ useEffect(() => {
           })(),
           fontWeight: '800', 
           color: '#1f4b81ff',
-          flex: 1,
-          flexShrink: 1,
+          flex: 1, // ✅ Takes available space
+          flexShrink: 1, // ✅ Can shrink if needed
         }}
         numberOfLines={1}
-        adjustsFontSizeToFit={true}
-        minimumFontScale={0.5}
+        adjustsFontSizeToFit={true} // ✅ Auto-shrinks to fit
+        minimumFontScale={0.5} // ✅ Can shrink up to 50%
       >
-        ₱{budgetLeft // 🔥 Changed from remainingBudget to budgetLeft
-          ? Number(budgetLeft).toLocaleString('en-PH', {
+        ₱{remainingBudget
+          ? Number(remainingBudget).toLocaleString('en-PH', {
               minimumFractionDigits: 2,
             })
           : '0.00'}
@@ -2188,7 +2144,7 @@ useEffect(() => {
           color: '#1f4b81ff',
           marginTop: 4,
       }}>
-        ₱{Number(totalSpent).toLocaleString('en-PH', { // 🔥 Changed from totalExpense to totalSpent
+        ₱{Number(totalExpense).toLocaleString('en-PH', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}
@@ -4978,15 +4934,14 @@ menuDivider: {
   backgroundColor: '#e8f0f9',
   marginHorizontal: 12,
 },
-
-  modalOverlayProfile: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    paddingTop: 60,
-    paddingLeft: 16,
-  },
+modalOverlayProfile: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  justifyContent: 'flex-start', // stays the same (top)
+  alignItems: 'flex-start',     // changed from flex-end → flex-start (left)
+  paddingTop: 60,
+  paddingLeft: 16,              
+},
   menuDropdownProfile: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
