@@ -31,6 +31,8 @@ if (Platform.OS === "web") {
   } = require("lucide-react-native"));
 }
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 const BUDGET_TUTORIAL_STEPS = [
   {
     id: 1,
@@ -41,6 +43,13 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: PieChart,
     highlightKey: "budget-overview",
     color: "#1f4b81",
+    position: { top: SCREEN_HEIGHT * 0.45, left: 20, right: 20 },
+    highlightArea: { 
+      top: Platform.OS === "ios" ? 90 : 70, 
+      left: 0, 
+      right: 0, 
+      height: 560 
+    },
   },
   {
     id: 2,
@@ -51,6 +60,13 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: Hourglass,
     highlightKey: "unallocated-pill",
     color: "#1f4b81",
+    position: { top: 270, left: 20, right: 20 }, // Move card to top
+    highlightArea: { 
+      top: Platform.OS === "ios" ? 480 : 635, 
+      left: SCREEN_WIDTH * 0.440,
+      right: SCREEN_WIDTH * 0.440,
+      height: 60 
+    },
   },
   {
     id: 3,
@@ -61,6 +77,13 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: Settings,
     highlightKey: "set-allocation-btn",
     color: "#1f4b81",
+    position: { top: 340, left: 20, right: 20 }, // Move card to top
+    highlightArea: { 
+     top: Platform.OS === "ios" ? 480 : 735, 
+      left: SCREEN_WIDTH * 0.440,
+      right: SCREEN_WIDTH * 0.440,
+      height: 70
+    },
   },
   {
     id: 4,
@@ -71,6 +94,13 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: RefreshCw,
     highlightKey: "clear-all-btn",
     color: "#1f4b81",
+     position: { top: 440, left: 20, right: 20 }, // Move card to top
+    highlightArea: { 
+     top: Platform.OS === "ios" ? 480 : 805, 
+      left: SCREEN_WIDTH * 0.440,
+      right: SCREEN_WIDTH * 0.440,
+      height: 75
+    },
   },
   {
     id: 5,
@@ -81,6 +111,13 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: Copy,
     highlightKey: "copy-period-btn",
     color: "#1f4b81",
+     position: { top: 440, left: 20, right: 20 }, // Move card to top
+    highlightArea: { 
+     top: Platform.OS === "ios" ? 480 : 880, 
+      left: SCREEN_WIDTH * 0.440,
+      right: SCREEN_WIDTH * 0.440,
+      height: 75
+    },
   },
 ];
 
@@ -128,15 +165,41 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <Animated.View style={[styles.tutorialOverlay, { opacity: fadeAnim }]}>
-        <TouchableOpacity
-          style={styles.tutorialBackdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        {/* Dark overlay backdrop */}
+        <View style={styles.darkOverlay} />
 
-        <View style={styles.tutorialCard}>
+        {/* Highlight box */}
+        {step.highlightArea && (
+          <View
+            style={[
+              styles.highlightBox,
+              {
+                top: step.highlightArea.top,
+                left: step.highlightArea.left,
+                right: step.highlightArea.right,
+                bottom: step.highlightArea.bottom,
+                width: step.highlightArea.width,
+                height: step.highlightArea.height,
+              },
+            ]}
+          />
+        )}
+
+        {/* Tutorial Card */}
+        <View
+          style={[
+            styles.tutorialCard,
+            {
+              top: step.position.top,
+              left: step.position.left,
+              right: step.position.right,
+              bottom: step.position.bottom,
+            },
+          ]}
+        >
           <View style={styles.tutorialIconContainer}>
             <Icon size={32} color="#1f4b81" strokeWidth={2.5} />
           </View>
@@ -198,7 +261,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
 
 export default function BudgetTutorialScreen() {
   const router = useRouter();
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
 
   const handleBack = () => {
@@ -217,7 +280,7 @@ export default function BudgetTutorialScreen() {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} scrollEnabled={!showTutorial}>
         {/* Budget Overview */}
         <View style={[styles.budgetOverview, styles.gradientBg]}>
           <View style={styles.overviewHeader}>
@@ -284,17 +347,6 @@ export default function BudgetTutorialScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating Help Button */}
-      <TouchableOpacity
-        style={styles.helpButton}
-        onPress={() => {
-          setShowTutorial(true);
-          setCurrentStep(0);
-        }}
-      >
-        <Text style={styles.helpButtonText}>?</Text>
-      </TouchableOpacity>
-
       {/* Tutorial Overlay */}
       <TutorialOverlay
         visible={showTutorial}
@@ -302,6 +354,19 @@ export default function BudgetTutorialScreen() {
         currentStep={currentStep}
         setCurrentStep={setCurrentStep}
       />
+
+      {/* Floating Help Button - only show when tutorial is closed */}
+      {!showTutorial && (
+        <TouchableOpacity
+          style={styles.helpButton}
+          onPress={() => {
+            setShowTutorial(true);
+            setCurrentStep(0);
+          }}
+        >
+          <Text style={styles.helpButtonText}>?</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -504,37 +569,44 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
   },
+  // Tutorial Overlay Styles (matching home tutorial)
   tutorialOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
-  tutorialBackdrop: {
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.16)",
+  },
+  highlightBox: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    backgroundColor: "transparent",
+    borderWidth: 3,
+    borderColor: "#1f4b81",
+    borderRadius: 12,
+    shadowColor: "#1f4b81",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
   },
   tutorialCard: {
-    backgroundColor: "white",
+    position: "absolute",
+    marginHorizontal: 20,
+    backgroundColor: "#1F2937",
     borderRadius: 20,
     padding: 24,
-    maxWidth: 480,
-    width: "100%",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 20 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
-    shadowRadius: 40,
+    shadowRadius: 20,
     elevation: 10,
   },
   tutorialIconContainer: {
     width: 64,
     height: 64,
     borderRadius: 24,
-    backgroundColor: "rgba(31, 75, 129, 0.1)",
+    backgroundColor: "rgba(31, 75, 129, 0.15)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -542,21 +614,21 @@ const styles = StyleSheet.create({
     borderColor: "rgba(127, 177, 214, 0.4)",
   },
   tutorialTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1F2937",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
     marginBottom: 4,
   },
   tutorialSubtitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1f4b81",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#93E8E9",
     marginBottom: 8,
   },
   tutorialDescription: {
-    color: "#6B7280",
-    lineHeight: 24,
-    fontSize: 16,
+    color: "#D1D5DB",
+    lineHeight: 22,
+    fontSize: 15,
     marginBottom: 20,
   },
   tutorialDots: {
@@ -570,7 +642,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#4B5563",
   },
   tutorialDotActive: {
     width: 24,
@@ -578,9 +650,9 @@ const styles = StyleSheet.create({
   },
   tutorialStepText: {
     textAlign: "center",
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#6B7280",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#9CA3AF",
     marginBottom: 16,
   },
   tutorialButtons: {
@@ -592,21 +664,21 @@ const styles = StyleSheet.create({
   tutorialBackBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    backgroundColor: "rgba(156, 163, 175, 0.1)",
   },
   tutorialBackText: {
-    color: "#6B7280",
-    fontWeight: "700",
+    color: "#9CA3AF",
+    fontWeight: "600",
+    fontSize: 15,
   },
   tutorialSkipText: {
-    color: "#6B7280",
-    fontWeight: "700",
+    color: "#9CA3AF",
+    fontWeight: "600",
+    fontSize: 15,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
@@ -617,19 +689,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     backgroundColor: "#1f4b81",
-    shadowColor: "#1f4b81",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
   },
   tutorialNextText: {
     color: "white",
-    fontWeight: "800",
+    fontWeight: "700",
     fontSize: 16,
   },
   tutorialSpacer: {

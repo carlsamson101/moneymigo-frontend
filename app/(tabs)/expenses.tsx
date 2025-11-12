@@ -1540,7 +1540,7 @@ useEffect(() => {
   }
 }, [voiceTranscript]);
 
-// 🧠 OCR processing (Fixed for Native APK - No FileSystem needed)
+// 🧠 OCR processing (Improved accuracy + Fixed date picker for APK)
 async function processReceiptImage(uri) {
   try {
     setIsScanning(true);
@@ -1563,7 +1563,6 @@ async function processReceiptImage(uri) {
       await worker.terminate();
       extractedText = result?.data?.text || "";
     } else {
-      // 🔧 FIX: Use XMLHttpRequest for better native compatibility
       console.log("📤 Using XMLHttpRequest for native OCR...");
       
       extractedText = await new Promise((resolve, reject) => {
@@ -1602,6 +1601,7 @@ async function processReceiptImage(uri) {
         formData.append("language", "eng");
         formData.append("OCREngine", "2");
         formData.append("scale", "true");
+        formData.append("isTable", "true"); // Better for receipt parsing
         
         console.log("📤 Sending image to OCR.Space...");
         xhr.send(formData);
@@ -1619,44 +1619,78 @@ async function processReceiptImage(uri) {
     const cleanText = extractedText
       .replace(/\n+/g, " ")
       .replace(/\s{2,}/g, " ")
-      .replace(/[^\x20-\x7E]/g, "") // remove weird chars
+      .replace(/[^\x20-\x7E]/g, "")
       .toLowerCase();
 
-    // 4️⃣ Smarter amount detection (context-aware)
+    // 4️⃣ 🎯 IMPROVED AMOUNT DETECTION - Exclude VAT/Tax, prioritize subtotal
     let detectedAmount = null;
 
-    // Normalize text for matching
     const cleanLines = cleanText
-      .split(/(?<=\d)\s+/) // split by whitespace near numbers
+      .split(/(?<=\d)\s+/)
       .map(l => l.trim())
       .filter(Boolean);
 
-    // Priority 1: Look for lines with keywords that usually indicate totals or transactions
-    const PRIORITY_PATTERNS = [
-      /(cash\s*withdrawal|withdrawal\s*amount)/i,
-      /(transaction\s*amount|total\s*amount|amount\s*due|grand\s*total)/i,
-      /(deposit\s*amount|credit\s*amount)/i,
+    console.log("📄 Cleaned lines:", cleanLines);
+
+    // 🚫 EXCLUDE: Lines with VAT, tax, service charge (these are add-ons, not the main amount)
+    const EXCLUDE_PATTERNS = [
+      /vat|tax|service\s*charge|sc\s*\d|vatable/i,
     ];
 
-    // Try keyword-based extraction
-    for (const regex of PRIORITY_PATTERNS) {
-      const match = cleanLines.find(line => regex.test(line));
+    // ✅ PRIORITY 1: Look for SUBTOTAL (amount before taxes)
+    const SUBTOTAL_PATTERNS = [
+      /subtotal|sub\s*total|sub-total/i,
+      /amount\s*due|total\s*amount\s*due/i,
+      /total\s*sales|sales\s*total/i,
+    ];
+
+    for (const regex of SUBTOTAL_PATTERNS) {
+      const match = cleanLines.find(line => {
+        // Skip if line contains VAT/tax keywords
+        if (EXCLUDE_PATTERNS.some(ex => ex.test(line))) return false;
+        return regex.test(line);
+      });
+
       if (match) {
         const numMatch = match.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
         if (numMatch) {
           detectedAmount = parseFloat(numMatch[numMatch.length - 1].replace(/[^\d.]/g, ""));
-          console.log("💰 Found keyword-based line:", match);
+          console.log("✅ Found SUBTOTAL:", match, "→", detectedAmount);
           break;
         }
       }
     }
 
-    // Priority 2: If not found, find the **largest number near any 'withdrawal', 'amount', or 'total'**
+    // ✅ PRIORITY 2: Bank transactions (withdrawal, deposit)
+    if (!detectedAmount) {
+      const BANK_PATTERNS = [
+        /(cash\s*withdrawal|withdrawal\s*amount)/i,
+        /(transaction\s*amount)/i,
+        /(deposit\s*amount|credit\s*amount)/i,
+      ];
+
+      for (const regex of BANK_PATTERNS) {
+        const match = cleanLines.find(line => regex.test(line));
+        if (match) {
+          const numMatch = match.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
+          if (numMatch) {
+            detectedAmount = parseFloat(numMatch[numMatch.length - 1].replace(/[^\d.]/g, ""));
+            console.log("💰 Found bank transaction:", match, "→", detectedAmount);
+            break;
+          }
+        }
+      }
+    }
+
+    // ✅ PRIORITY 3: "TOTAL" (but exclude if VAT/Tax nearby)
     if (!detectedAmount) {
       const contextMatches = [];
-      const contextRegex = /(withdrawal|amount|total|balance|deposit)/i;
+      const contextRegex = /total|amount|balance/i;
 
       cleanLines.forEach((line, idx) => {
+        // Skip lines with VAT/tax
+        if (EXCLUDE_PATTERNS.some(ex => ex.test(line))) return;
+
         if (contextRegex.test(line)) {
           const numbers = (line.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
             parseFloat(n.replace(/[^\d.]/g, ""))
@@ -1664,8 +1698,9 @@ async function processReceiptImage(uri) {
           if (numbers.length) {
             contextMatches.push(...numbers);
           }
-          // Also check next line (some receipts break lines)
-          if (cleanLines[idx + 1]) {
+
+          // Check next line (but skip if it has VAT/tax)
+          if (cleanLines[idx + 1] && !EXCLUDE_PATTERNS.some(ex => ex.test(cleanLines[idx + 1]))) {
             const nextNums = (cleanLines[idx + 1].match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
               parseFloat(n.replace(/[^\d.]/g, ""))
             );
@@ -1676,29 +1711,36 @@ async function processReceiptImage(uri) {
 
       if (contextMatches.length > 0) {
         detectedAmount = Math.max(...contextMatches);
-        console.log("📊 Found context-based max amount:", detectedAmount);
+        console.log("📊 Found context-based amount:", detectedAmount);
       }
     }
 
-    // Priority 3: Fallback to global max numeric value (last resort)
+    // ✅ PRIORITY 4: Fallback - largest number (excluding obvious VAT/tax values)
     if (!detectedAmount) {
-      const allNumbers = (cleanText.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
-        parseFloat(n.replace(/[^\d.]/g, ""))
-      );
+      const allNumbers = cleanText
+        .split(/\s+/)
+        .filter(word => {
+          // Skip if word contains VAT or tax keywords
+          return !EXCLUDE_PATTERNS.some(ex => ex.test(word));
+        })
+        .flatMap(word => word.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || [])
+        .map(n => parseFloat(n.replace(/[^\d.]/g, "")))
+        .filter(n => n > 0);
+
       if (allNumbers.length) {
         detectedAmount = Math.max(...allNumbers);
         console.log("📈 Fallback: using global max:", detectedAmount);
       }
     }
 
-    // 5️⃣ Smart Category Detection (includes banks)
+    // 5️⃣ Smart Category Detection
     let detectedCategory = "Others";
     const CATEGORY_PATTERNS = {
-      Food: /(jollibee|mcdonald|kfc|chowking|food|meal|snack|burger|pizza|coffee|tea|restaurant)/i,
-      Transport: /(grab|taxi|bus|jeep|tricycle|fare|transport|fuel|parking)/i,
-      Bills: /(meralco|pldt|globe|smart|bill|internet|wifi|water|electric)/i,
-      School: /(tuition|school|book|notebook|exam|project|student|module)/i,
-      Shopping: /(mall|shop|store|sm|robinsons|grocery|watsons|shopee|lazada)/i,
+      Food: /(jollibee|mcdonald|kfc|chowking|food|meal|snack|burger|pizza|coffee|tea|restaurant|starbucks|dunkin)/i,
+      Transport: /(grab|taxi|bus|jeep|tricycle|fare|transport|fuel|parking|gasoline|petron|shell)/i,
+      Bills: /(meralco|pldt|globe|smart|bill|internet|wifi|water|electric|converge)/i,
+      School: /(tuition|school|book|notebook|exam|project|student|module|university|college)/i,
+      Shopping: /(mall|shop|store|sm|robinsons|grocery|watsons|shopee|lazada|puregold|mercury)/i,
       Savings: /(atm|bank|deposit|withdrawal|landbank|bpi|bdo|maya|gcash|balance|transaction record|cash withdrawal)/i,
     };
 
@@ -1711,28 +1753,26 @@ async function processReceiptImage(uri) {
 
     // 🧮 Confidence calculation
     let confidence = 0.6;
-    if (detectedAmount && /total|withdrawal|deposit|balance/.test(cleanText))
+    if (detectedAmount && /subtotal|total|withdrawal|deposit/.test(cleanText))
       confidence += 0.25;
     if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.15;
     if (confidence > 1) confidence = 1;
 
-    setOcrDetectedDate(new Date()); // Initialize with today's date
+    // ✅ CRITICAL: Set date as Date object, NOT null
+    const todayDate = new Date();
+    setOcrDetectedDate(todayDate);
     setOcrRawText(cleanText);
     setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
+    setOcrDetectedNotes(""); // Clear previous notes
     setShowOcrModal(true);
 
     console.log("✅ OCR Result", {
       amount: detectedAmount,
       category: detectedCategory,
-      confidence,
+      date: todayDate.toISOString(),
     });
 
-    console.log(
-      `Detected ${detectedCategory} transaction for ₱${
-        detectedAmount ? detectedAmount.toFixed(2) : "unknown"
-      }.`
-    );
   } catch (err) {
     console.error("❌ OCR error:", err);
     Alert.alert("Error", `Failed to process receipt: ${err.message}`);
@@ -1741,6 +1781,58 @@ async function processReceiptImage(uri) {
   }
 }
 
+
+// 🔧 FIX: Make sure your OCR modal date picker works on native
+// In your OCR confirmation modal, use this date picker structure:
+
+{Platform.OS === 'web' ? (
+  <View style={styles.input}>
+    <input
+      type="date"
+      style={{
+        fontSize: 16,
+        padding: 6,
+        border: 'none',
+        outline: 'none',
+        backgroundColor: 'transparent',
+        width: '100%',
+      }}
+      value={ocrDetectedDate ? ocrDetectedDate.toISOString().slice(0, 10) : ''}
+      onChange={(e) => {
+        if (e.target.value) {
+          setOcrDetectedDate(new Date(e.target.value));
+        }
+      }}
+    />
+  </View>
+) : (
+  <>
+    <TouchableOpacity 
+      onPress={() => setShowOcrDatePicker(true)} 
+      style={styles.input}
+    >
+      <Text>
+        {ocrDetectedDate 
+          ? ocrDetectedDate.toLocaleDateString() 
+          : 'Select Date'}
+      </Text>
+    </TouchableOpacity>
+    
+    {showOcrDatePicker && (
+      <DateTimePicker
+        value={ocrDetectedDate || new Date()}
+        mode="date"
+        display="default"
+        onChange={(event, selectedDate) => {
+          setShowOcrDatePicker(false);
+          if (event.type === 'set' && selectedDate) {
+            setOcrDetectedDate(selectedDate);
+          }
+        }}
+      />
+    )}
+  </>
+)}
 
 
 
@@ -2801,75 +2893,85 @@ const HistorySection = (
               alignItems: 'center',
             }}>
               <Ionicons name="calendar-outline" size={16} color="#6366F1" style={{ marginRight: 8 }} />
-              <input
-                type="date"
-                value={ocrDetectedDate ? formatDateInputValue(ocrDetectedDate) : ''}
-                onChange={e => setOcrDetectedDate(e.target.value ? parseDateLocal(e.target.value) : new Date())}
-                min={min ? formatDateInputValue(min) : undefined}
-                max={max ? formatDateInputValue(max) : undefined}
-                style={{
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  fontSize: '15px',
-                  fontFamily: 'inherit',
-                  color: '#1E293B',
-                  outline: 'none',
-                  flex: 1,
-                  cursor: 'pointer',
-                }}
-              />
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity 
-                onPress={() => setShowOcrDatePicker(true)} 
-                style={{
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#CBD5E1',
-                  padding: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Ionicons name="calendar-outline" size={16} color="#6366F1" style={{ marginRight: 10 }} />
-                  <Text style={{ 
-                    fontSize: 14, 
-                    color: ocrDetectedDate ? '#1E293B' : '#94A3B8',
-                    fontWeight: ocrDetectedDate ? '500' : '400'
-                  }}>
-                    {ocrDetectedDate ? ocrDetectedDate.toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric' 
-                    }) : 'Select Date'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-              </TouchableOpacity>
-              
-              {showOcrDatePicker && (
-                <DateTimePicker
-                  value={ocrDetectedDate || new Date()}
-                  mode="date"
-                  display="default"
-                  minimumDate={min}
-                  maximumDate={new Date(max.getTime() - 86400000)}
-                  onChange={(event, selectedDate) => {
-                    setShowOcrDatePicker(false);
-                    if (event.type === 'set' && selectedDate) {
-                      setOcrDetectedDate(selectedDate);
-                    }
-                  }}
-                />
-              )}
-            </>
-          )}
+             <input
+        type="date"
+        value={ocrDetectedDate ? formatDateInputValue(ocrDetectedDate) : ''}
+        onChange={e => {
+          if (e.target.value) {
+            setOcrDetectedDate(parseDateLocal(e.target.value));
+          }
+        }}
+        min={min ? formatDateInputValue(min) : undefined}
+        max={max ? formatDateInputValue(max) : undefined}
+        style={{
+          border: 'none',
+          backgroundColor: 'transparent',
+          fontSize: '15px',
+          fontFamily: 'inherit',
+          color: '#1E293B',
+          outline: 'none',
+          flex: 1,
+          cursor: 'pointer',
+        }}
+      />
+    </View>
+  ) : (
+    <>
+      <TouchableOpacity 
+        onPress={() => {
+          console.log('📅 OCR Date picker clicked');
+          setShowOcrDatePicker(true);
+        }} 
+        style={{
+          backgroundColor: '#F8FAFC',
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: '#CBD5E1',
+          padding: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Ionicons name="calendar-outline" size={16} color="#6366F1" style={{ marginRight: 10 }} />
+          <Text style={{ 
+            fontSize: 14, 
+            color: ocrDetectedDate ? '#1E293B' : '#94A3B8',
+            fontWeight: ocrDetectedDate ? '500' : '400'
+          }}>
+            {ocrDetectedDate ? ocrDetectedDate.toLocaleDateString('en-US', { 
+              weekday: 'short', 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            }) : 'Select Date'}
+          </Text>
         </View>
+        <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+      </TouchableOpacity>
+      
+      {showOcrDatePicker && (
+        <DateTimePicker
+          value={ocrDetectedDate || new Date()}
+          mode="date"
+          display="default"
+          minimumDate={min}
+          maximumDate={new Date(max.getTime() - 86400000)}
+          onChange={(event, selectedDate) => {
+            console.log('📅 Date picker closed:', event.type, selectedDate);
+            setShowOcrDatePicker(false);
+            if (event.type === 'set' && selectedDate) {
+              setOcrDetectedDate(selectedDate);
+              console.log('✅ Date updated to:', selectedDate.toISOString());
+            }
+          }}
+        />
+      )}
+    </>
+  )}
+</View>
 
         {/* Amount Input */}
         <View>
@@ -3051,16 +3153,19 @@ const HistorySection = (
               return;
             }
 
-            if (!ocrDetectedDate) {
-              Alert.alert("⚠️ Invalid Date", "Please select a valid date.");
-              return;
-            }
+           
+    // ✅ Validate date
+    if (!ocrDetectedDate || !(ocrDetectedDate instanceof Date)) {
+      Alert.alert("⚠️ Invalid Date", "Please select a valid date.");
+      return;
+    }
 
             try {
-              setExpenseAmount(ocrDetectedAmount);
-              setExpenseCategory(ocrDetectedCategory);
-              setExpenseNotes(ocrDetectedNotes?.trim() || "");
-              setCustomDate(ocrDetectedDate); // Set the selected date
+             // ✅ Set values for handleAddExpense
+      setExpenseAmount(ocrDetectedAmount);
+      setExpenseCategory(ocrDetectedCategory);
+      setExpenseNotes(ocrDetectedNotes?.trim() || "Scanned from receipt");
+      setCustomDate(ocrDetectedDate); // ✅ Use the OCR detected date
 
               setShowOcrModal(false);
 
