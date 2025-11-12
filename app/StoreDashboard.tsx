@@ -391,6 +391,9 @@ const applyVoiceItemCommand = async (command) => {
   const handled = handleVoiceItemConversation(command);
   if (handled) return;
 
+    // ✅ define this first
+  const lower = command.toLowerCase().trim();
+
  // 🗣️ Handle voice command: "update all tuna category to canned goods"
 const updateMatch =
   lower.match(/update all\s+([\w\s]+?)\s+category\s+to\s+([\w\s]+)/i) ||
