@@ -281,21 +281,19 @@ const parseVoiceItemCommand = (command: string) => {
 const pesoWords = "(?:pesos?|php|piso|pisos)";
 let m: RegExpMatchArray | null = null;
 
-// ✅ number comes *after* keywords: "at 10", "price 10", "cost 10"
-m = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+(\\d+(?:[.,]\\d{1,2})?)\\b`));
+// ✅ number comes *after* keywords
+m = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+(\\d+(?:[.,]\\d+)?)\\b`));
 
-// ✅ NEW: number comes *before* keyword: "150 ml at", "20 pcs at", etc.
+// ✅ number *before* keyword
 if (!m) {
   m = cleaned.match(
-    new RegExp(
-      `\\b(\\d+(?:[.,]\\d{1,2})?)\\s*(?:ml|g|kg|l|pcs?|pieces?)?\\s*(?:at|price|for|cost|costs|worth|is|are)\\b`
-    )
+    new RegExp(`\\b(\\d+(?:[.,]\\d+)?)\\s*(?:ml|g|kg|l|pcs?|pieces?)?\\s*(?:at|price|for|cost|costs|worth|is|are)\\b`)
   );
 }
 
-// ✅ number + currency: "10 pesos", "15 php"
+// ✅ with currency
 if (!m) {
-  m = cleaned.match(new RegExp(`\\b(\\d+(?:[.,]\\d{1,2})?)\\s*${pesoWords}\\b`));
+  m = cleaned.match(new RegExp(`\\b(\\d+(?:[.,]\\d+)?)\\s*${pesoWords}\\b`));
 }
 
 // ✅ words instead of numbers: "at ten", "for twenty five pesos"
