@@ -101,13 +101,14 @@ const handleLogin = async () => {
   }
 };
 
-function showAlert(title: string, message: string) {
+function showAlert(title, message) {
   if (Platform.OS === "web") {
-    showAlert(`${title}\n\n${message}`);
+    window.alert(`${title}\n\n${message}`);
   } else {
-    showAlert(title, message);
+    Alert.alert(title, message);
   }
 }
+
 
 
   /* =========================================================
@@ -145,10 +146,9 @@ function showAlert(title: string, message: string) {
      🧹 LOGOUT HANDLER (optional, for debug)
   ========================================================= */
   const handleLogout = async () => {
-    await AsyncStorage.removeItem("authToken");
-    await AsyncStorage.removeItem("storeName");
-    showAlert("Logged out");
-  };
+  await AsyncStorage.multiRemove(["storeToken", "storeName"]);
+  Alert.alert("Logged out");
+};
 
   return (
     <LinearGradient

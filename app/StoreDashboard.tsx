@@ -224,6 +224,18 @@ const [hasSpokenHint, setHasSpokenHint] = useState(false);
     }
   };
 
+
+  const handleLogout = async () => {
+  try {
+    await AsyncStorage.multiRemove(["storeToken", "storeName"]);
+    Alert.alert("Logged out", "You’ve been signed out successfully.");
+    router.replace("/StoreAuth"); // or whatever your login route is
+  } catch (err) {
+    console.error("Logout error:", err);
+    Alert.alert("Error", "Failed to log out properly.");
+  }
+};
+
   // Fetch deals
 const fetchDeals = async () => {
   if (!storeName) return;
@@ -379,6 +391,7 @@ const handleVoiceItemConversation = (spokenText) => {
 
   return false;
 };
+
 const applyVoiceItemCommand = async (command) => {
   console.log("🎤 Voice input:", command);
 
@@ -387,18 +400,13 @@ const applyVoiceItemCommand = async (command) => {
     return;
   }
 
-  // 🗣 Handle greeting or help voice triggers first
-  const handled = handleVoiceItemConversation(command);
-  if (handled) return;
-
-  // ✅ Normalize text first
   const lower = command.toLowerCase().trim();
 
-  // 🧭 Detect update commands (batch category updates)
+  // 🧩 Handle special command: update all X category to Y
   const updateMatch =
-    lower.match(/update all\s+([\w\s]+?)\s+categorie?s?\s+to\s+([\w\s]+)/i) ||
-    lower.match(/change all\s+([\w\s]+?)\s+categorie?s?\s+to\s+([\w\s]+)/i) ||
-    lower.match(/set category of\s+([\w\s]+?)\s+to\s+([\w\s]+)/i);
+    lower.match(/update all\s+([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
+    lower.match(/change all\s+([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
+    lower.match(/set\s+(?:category|categories)\s+of\s+([\w\s]+?)\s+(?:to|into)\s+([\w\s]+)/i);
 
   if (updateMatch) {
     const productKeyword = updateMatch[1].trim().toLowerCase();
@@ -409,7 +417,7 @@ const applyVoiceItemCommand = async (command) => {
       const res = await api.get(`/storeItems/${storeName}`);
       const allItems = res.data || [];
 
-      // Find matches either by item name or current category
+      // Match by item name OR old category
       const matches = allItems.filter(
         (p) =>
           p.itemName.toLowerCase().includes(productKeyword) ||
@@ -423,7 +431,6 @@ const applyVoiceItemCommand = async (command) => {
         return;
       }
 
-      // 🔄 Update all matched items
       for (const item of matches) {
         await api.put(`/storeItems/${item._id}`, {
           ...item,
@@ -435,7 +442,7 @@ const applyVoiceItemCommand = async (command) => {
       speakWeb(msg, { language: "en-US", rate: 1.3 });
       Alert.alert("✅ Category Updated", msg);
       fetchItems();
-    } catch (err: any) {
+    } catch (err) {
       console.error("❌ Voice update failed:", err.response?.data || err.message);
       speakWeb("Sorry, I couldn’t update those items. Please try again.", {
         language: "en-US",
@@ -443,16 +450,14 @@ const applyVoiceItemCommand = async (command) => {
       });
     }
 
-    return; // ✅ stop further add-item processing
+    return; // stop here — don’t parse as a normal item
   }
 
-  // 🧩 Otherwise parse as add-item command
+  // 🧠 only continue if it’s NOT an update command
   const parsed = parseVoiceItemCommand(command);
 
-  // ✅ Validate for price and item name
   if (!parsed.itemName || !parsed.price || parsed.price <= 0) {
-    const msg =
-      "I didn't catch the item name or price. Please try again by saying: add item name at price per unit.";
+    const msg = "I didn't catch the item name or price. Please try again by saying: add item name at price per unit.";
     Alert.alert("Try Again", msg);
     speakWeb(msg, { language: "en-US", rate: 1.5 });
     setVoiceTranscript("");
@@ -460,6 +465,7 @@ const applyVoiceItemCommand = async (command) => {
   }
 
   console.log("✅ Parsed item:", parsed);
+
 
   try {
     // 💬 Speak back the confirmation
@@ -872,56 +878,42 @@ const deleteDealHandler = async (dealId: string) => {
       </View>
     </View>
 
-    {/* ===== Logout Button ===== */}
-    <TouchableOpacity
-      onPress={() => setConfirmVisible(true)}
-      style={styles.logoutButton}
-    >
-      <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-    </TouchableOpacity>
-  </View>
+{/* ===== Logout Button ===== */}
+<TouchableOpacity
+  onPress={() => setConfirmVisible(true)}
+  style={styles.logoutButton}
+>
+  <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+</TouchableOpacity>
 
-  {/* ===== Logout Confirmation Modal ===== */}
-  <Modal transparent visible={confirmVisible} animationType="fade">
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContainer}>
-        <Ionicons name="alert-circle-outline" size={42} color="#EF4444" />
-        <Text style={[styles.modalTitle, { marginTop: 12 }]}>Confirm Logout</Text>
-        <Text style={styles.modalMessage}>
-          Are you sure you want to log out of this store account?
-        </Text>
+{/* ===== Logout Confirmation Modal ===== */}
+<Modal transparent visible={confirmVisible} animationType="fade">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      <Ionicons name="alert-circle-outline" size={42} color="#EF4444" />
+      <Text style={[styles.modalTitle, { marginTop: 12 }]}>Confirm Logout</Text>
+      <Text style={styles.modalMessage}>
+        Are you sure you want to log out of this store account?
+      </Text>
 
-        <View style={styles.modalActions}>
-          <TouchableOpacity
-            style={[styles.modalButton, styles.cancelBtn]}
-            onPress={() => setConfirmVisible(false)}
-          >
-            <Text style={styles.modalCancelText}>Cancel</Text>
-          </TouchableOpacity>
+      <View style={styles.modalActions}>
+        <TouchableOpacity
+          style={[styles.modalButton, styles.cancelBtn]}
+          onPress={() => setConfirmVisible(false)}
+        >
+          <Text style={styles.modalCancelText}>Cancel</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.modalButton, { backgroundColor: "#EF4444" }]}
-            onPress={async () => {
-              try {
-                await AsyncStorage.multiRemove([
-                  "storeToken",
-                  "storeName",
-                  "storeId",
-                ]);
-                setConfirmVisible(false);
-                setTimeout(() => router.replace("/storeAuth"), 100);
-              } catch (err) {
-                console.error("❌ Logout failed:", err);
-                Alert.alert("Error", "Failed to log out properly.");
-              }
-            }}
-          >
-            <Text style={styles.modalDeleteText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.modalButton, { backgroundColor: "#EF4444" }]}
+          onPress={handleLogout} // ✅ simple and clean
+        >
+          <Text style={styles.modalDeleteText}>Logout</Text>
+        </TouchableOpacity>
       </View>
     </View>
-  </Modal>
+  </View>
+</Modal>
 
   {/* Location & Stats Row */}
   <View style={styles.headerBottom}>
