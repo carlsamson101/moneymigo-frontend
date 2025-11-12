@@ -195,6 +195,8 @@ const [hasSpokenHint, setHasSpokenHint] = useState(false);
   // Edit modal state
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editPriceText, setEditPriceText] = useState(""); // 🧠 string for input
+
 
   // ADD ITEM MODAL STATE
   const [addItemModalVisible, setAddItemModalVisible] = useState(false);
@@ -729,6 +731,8 @@ const deleteDealHandler = async (dealId: string) => {
   // Edit modal
   const openEditModal = (item: Item) => {
     setEditItem(item);
+      setEditPriceText(item.price.toString()); // 🧠 preload price as string
+
     setModalVisible(true);
   };
 
@@ -737,12 +741,12 @@ const deleteDealHandler = async (dealId: string) => {
 
   try {
     const payload = {
-      itemName: editItem.itemName.trim(),
-      price: parseFloat(editItem.price) || 0,
-      currency: "PHP", // ✅ backend expects this
-      unit: editItem.unit,
-      category: editItem.category || "other",
-      stock: editItem.stock ?? 0, // ✅ avoid sending undefined
+          itemName: editItem.itemName.trim(),
+        price: parseFloat(editPriceText) || 0,  // ✅ fixed here
+        currency: "PHP",
+        unit: editItem.unit,
+        category: editItem.category || "other",
+        stock: editItem.stock ?? 0,
     };
 
     console.log("📝 Updating item:", editItem._id, payload);
@@ -1760,18 +1764,18 @@ const deleteDealHandler = async (dealId: string) => {
                   <Text style={styles.inputLabel}>Price</Text>
                   <View style={styles.inputWithIcon}>
                     <MaterialCommunityIcons name="currency-php" size={18} color="#64748B" />
-                    <TextInput
-                      placeholder="Price"
-                      keyboardType="numeric"
-                      value={editItem?.price.toString()}
-                      onChangeText={(text) =>
-                        setEditItem(
-                          (prev) => prev && { ...prev, price: parseFloat(text) || 0 }
-                        )
+                   <TextInput
+                    placeholder="Price"
+                    keyboardType="decimal-pad"
+                    value={editPriceText}
+                    onChangeText={(text) => {
+                      if (/^\d*\.?\d*$/.test(text)) {
+                        setEditPriceText(text);
                       }
-                      style={styles.formInput}
-                      placeholderTextColor="#94A3B8"
-                    />
+                    }}
+                    style={styles.formInput}
+                    placeholderTextColor="#94A3B8"
+                  />
                   </View>
                 </View>
 
