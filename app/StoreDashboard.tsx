@@ -265,26 +265,41 @@ const parseVoiceItemCommand = (command: string) => {
     category: "other"
   };
 
-  // ---- price extraction (numbers → then words) ----
-  const pesoWords = "(?:pesos?|php|piso|pisos)";
-  let m: RegExpMatchArray | null = null;
+ // ---- price extraction (numbers → then words) ----
+const pesoWords = "(?:pesos?|php|piso|pisos)";
+let m: RegExpMatchArray | null = null;
 
-  // numeric after keywords: "at 10", "price 10", "cost 10"
-  m = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+(\\d+(?:[.,]\\d{1,2})?)\\b`));
-  if (!m) {
-    // numeric with currency: "10 pesos"
-    m = cleaned.match(new RegExp(`\\b(\\d+(?:[.,]\\d{1,2})?)\\s*${pesoWords}\\b`));
+// ✅ number comes *after* keywords: "at 10", "price 10", "cost 10"
+m = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+(\\d+(?:[.,]\\d{1,2})?)\\b`));
+
+// ✅ NEW: number comes *before* keyword: "150 ml at", "20 pcs at", etc.
+if (!m) {
+  m = cleaned.match(
+    new RegExp(
+      `\\b(\\d+(?:[.,]\\d{1,2})?)\\s*(?:ml|g|kg|l|pcs?|pieces?)?\\s*(?:at|price|for|cost|costs|worth|is|are)\\b`
+    )
+  );
+}
+
+// ✅ number + currency: "10 pesos", "15 php"
+if (!m) {
+  m = cleaned.match(new RegExp(`\\b(\\d+(?:[.,]\\d{1,2})?)\\s*${pesoWords}\\b`));
+}
+
+// ✅ words instead of numbers: "at ten", "for twenty five pesos"
+if (!m) {
+  const mw = cleaned.match(
+    new RegExp(
+      `\\b(?:at|price|for|cost|costs|worth|is|are)\\s+([a-z\\s-]+?)(?:\\s*${pesoWords}\\b|\\b)`
+    )
+  );
+  if (mw) {
+    const wnum = wordToNumberPhrase(mw[1]);
+    if (wnum != null) result.price = wnum;
   }
-  if (!m) {
-    // words after keywords: "at ten", "for twenty five pesos"
-    const mw = cleaned.match(new RegExp(`\\b(?:at|price|for|cost|costs|worth|is|are)\\s+([a-z\\s-]+?)(?:\\s*${pesoWords}\\b|\\b)`));
-    if (mw) {
-      const wnum = wordToNumberPhrase(mw[1]);
-      if (wnum != null) result.price = wnum;
-    }
-  } else {
-    result.price = parseFloat(m[1].replace(",", "."));
-  }
+} else {
+  result.price = parseFloat(m[1].replace(",", "."));
+}
 
   // ---- unit extraction ----
 const u = cleaned.match(/\b(?:per|each|every|by)\s+([a-z]+)/i);
@@ -376,6 +391,57 @@ const applyVoiceItemCommand = async (command) => {
   const handled = handleVoiceItemConversation(command);
   if (handled) return;
 
+ // 🗣️ Handle voice command: "update all tuna category to canned goods"
+const updateMatch =
+  lower.match(/update all\s+([\w\s]+?)\s+category\s+to\s+([\w\s]+)/i) ||
+  lower.match(/change all\s+([\w\s]+?)\s+category\s+to\s+([\w\s]+)/i) ||
+  lower.match(/set category of\s+([\w\s]+?)\s+to\s+([\w\s]+)/i);
+
+if (updateMatch) {
+  const productKeyword = updateMatch[1].trim().toLowerCase();
+  const newCategory = updateMatch[2].trim().toLowerCase();
+  console.log("🛠 Voice batch update:", productKeyword, "→", newCategory);
+
+  try {
+    const res = await api.get(`/storeItems/${storeName}`);
+    const allItems = res.data || [];
+
+    // Match by item name OR current category
+    const matches = allItems.filter(
+      (p) =>
+        p.itemName.toLowerCase().includes(productKeyword) ||
+        p.category?.toLowerCase().includes(productKeyword)
+    );
+
+    if (matches.length === 0) {
+      const msg = `I couldn’t find any items related to ${productKeyword}.`;
+      speakWeb(msg, { language: "en-US", rate: 1.4 });
+      Alert.alert("No Matches", msg);
+      return;
+    }
+
+    // Update each match
+    for (const item of matches) {
+      await api.put(`/storeItems/${item._id}`, {
+        ...item,
+        category: newCategory,
+      });
+    }
+
+    const msg = `Updated ${matches.length} items related to ${productKeyword} to category ${newCategory}.`;
+    speakWeb(msg, { language: "en-US", rate: 1.3 });
+    Alert.alert("✅ Category Updated", msg);
+    fetchItems();
+  } catch (err: any) {
+    console.error("❌ Voice update failed:", err.response?.data || err.message);
+    speakWeb("Sorry, I couldn’t update those items. Please try again.", {
+      language: "en-US",
+      rate: 1.3,
+    });
+  }
+
+  return; // stop further command processing
+}
   const parsed = parseVoiceItemCommand(command);
 
   // ✅ Validation
