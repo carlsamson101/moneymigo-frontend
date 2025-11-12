@@ -379,7 +379,6 @@ const handleVoiceItemConversation = (spokenText) => {
 
   return false;
 };
-
 const applyVoiceItemCommand = async (command) => {
   console.log("🎤 Voice input:", command);
 
@@ -388,68 +387,72 @@ const applyVoiceItemCommand = async (command) => {
     return;
   }
 
+  // 🗣 Handle greeting or help voice triggers first
   const handled = handleVoiceItemConversation(command);
   if (handled) return;
 
-    // ✅ define this first
+  // ✅ Normalize text first
   const lower = command.toLowerCase().trim();
 
- // 🗣️ Handle voice command: "update all tuna category to canned goods"
-const updateMatch =
-  lower.match(/update all\s+([\w\s]+?)\s+category\s+to\s+([\w\s]+)/i) ||
-  lower.match(/change all\s+([\w\s]+?)\s+category\s+to\s+([\w\s]+)/i) ||
-  lower.match(/set category of\s+([\w\s]+?)\s+to\s+([\w\s]+)/i);
+  // 🧭 Detect update commands (batch category updates)
+  const updateMatch =
+    lower.match(/update all\s+([\w\s]+?)\s+categorie?s?\s+to\s+([\w\s]+)/i) ||
+    lower.match(/change all\s+([\w\s]+?)\s+categorie?s?\s+to\s+([\w\s]+)/i) ||
+    lower.match(/set category of\s+([\w\s]+?)\s+to\s+([\w\s]+)/i);
 
-if (updateMatch) {
-  const productKeyword = updateMatch[1].trim().toLowerCase();
-  const newCategory = updateMatch[2].trim().toLowerCase();
-  console.log("🛠 Voice batch update:", productKeyword, "→", newCategory);
+  if (updateMatch) {
+    const productKeyword = updateMatch[1].trim().toLowerCase();
+    const newCategory = updateMatch[2].trim().toLowerCase();
+    console.log("🛠 Voice batch update:", productKeyword, "→", newCategory);
 
-  try {
-    const res = await api.get(`/storeItems/${storeName}`);
-    const allItems = res.data || [];
+    try {
+      const res = await api.get(`/storeItems/${storeName}`);
+      const allItems = res.data || [];
 
-    // Match by item name OR current category
-    const matches = allItems.filter(
-      (p) =>
-        p.itemName.toLowerCase().includes(productKeyword) ||
-        p.category?.toLowerCase().includes(productKeyword)
-    );
+      // Find matches either by item name or current category
+      const matches = allItems.filter(
+        (p) =>
+          p.itemName.toLowerCase().includes(productKeyword) ||
+          p.category?.toLowerCase().includes(productKeyword)
+      );
 
-    if (matches.length === 0) {
-      const msg = `I couldn’t find any items related to ${productKeyword}.`;
-      speakWeb(msg, { language: "en-US", rate: 1.4 });
-      Alert.alert("No Matches", msg);
-      return;
-    }
+      if (matches.length === 0) {
+        const msg = `I couldn’t find any items related to ${productKeyword}.`;
+        speakWeb(msg, { language: "en-US", rate: 1.4 });
+        Alert.alert("No Matches", msg);
+        return;
+      }
 
-    // Update each match
-    for (const item of matches) {
-      await api.put(`/storeItems/${item._id}`, {
-        ...item,
-        category: newCategory,
+      // 🔄 Update all matched items
+      for (const item of matches) {
+        await api.put(`/storeItems/${item._id}`, {
+          ...item,
+          category: newCategory,
+        });
+      }
+
+      const msg = `Updated ${matches.length} items related to ${productKeyword} to category ${newCategory}.`;
+      speakWeb(msg, { language: "en-US", rate: 1.3 });
+      Alert.alert("✅ Category Updated", msg);
+      fetchItems();
+    } catch (err: any) {
+      console.error("❌ Voice update failed:", err.response?.data || err.message);
+      speakWeb("Sorry, I couldn’t update those items. Please try again.", {
+        language: "en-US",
+        rate: 1.3,
       });
     }
 
-    const msg = `Updated ${matches.length} items related to ${productKeyword} to category ${newCategory}.`;
-    speakWeb(msg, { language: "en-US", rate: 1.3 });
-    Alert.alert("✅ Category Updated", msg);
-    fetchItems();
-  } catch (err: any) {
-    console.error("❌ Voice update failed:", err.response?.data || err.message);
-    speakWeb("Sorry, I couldn’t update those items. Please try again.", {
-      language: "en-US",
-      rate: 1.3,
-    });
+    return; // ✅ stop further add-item processing
   }
 
-  return; // stop further command processing
-}
+  // 🧩 Otherwise parse as add-item command
   const parsed = parseVoiceItemCommand(command);
 
-  // ✅ Validation
+  // ✅ Validate for price and item name
   if (!parsed.itemName || !parsed.price || parsed.price <= 0) {
-    const msg = "I didn't catch the item name or price. Please try again by saying: add item name at price per unit.";
+    const msg =
+      "I didn't catch the item name or price. Please try again by saying: add item name at price per unit.";
     Alert.alert("Try Again", msg);
     speakWeb(msg, { language: "en-US", rate: 1.5 });
     setVoiceTranscript("");
@@ -459,7 +462,7 @@ if (updateMatch) {
   console.log("✅ Parsed item:", parsed);
 
   try {
-    // 🗣️ Speak clear confirmation once
+    // 💬 Speak back the confirmation
     const spoken = `Got it. Added ${parsed.itemName} for ${parsed.price} pesos per ${parsed.unit}, under ${parsed.category}.`;
     speakWeb(spoken, { language: "en-US", rate: 1.5 });
 
@@ -473,15 +476,13 @@ if (updateMatch) {
       category: parsed.category,
     });
 
-    // 📱 UI Alert only (no extra voice)
     Alert.alert(
       "✅ Item Added",
       `${parsed.itemName}\n₱${parsed.price} per ${parsed.unit}\nCategory: ${parsed.category}`
     );
 
-    fetchItems(); // refresh product list
+    fetchItems(); // refresh list
     setTimeout(() => setVoiceTranscript(""), 5000);
-
   } catch (err) {
     console.error("❌ Voice add failed:", err);
     const errMsg = "Sorry, I couldn’t add that item. Please try again.";
@@ -491,14 +492,12 @@ if (updateMatch) {
   }
 };
 
+// 🎙 Start voice recognition
 const startVoiceRecognition = async () => {
   console.log("🎤 Voice button clicked");
 
   if (Platform.OS !== "web") {
-    Alert.alert(
-      "🎙️ Voice Input",
-      "Voice recognition only works in browser"
-    );
+    Alert.alert("🎙️ Voice Input", "Voice recognition only works in browser");
     return;
   }
 
@@ -509,18 +508,16 @@ const startVoiceRecognition = async () => {
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(t => t.stop());
+    stream.getTracks().forEach((t) => t.stop());
 
-    // ✅ Speak welcome message BEFORE starting recognition (only first time)
+    // 🗣 Intro only once
     if (!hasSpokenHint) {
       setHasSpokenHint(true);
       speakWeb(
-        "Welcome to your store! I'm your store assistant, designed to make your job easier. To add items, say: add item name at price per unit and category",
-        { language: "en-US", rate: 1.4 }
+        "Welcome to your store! To add items, say: add item name at price per unit and category. To update, say: update all item name categories to new category.",
+        { language: "en-US", rate: 1.3 }
       );
-      
-      // ✅ Wait for speech to finish before starting mic
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 4500));
     }
 
     const recognition = new SpeechRecognition();
@@ -559,7 +556,6 @@ const startVoiceRecognition = async () => {
         recognition.stop();
       } catch (e) {}
     }, 8000);
-
   } catch (err) {
     console.error("❌ Voice error:", err);
     Alert.alert("Error", "Failed to start voice recognition");
