@@ -1540,7 +1540,7 @@ useEffect(() => {
   }
 }, [voiceTranscript]);
 
-// 🧠 OCR processing (Expo-safe version using Tesseract.js only)
+// 🧠 OCR processing (Fixed for Native APK - No FileSystem needed)
 async function processReceiptImage(uri) {
   try {
     setIsScanning(true);
@@ -1563,33 +1563,57 @@ async function processReceiptImage(uri) {
       await worker.terminate();
       extractedText = result?.data?.text || "";
     } else {
-      const formData = new FormData();
-      formData.append("file", {
-        uri: processed.uri,
-        type: "image/jpeg",
-        name: "receipt.jpg",
+      // 🔧 FIX: Use XMLHttpRequest for better native compatibility
+      console.log("📤 Using XMLHttpRequest for native OCR...");
+      
+      extractedText = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://api.ocr.space/parse/image');
+        xhr.setRequestHeader('apikey', OCR_API_KEY);
+        
+        xhr.onload = () => {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            console.log("📥 OCR.Space response:", data);
+            
+            if (data.IsErroredOnProcessing) {
+              reject(new Error(data.ErrorMessage?.[0] || "OCR processing failed"));
+            } else {
+              const text = data?.ParsedResults?.[0]?.ParsedText || "";
+              if (!text.trim()) {
+                reject(new Error("No text extracted from image"));
+              }
+              resolve(text);
+            }
+          } catch (err) {
+            reject(new Error(`Failed to parse OCR response: ${err.message}`));
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error('Network request failed'));
+        xhr.ontimeout = () => reject(new Error('Request timed out'));
+        
+        const formData = new FormData();
+        formData.append("file", {
+          uri: processed.uri,
+          type: "image/jpeg",
+          name: "receipt.jpg",
+        });
+        formData.append("language", "eng");
+        formData.append("OCREngine", "2");
+        formData.append("scale", "true");
+        
+        console.log("📤 Sending image to OCR.Space...");
+        xhr.send(formData);
       });
-      formData.append("language", "eng");
-      formData.append("OCREngine", "2");
-      formData.append("scale", "true");
-
-      const res = await fetch("https://api.ocr.space/parse/image", {
-        method: "POST",
-        headers: { apikey: OCR_API_KEY },
-        body: formData,
-      });
-      const data = await res.json();
-
-      if (data.IsErroredOnProcessing)
-        throw new Error(data.ErrorMessage?.[0] || "OCR failed");
-
-      extractedText = data?.ParsedResults?.[0]?.ParsedText || "";
     }
 
     if (!extractedText.trim()) {
       Alert.alert("⚠️ OCR Failed", "No readable text detected. Try again.");
       return;
     }
+
+    console.log("✅ Extracted text:", extractedText);
 
     // 3️⃣ Clean up text for parsing
     const cleanText = extractedText
@@ -1599,73 +1623,73 @@ async function processReceiptImage(uri) {
       .toLowerCase();
 
     // 4️⃣ Smarter amount detection (context-aware)
-let detectedAmount = null;
+    let detectedAmount = null;
 
-// Normalize text for matching
-const cleanLines = cleanText
-  .split(/(?<=\d)\s+/) // split by whitespace near numbers
-  .map(l => l.trim())
-  .filter(Boolean);
+    // Normalize text for matching
+    const cleanLines = cleanText
+      .split(/(?<=\d)\s+/) // split by whitespace near numbers
+      .map(l => l.trim())
+      .filter(Boolean);
 
-// Priority 1: Look for lines with keywords that usually indicate totals or transactions
-const PRIORITY_PATTERNS = [
-  /(cash\s*withdrawal|withdrawal\s*amount)/i,
-  /(transaction\s*amount|total\s*amount|amount\s*due|grand\s*total)/i,
-  /(deposit\s*amount|credit\s*amount)/i,
-];
+    // Priority 1: Look for lines with keywords that usually indicate totals or transactions
+    const PRIORITY_PATTERNS = [
+      /(cash\s*withdrawal|withdrawal\s*amount)/i,
+      /(transaction\s*amount|total\s*amount|amount\s*due|grand\s*total)/i,
+      /(deposit\s*amount|credit\s*amount)/i,
+    ];
 
-// Try keyword-based extraction
-for (const regex of PRIORITY_PATTERNS) {
-  const match = cleanLines.find(line => regex.test(line));
-  if (match) {
-    const numMatch = match.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
-    if (numMatch) {
-      detectedAmount = parseFloat(numMatch[numMatch.length - 1].replace(/[^\d.]/g, ""));
-      console.log("💰 Found keyword-based line:", match);
-      break;
+    // Try keyword-based extraction
+    for (const regex of PRIORITY_PATTERNS) {
+      const match = cleanLines.find(line => regex.test(line));
+      if (match) {
+        const numMatch = match.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
+        if (numMatch) {
+          detectedAmount = parseFloat(numMatch[numMatch.length - 1].replace(/[^\d.]/g, ""));
+          console.log("💰 Found keyword-based line:", match);
+          break;
+        }
+      }
     }
-  }
-}
 
-// Priority 2: If not found, find the **largest number near any 'withdrawal', 'amount', or 'total'**
-if (!detectedAmount) {
-  const contextMatches = [];
-  const contextRegex = /(withdrawal|amount|total|balance|deposit)/i;
+    // Priority 2: If not found, find the **largest number near any 'withdrawal', 'amount', or 'total'**
+    if (!detectedAmount) {
+      const contextMatches = [];
+      const contextRegex = /(withdrawal|amount|total|balance|deposit)/i;
 
-  cleanLines.forEach((line, idx) => {
-    if (contextRegex.test(line)) {
-      const numbers = (line.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
+      cleanLines.forEach((line, idx) => {
+        if (contextRegex.test(line)) {
+          const numbers = (line.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
+            parseFloat(n.replace(/[^\d.]/g, ""))
+          );
+          if (numbers.length) {
+            contextMatches.push(...numbers);
+          }
+          // Also check next line (some receipts break lines)
+          if (cleanLines[idx + 1]) {
+            const nextNums = (cleanLines[idx + 1].match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
+              parseFloat(n.replace(/[^\d.]/g, ""))
+            );
+            if (nextNums.length) contextMatches.push(...nextNums);
+          }
+        }
+      });
+
+      if (contextMatches.length > 0) {
+        detectedAmount = Math.max(...contextMatches);
+        console.log("📊 Found context-based max amount:", detectedAmount);
+      }
+    }
+
+    // Priority 3: Fallback to global max numeric value (last resort)
+    if (!detectedAmount) {
+      const allNumbers = (cleanText.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
         parseFloat(n.replace(/[^\d.]/g, ""))
       );
-      if (numbers.length) {
-        contextMatches.push(...numbers);
-      }
-      // Also check next line (some receipts break lines)
-      if (cleanLines[idx + 1]) {
-        const nextNums = (cleanLines[idx + 1].match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
-          parseFloat(n.replace(/[^\d.]/g, ""))
-        );
-        if (nextNums.length) contextMatches.push(...nextNums);
+      if (allNumbers.length) {
+        detectedAmount = Math.max(...allNumbers);
+        console.log("📈 Fallback: using global max:", detectedAmount);
       }
     }
-  });
-
-  if (contextMatches.length > 0) {
-    detectedAmount = Math.max(...contextMatches);
-    console.log("📊 Found context-based max amount:", detectedAmount);
-  }
-}
-
-// Priority 3: Fallback to global max numeric value (last resort)
-if (!detectedAmount) {
-  const allNumbers = (cleanText.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
-    parseFloat(n.replace(/[^\d.]/g, ""))
-  );
-  if (allNumbers.length) {
-    detectedAmount = Math.max(...allNumbers);
-    console.log("📈 Fallback: using global max:", detectedAmount);
-  }
-}
 
     // 5️⃣ Smart Category Detection (includes banks)
     let detectedCategory = "Others";
@@ -1692,7 +1716,7 @@ if (!detectedAmount) {
     if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.15;
     if (confidence > 1) confidence = 1;
 
-   setOcrDetectedDate(new Date()); // Initialize with today's date
+    setOcrDetectedDate(new Date()); // Initialize with today's date
     setOcrRawText(cleanText);
     setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
@@ -1705,13 +1729,13 @@ if (!detectedAmount) {
     });
 
     console.log(
-  `Detected ${detectedCategory} transaction for ₱${
-    detectedAmount ? detectedAmount.toFixed(2) : "unknown"
-  }.`
-);
+      `Detected ${detectedCategory} transaction for ₱${
+        detectedAmount ? detectedAmount.toFixed(2) : "unknown"
+      }.`
+    );
   } catch (err) {
     console.error("❌ OCR error:", err);
-    Alert.alert("Error", "Failed to process receipt. Try again.");
+    Alert.alert("Error", `Failed to process receipt: ${err.message}`);
   } finally {
     setIsScanning(false);
   }

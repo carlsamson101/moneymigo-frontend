@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MoneyMigo",
-    "slug": "moneymate-frontend",
+    "slug": "moneymigo",
     "version": "1.1.4",
     "orientation": "portrait",
     "icon": "./assets/images/moneymigo-icon.png",
@@ -14,7 +14,7 @@
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/d27d8f24-2514-48f7-b171-d0835f9a4976"
+      "url": "https://u.expo.dev/7b285c43-4ea0-4d5b-a86f-7debc735d6e4"
     },
     "scheme": "moneymigo",
     "userInterfaceStyle": "automatic",
@@ -27,8 +27,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "MoneyMigo needs camera access to scan receipts and take photos.",
         "NSPhotoLibraryUsageDescription": "MoneyMigo needs access to your Photos and Videos to upload receipts or media.",
-        "NSMicrophoneUsageDescription": "MoneyMigo needs microphone access for voice command and audio features.",
-        "NSSpeechRecognitionUsageDescription": "MoneyMigo needs speech recognition to add expenses by voice."
+        "NSMicrophoneUsageDescription": "MoneyMigo needs microphone access for voice commands to add expenses.",
+        "NSSpeechRecognitionUsageDescription": "MoneyMigo needs speech recognition to convert your voice to text."
       }
     },
     "android": {
@@ -38,13 +38,20 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "CAMERA",
-        "INTERNET",
-        "RECORD_AUDIO",
-        "READ_MEDIA_IMAGES",
-        "READ_MEDIA_VIDEO",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
       "package": "com.moneymigo.app"
     },
@@ -89,11 +96,12 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d27d8f24-2514-48f7-b171-d0835f9a4976"
+        "projectId": "7b285c43-4ea0-4d5b-a86f-7debc735d6e4"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "owner": "carlsamson101"
   }
 }
