@@ -299,9 +299,26 @@ if (u) {
 
   // ---- category extraction ----
   const cat = cleaned.match(/\bcategory\s+([a-z\s]+)(?:$|\b)/i);
-  if (cat) {
-    result.category = cat[1].trim();
+ // ---- category extraction ----
+let matchedCategory = null;
+
+// 1️⃣ Explicit 'category ...'
+const cat = cleaned.match(/\bcategory\s+([a-z\s]+)(?:$|\b)/i);
+if (cat) matchedCategory = cat[1].trim().toLowerCase();
+
+// 2️⃣ If no explicit word 'category', scan the whole command for alias keywords
+if (!matchedCategory) {
+  for (const [alias, canon] of Object.entries(STORE_CATEGORY_LOOKUP)) {
+    if (cleaned.includes(alias)) {
+      matchedCategory = canon;
+      break;
+    }
   }
+}
+
+// 3️⃣ Final fallback
+result.category = matchedCategory || "other";
+
 
   // ---- item name: everything before price/keywords/category ----
   // cut off at the first price keyword or "category"

@@ -508,6 +508,16 @@ if (Platform.OS === "web") {
 function handleVoiceConversation(spokenText) {
   const lower = spokenText.toLowerCase().trim();
 
+  // 🎯 Detect 'add' command first — let parser handle it
+if (/^add\s+\d+/i.test(lower)) {
+  console.log("💬 Detected expense command — skipping chat handling");
+  return false;
+}
+
+if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
+  return false;
+}
+
   // 👋 Greetings & casual intros
   if (/(hi|hello|hey|good (morning|afternoon|evening))/i.test(lower)) {
     Speech.speak(
@@ -1025,9 +1035,8 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
     // add 120 food note lunch
     // add 120 to food note lunch
     // add 120 to food yesterday note dinner
-    const match = lower.match(
-      /add\s+(\d+(?:\.\d+)?)\s*(?:to\s+)?(\w+)?(?:\s+(yesterday|today))?(?:\s+note\s+(.*))?/i
-    );
+   const match = lower.match(/add\s+(\d+(?:\.\d+)?)\s*(?:to|in)?\s*([a-zA-Z ]+)?(?:\s+(yesterday|today))?(?:\s+note\s+(.+))?/i);
+
 
     let amount: number | null = null;
     let category = "Others";
