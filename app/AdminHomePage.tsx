@@ -6,20 +6,27 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Pressable ,
+  Platform,
+  Dimensions,
   ActivityIndicator,
   SafeAreaView,
   Alert,
   Modal,
   TextInput,
 } from "react-native";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import api from "../lib/api";
 import { checkAdminAuth } from "../lib/adminAuthGuard";
+import { usePathname } from "expo-router";
 
 export default function AdminHomePage() {
+    const currentPage = "home"; // Change per page
+
   useEffect(() => {
   (async () => {
     const isValid = await checkAdminAuth();
@@ -30,7 +37,7 @@ export default function AdminHomePage() {
   const [users, setUsers] = useState([]);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
-
+const pathname = usePathname();
   // Delete modal
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [targetType, setTargetType] = useState(null);
@@ -43,6 +50,10 @@ export default function AdminHomePage() {
   const [editStorePassword, setEditStorePassword] = useState("");
   const [editStoreId, setEditStoreId] = useState("");
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+// Add these state variables after your existing useState hooks
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const { width } = Dimensions.get('window');
+  const isMobile = width < 768;
 
   /* =========================================================
      FETCH USERS & STORES
@@ -98,107 +109,188 @@ export default function AdminHomePage() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.layout}>
-        {/* ===== Sidebar ===== */}
-        <LinearGradient
-          colors={["#0D7C8A", "#16A9B8"]}
-          style={styles.sidebar}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        >
-          <View style={styles.sidebarHeader}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.sidebarLogoText}>M</Text>
-            </View>
-            <Text style={styles.sidebarTitle}>Admin Panel</Text>
-          </View>
+      {/* Mobile Hamburger Button */}
+{isMobile && !sidebarVisible && (
+  <TouchableOpacity 
+    style={styles.hamburgerBtn}
+    onPress={() => setSidebarVisible(true)}
+  >
+    <Ionicons name="menu" size={28} color="white" />
+  </TouchableOpacity>
+)}
 
-          <View style={styles.sidebarMenu}>
-            <TouchableOpacity
-              style={[styles.sidebarItem, styles.sidebarItemActive]}
-              onPress={() => router.push("/AdminHomePage")}
-            >
-              <Ionicons name="home" size={24} color="#A4C639" />
-              <Text style={[styles.sidebarText, styles.sidebarTextActive]}>
-                Home
-              </Text>
-            </TouchableOpacity>
+{/* Sidebar Overlay for Mobile */}
+{isMobile && sidebarVisible && (
+  <TouchableOpacity
+    style={styles.sidebarOverlay}
+    activeOpacity={1}
+    onPress={() => setSidebarVisible(false)}
+  />
+)}
 
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push("/AdminToolsPage")}
-            >
-              <Ionicons
-                name="settings-outline"
-                size={24}
-                color="rgba(255,255,255,0.7)"
-              />
-              <Text style={styles.sidebarText}>Tools</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push("/AdminDealsPage")}
-            >
-              <Ionicons
-                name="pricetag-outline"
-                size={24}
-                color="rgba(255,255,255,0.7)"
-              />
-              <Text style={styles.sidebarText}>Deals</Text>
-            </TouchableOpacity>
-          </View>
-
-       {/* ===== Logout Button ===== */}
-<TouchableOpacity
-  style={styles.logoutBtn}
-  onPress={() => setLogoutModalVisible(true)} // 🔥 Opens modal instead of alert
+{/* Sidebar - Always rendered, positioned based on state */}
+<LinearGradient
+  colors={['#0D7C8A', '#16A9B8']}
+  style={[
+    styles.sidebar,
+    isMobile && {
+      position: 'absolute',
+      left: sidebarVisible ? 0 : -280,
+      zIndex: 1000,
+      height: '100%',
+    }
+  ]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 0, y: 1 }}
 >
-  <Ionicons name="log-out-outline" size={24} color="#EF4444" />
-  <Text style={styles.logoutText}>Logout</Text>
-</TouchableOpacity>
+  {/* Close button (only on mobile when open) */}
+  {isMobile && sidebarVisible && (
+    <TouchableOpacity 
+      style={styles.closeBtn}
+      onPress={() => setSidebarVisible(false)}
+    >
+      <Ionicons name="close" size={28} color="white" />
+    </TouchableOpacity>
+  )}
+
+  <View style={styles.sidebarHeader}>
+    <View style={styles.logoCircle}>
+      <Text style={styles.sidebarLogoText}>M</Text>
+    </View>
+    <Text style={styles.sidebarTitle}>Admin Panel</Text>
+  </View>
+
+<View style={styles.sidebarMenu}>
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminHomePage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminHomePage");
+    }}
+  >
+    <Ionicons 
+      name="home" 
+      size={24} 
+      color={pathname === "/AdminHomePage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminHomePage" && styles.sidebarTextActive
+    ]}>
+      Home
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminToolsPage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminToolsPage");
+    }}
+  >
+    <Ionicons 
+      name="settings-outline" 
+      size={24} 
+      color={pathname === "/AdminToolsPage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminToolsPage" && styles.sidebarTextActive
+    ]}>
+      Tools
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminDealsPage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminDealsPage");
+    }}
+  >
+    <Ionicons 
+      name="pricetag-outline" 
+      size={24} 
+      color={pathname === "/AdminDealsPage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminDealsPage" && styles.sidebarTextActive
+    ]}>
+      Deals
+    </Text>
+  </TouchableOpacity>
+</View>
+
+  <TouchableOpacity
+    style={styles.logoutBtn}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      setLogoutModalVisible(true);
+    }}
+  >
+    <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+    <Text style={styles.logoutText}>Logout</Text>
+  </TouchableOpacity>
+</LinearGradient>
 
 {/* ===== Logout Confirmation Modal ===== */}
-<Modal transparent visible={logoutModalVisible} animationType="fade">
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      <Ionicons name="alert-circle-outline" size={42} color="#EF4444" />
-      <Text style={[styles.modalTitle, { marginTop: 12 }]}>Confirm Logout</Text>
-      <Text style={styles.modalMessage}>
-        Are you sure you want to log out of your admin account?
+<Modal 
+  transparent 
+  visible={logoutModalVisible} 
+  animationType="fade"
+  onRequestClose={() => setLogoutModalVisible(false)}
+>
+  <Pressable 
+    style={styles.modalOverlay} 
+    onPress={() => setLogoutModalVisible(false)}
+  >
+    <View style={styles.dialogBox} onStartShouldSetResponder={() => true}>
+      <View style={styles.dialogIconWrapper}>
+        <Ionicons name="log-out-outline" size={32} color="#EF4444" />
+      </View>
+
+      <Text style={styles.dialogTitle}>Confirm Logout</Text>
+      <Text style={styles.dialogMessage}>
+        Are you sure you want to log out of the admin panel?
       </Text>
 
-      <View style={styles.modalActions}>
-        <TouchableOpacity
-          style={[styles.modalButton, styles.cancelBtn]}
+      <View style={styles.dialogActions}>
+        <TouchableOpacity 
+          style={styles.dialogCancelBtn}
           onPress={() => setLogoutModalVisible(false)}
         >
-          <Text style={styles.modalCancelText}>Cancel</Text>
+          <Text style={styles.dialogCancelText}>Cancel</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.modalButton, { backgroundColor: "#EF4444" }]}
+          style={styles.dialogConfirmBtn}
           onPress={async () => {
             try {
               await AsyncStorage.removeItem("adminToken");
               setLogoutModalVisible(false);
-              setTimeout(() => {
-                router.replace("/AdminLoginPage");
-              }, 100);
+              router.replace("/AdminLoginPage");
             } catch (err) {
               console.error("Logout failed:", err);
               Alert.alert("Error", "Failed to log out properly.");
             }
           }}
         >
-          <Text style={styles.modalDeleteText}>Logout</Text>
+          <Text style={styles.dialogConfirmText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </View>
-  </View>
+  </Pressable>
 </Modal>
-
-
-        </LinearGradient>
 
         {/* ===== Main Content ===== */}
         <ScrollView style={styles.mainContent}>
@@ -237,96 +329,108 @@ export default function AdminHomePage() {
               </View>
 
               {/* Manage Users */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Manage Users</Text>
-                {users.length === 0 ? (
-                  <Text style={styles.emptyText}>No users found.</Text>
-                ) : (
-                  users.map((user) => (
-                    <View key={user._id} style={styles.itemCard}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.itemName}>
-                          {user.username ||
-                            `${user.firstName} ${user.lastName}`}
-                        </Text>
-                        <Text style={styles.itemSub}>
-                          {user.email || "no email"}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setTargetType("user");
-                          setTargetId(user._id);
-                          setTargetName(user.username || user.email);
-                          setConfirmVisible(true);
-                        }}
-                        style={styles.deleteBtn}
-                      >
-                        <Ionicons
-                          name="trash-outline"
-                          size={18}
-                          color="#EF4444"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ))
-                )}
-              </View>
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Manage Users ({users.length})</Text>
+  {users.length === 0 ? (
+    <Text style={styles.emptyText}>No users found.</Text>
+  ) : (
+    <ScrollView 
+      style={styles.scrollableList}
+      showsVerticalScrollIndicator={true}
+      nestedScrollEnabled={true}
+    >
+      {users.map((user) => (
+        <View key={user._id} style={styles.itemCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.itemName}>
+              {user.username ||
+                `${user.firstName} ${user.lastName}`}
+            </Text>
+            <Text style={styles.itemSub}>
+              {user.email || "no email"}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              setTargetType("user");
+              setTargetId(user._id);
+              setTargetName(user.username || user.email);
+              setConfirmVisible(true);
+            }}
+            style={styles.deleteBtn}
+          >
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color="#EF4444"
+            />
+          </TouchableOpacity>
+        </View>
+      ))}
+    </ScrollView>
+  )}
+</View>
 
               {/* Manage Stores */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Manage Stores</Text>
-                {stores.length === 0 ? (
-                  <Text style={styles.emptyText}>No stores found.</Text>
-                ) : (
-                  stores.map((store) => (
-                    <View key={store._id} style={styles.itemCard}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.itemName}>{store.storeName}</Text>
-                        <Text style={styles.itemSub}>
-                          Role: {store.role || "store"}
-                        </Text>
-                      </View>
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Manage Stores ({stores.length})</Text>
+  {stores.length === 0 ? (
+    <Text style={styles.emptyText}>No stores found.</Text>
+  ) : (
+    <ScrollView 
+      style={styles.scrollableList}
+      showsVerticalScrollIndicator={true}
+      nestedScrollEnabled={true}
+    >
+      {stores.map((store) => (
+        <View key={store._id} style={styles.itemCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.itemName}>{store.storeName}</Text>
+            <Text style={styles.itemSub}>
+              Role: {store.role || "store"}
+            </Text>
+          </View>
 
-                      <View style={{ flexDirection: "row", gap: 8 }}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setEditStoreId(store._id);
-                            setEditStoreName(store.storeName);
-                            setEditStorePassword("");
-                            setEditStoreVisible(true);
-                          }}
-                          style={[
-                            styles.deleteBtn,
-                            { backgroundColor: "#DBEAFE" },
-                          ]}
-                        >
-                          <Ionicons
-                            name="create-outline"
-                            size={18}
-                            color="#2563EB"
-                          />
-                        </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => {
+                setEditStoreId(store._id);
+                setEditStoreName(store.storeName);
+                setEditStorePassword("");
+                setEditStoreVisible(true);
+              }}
+              style={[
+                styles.deleteBtn,
+                { backgroundColor: "#DBEAFE" },
+              ]}
+            >
+              <Ionicons
+                name="create-outline"
+                size={18}
+                color="#2563EB"
+              />
+            </TouchableOpacity>
 
-                        <TouchableOpacity
-                          onPress={() => {
-                            setTargetType("store");
-                            setTargetName(store.storeName);
-                            setConfirmVisible(true);
-                          }}
-                          style={styles.deleteBtn}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={18}
-                            color="#EF4444"
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))
-                )}
-              </View>
+            <TouchableOpacity
+              onPress={() => {
+                setTargetType("store");
+                setTargetName(store.storeName);
+                setConfirmVisible(true);
+              }}
+              style={styles.deleteBtn}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={18}
+                color="#EF4444"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </ScrollView>
+  )}
+</View>
             </>
           )}
         </ScrollView>
@@ -451,11 +555,15 @@ export default function AdminHomePage() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F8FAFC" },
   layout: { flex: 1, flexDirection: "row" },
-  sidebar: {
+   sidebar: {
     width: 260,
     paddingTop: 24,
     paddingHorizontal: 16,
     justifyContent: "space-between",
+    // Add smooth transition on web
+    ...(Platform.OS === 'web' && {
+      transition: 'left 0.3s ease-in-out',
+    }),
   },
   sidebarHeader: {
     alignItems: "center",
@@ -496,7 +604,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoutText: { marginLeft: 12, fontSize: 15, color: "#EF4444" },
-  mainContent: { flex: 1 },
+  mainContent: { flex: 1,     marginTop: Dimensions.get('window').width < 768 ? 60 : 0, },
   pageHeader: { padding: 24 },
   pageTitle: { fontSize: 28, fontWeight: "700", color: "white" },
   pageSubtitle: { fontSize: 14, color: "rgba(255,255,255,0.9)" },
@@ -534,46 +642,124 @@ const styles = StyleSheet.create({
   deleteBtn: { padding: 8, borderRadius: 8, backgroundColor: "#FEE2E2" },
   emptyText: { color: "#94A3B8", fontSize: 14 },
 
-  /* Modal styles */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+  
+
+
+ // ADD these NEW styles:
+  hamburgerBtn: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    zIndex: 999,
+    backgroundColor: '#16A9B8',
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  modalContainer: {
-    width: "85%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
+  sidebarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 999,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1E293B",
+  closeBtn: {
+    alignSelf: 'flex-end',
+    padding: 8,
     marginBottom: 8,
   },
-  modalMessage: {
-    fontSize: 15,
-    color: "#475569",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    width: "100%",
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelBtn: { backgroundColor: "#E2E8F0" },
-  deleteBtnModal: { backgroundColor: "#EF4444" },
-  modalCancelText: { color: "#1E293B", fontWeight: "600" },
-  modalDeleteText: { color: "#fff", fontWeight: "600" },
+  scrollableList: {
+  maxHeight: 600, // Adjust this value (shows ~5-6 items)
+  backgroundColor: '#FFFFFF',
+  borderRadius: 12,
+  padding: 8,
+},
+
+ // Add these NEW styles instead:
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+dialogBox: {
+  width: "85%",
+  maxWidth: 400,
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 24,
+  alignItems: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 10,
+  elevation: 10,
+},
+
+dialogIconWrapper: {
+  width: 56,
+  height: 56,
+  borderRadius: 28,
+  backgroundColor: "#FEE2E2",
+  justifyContent: "center",
+  alignItems: "center",
+  marginBottom: 16,
+},
+
+dialogTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  color: "#1E293B",
+  textAlign: "center",
+  marginBottom: 8,
+},
+
+dialogMessage: {
+  fontSize: 15,
+  color: "#475569",
+  textAlign: "center",
+  marginBottom: 20,
+  lineHeight: 22,
+},
+
+dialogActions: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  width: "100%",
+  gap: 12,
+},
+
+dialogCancelBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 10,
+  alignItems: "center",
+  backgroundColor: "#E2E8F0",
+},
+
+dialogConfirmBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 10,
+  alignItems: "center",
+  backgroundColor: "#EF4444",
+},
+
+dialogCancelText: {
+  color: "#1E293B",
+  fontWeight: "600",
+  fontSize: 15,
+},
+
+dialogConfirmText: {
+  color: "#fff",
+  fontWeight: "600",
+  fontSize: 15,
+},
 });

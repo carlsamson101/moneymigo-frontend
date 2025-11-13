@@ -18,6 +18,7 @@ if (typeof window !== "undefined") {
   }, 0);
 }
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { LogBox, Alert } from "react-native";
 LogBox.ignoreLogs([
@@ -43,6 +44,8 @@ if (typeof globalThis.__notificationsInit === "undefined") globalThis.__notifica
 
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+
   const router = useRouter();
   const mountedRef = useRef(true);
 
@@ -53,6 +56,59 @@ export default function RootLayout() {
 }
 
   useIdleLogout();
+
+// Replace your checkAuth useEffect with this debug version:
+useEffect(() => {
+  const checkAuth = async () => {
+    // ✅ OPTIMIZATION 1: Check public routes FIRST (synchronous, instant)
+    if (Platform.OS === "web") {
+      const current = window.location.pathname;
+      
+      const publicRoutes = [
+        "/login",
+        "/register",
+        "/verify-code",
+        "/reset-pin",
+        "/storeAuth",
+        "/AdminLoginPage",
+      ];
+
+      const isPublic = publicRoutes.some(
+        (route) => current === route || current.startsWith(route + "/")
+      );
+
+      if (isPublic) {
+        // ✅ Skip token checks entirely for public routes
+        setAuthChecked(true);
+        return;
+      }
+    }
+
+    // ✅ OPTIMIZATION 2: Read all tokens in parallel (not sequential)
+    const [adminToken, storeToken, userToken] = await Promise.all([
+      AsyncStorage.getItem("adminToken"),
+      AsyncStorage.getItem("storeToken"),
+      AsyncStorage.getItem("token"),
+    ]);
+
+        // NEW PRIORITY: storeToken > adminToken > userToken
+      if (storeToken) {
+        router.replace("/StoreDashboard");
+      } else if (adminToken) {
+        router.replace("/AdminHomePage");
+      } else if (userToken) {
+        router.replace("/(tabs)");
+      } else {
+        router.replace("/login");
+      }
+
+    setAuthChecked(true);
+  };
+
+  checkAuth();
+}, []);
+
+
 
   // 🕒 Hide splash after 2.8 seconds
   useEffect(() => {
@@ -142,7 +198,8 @@ export default function RootLayout() {
   }, []);
 
   // 💫 Splashscreen render
-if (showSplash && !globalThis.__splashNavigated) return <SplashScreen />;
+if ((showSplash || !authChecked) && !globalThis.__splashNavigated)
+  return <SplashScreen />;
 
   return (
     <RecentlyViewedProvider>

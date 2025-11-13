@@ -3,13 +3,13 @@ import { LogBox } from "react-native";
 LogBox.ignoreLogs([
   "setLayoutAnimationEnabledExperimental is currently a no-op",
   "expo-notifications: Android Push notifications",
-   "Unexpected text node",                     // 🧘 hides RN-Web text node spam
-  "Warning: Text strings must be rendered",   // companion message
+   "Unexpected text node",
+  "Warning: Text strings must be rendered",
 ]);
 
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Tabs } from "expo-router";
 import {
   Animated,
@@ -25,7 +25,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 
-const { width, height } = Dimensions.get("window");
 const FAB_SIZE = 60;
 
 export default function TabsLayout() {
@@ -33,6 +32,10 @@ export default function TabsLayout() {
   const [hoveredTab, setHoveredTab] = useState(null);
   const [fabPosition, setFabPosition] = useState({
     isRight: true,
+  });
+  const [dimensions, setDimensions] = useState({
+    width: Dimensions.get("window").width,
+    height: Dimensions.get("window").height,
   });
 
   const anim = useRef(new Animated.Value(0)).current;
@@ -42,10 +45,44 @@ export default function TabsLayout() {
 
   const pan = useRef(
     new Animated.ValueXY({
-      x: width - FAB_SIZE * 0.4,
-      y: height / 2 - FAB_SIZE / 2,
+      x: dimensions.width - FAB_SIZE * 0.4,
+      y: dimensions.height / 2 - FAB_SIZE / 2,
     })
   ).current;
+
+  // ✅ Listen for dimension changes
+ useEffect(() => {
+  let timeout;
+  const subscription = Dimensions.addEventListener("change", ({ window }) => {
+    clearTimeout(timeout);
+
+    timeout = setTimeout(() => {
+      const newWidth = window.width;
+      const newHeight = window.height;
+
+      setDimensions({ width: newWidth, height: newHeight });
+
+      // Now recalc FAB position only once
+      const currentX = pan.x._value;
+      const currentY = pan.y._value;
+
+      const isRight = currentX > dimensions.width / 2;
+      const newX = isRight ? newWidth - FAB_SIZE * 0.4 : -FAB_SIZE * 0.6;
+
+      const yRatio = currentY / dimensions.height;
+      const newY = Math.max(FAB_SIZE, Math.min(yRatio * newHeight, newHeight - FAB_SIZE * 2));
+
+      Animated.spring(pan, {
+        toValue: { x: newX, y: newY },
+        useNativeDriver: false,
+      }).start();
+
+      setFabPosition({ isRight });
+    }, 120); // delay prevents rapid re-renders
+  });
+
+  return () => subscription?.remove();
+}, []);
 
   const tabs = [
     { name: "index", icon: "home", label: "Home", colors: ["#1f4b81ff", "#1f4b81ff"], isTab: true },
@@ -59,7 +96,6 @@ export default function TabsLayout() {
     if (!hoverScales[i]) hoverScales[i] = new Animated.Value(0);
   });
 
-  // ✅ PanResponder for dragging + snapping + half-visible edges
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -78,18 +114,18 @@ export default function TabsLayout() {
       onPanResponderRelease: () => {
         pan.flattenOffset();
 
-        let finalX = Math.max(0, Math.min(pan.x._value, width - FAB_SIZE));
-        let finalY = Math.max(0, Math.min(pan.y._value, height - FAB_SIZE));
+        let finalX = Math.max(0, Math.min(pan.x._value, dimensions.width - FAB_SIZE));
+        let finalY = Math.max(0, Math.min(pan.y._value, dimensions.height - FAB_SIZE));
 
         // Snap horizontally (60% hidden) - only left or right
-        if (finalX < width / 2) {
+        if (finalX < dimensions.width / 2) {
           finalX = -FAB_SIZE * 0.6;
         } else {
-          finalX = width - FAB_SIZE * 0.4;
+          finalX = dimensions.width - FAB_SIZE * 0.4;
         }
 
         // Clamp vertical position
-        finalY = Math.max(FAB_SIZE, Math.min(finalY, height - FAB_SIZE * 2));
+        finalY = Math.max(FAB_SIZE, Math.min(finalY, dimensions.height - FAB_SIZE * 2));
 
         Animated.spring(pan, {
           toValue: { x: finalX, y: finalY },
@@ -97,7 +133,7 @@ export default function TabsLayout() {
         }).start();
 
         setFabPosition({
-          isRight: finalX > width / 2,
+          isRight: finalX > dimensions.width / 2,
         });
       },
     })
@@ -200,7 +236,6 @@ export default function TabsLayout() {
         pointerEvents="box-none"
       >
         {tabs.map((tab, i) => {
-          // 🌙 Arc always opens horizontally
           const baseAngle = 0;
           const angle = ((i - 2) / 4) * (Math.PI / 1.15) + baseAngle;
 

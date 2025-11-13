@@ -4,8 +4,8 @@ import { Platform } from "react-native";
 
 type UserToken = {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   token: string;
   budgetPeriod?: "Daily" | "Weekly" | "Monthly" | "Custom";
   avatarUrl?: string;
@@ -13,27 +13,31 @@ type UserToken = {
 
 const STORAGE_KEY = "userToken";
 
-// ✅ Save token + user info + expiry date
+// ========================================================
+// SAVE TOKEN (fixed merge, fixed web persistence, no break)
+// ========================================================
 export async function saveToken(user: UserToken) {
   try {
-    // Merge with existing token so details aren’t lost
-    const existing = await getToken();
-    const merged = { ...existing, ...user };
+    const existing = await getToken(); // can be null!
+
+    // FIX: avoid merging null → {}
+    const merged = { ...(existing || {}), ...(user || {}) };
 
     const userStr = JSON.stringify(merged);
 
-    if (Platform.OS !== "web") {
-      await SecureStore.setItemAsync(STORAGE_KEY, userStr);
-    } else {
+    // FIX: SecureStore does NOT work on web → use localStorage
+    if (Platform.OS === "web") {
       localStorage.setItem(STORAGE_KEY, userStr);
+    } else {
+      await SecureStore.setItemAsync(STORAGE_KEY, userStr);
     }
 
-    // ✅ Save expiry separately in AsyncStorage (7 days)
+    // Save expiry (7 days)
     const now = new Date();
     const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     await AsyncStorage.setItem("authExpiry", expiry.toISOString());
 
-    // ✅ Save cached profile (for offline use)
+    // Save cached data
     await AsyncStorage.setItem("userData", userStr);
 
     console.log("💾 Token, expiry, and user data saved");
@@ -42,22 +46,31 @@ export async function saveToken(user: UserToken) {
   }
 }
 
-// ✅ Retrieve token + user data
+// ========================================================
+// GET TOKEN (fixed: always return correct platform storage)
+// ========================================================
 export async function getToken(): Promise<UserToken | null> {
   try {
-    const value =
-      Platform.OS === "web"
-        ? localStorage.getItem(STORAGE_KEY)
-        : await SecureStore.getItemAsync(STORAGE_KEY);
+    let value;
 
-    return value ? JSON.parse(value) : null;
+    if (Platform.OS === "web") {
+      value = localStorage.getItem(STORAGE_KEY);
+    } else {
+      value = await SecureStore.getItemAsync(STORAGE_KEY);
+    }
+
+    if (!value) return null;
+
+    return JSON.parse(value);
   } catch (error) {
     console.error("⚠️ Token parse error:", error);
     return null;
   }
 }
 
-// ✅ Retrieve cached user info (for offline)
+// ========================================================
+// GET CACHED USER (unchanged, still correct)
+// ========================================================
 export async function getCachedUser() {
   try {
     const data = await AsyncStorage.getItem("userData");
@@ -67,7 +80,9 @@ export async function getCachedUser() {
   }
 }
 
-// ✅ Remove token + expiry + cached profile
+// ========================================================
+// REMOVE TOKEN (fixed: remove both web + native properly)
+// ========================================================
 export async function removeToken() {
   try {
     if (Platform.OS === "web") {
@@ -75,7 +90,9 @@ export async function removeToken() {
     } else {
       await SecureStore.deleteItemAsync(STORAGE_KEY);
     }
+
     await AsyncStorage.multiRemove(["authExpiry", "userData", "migo-email"]);
+
     console.log("🧹 Cleared token, expiry, and cached user data");
   } catch (error) {
     console.error("⚠️ Failed to clear auth data:", error);

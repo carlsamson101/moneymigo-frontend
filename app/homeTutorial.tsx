@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -75,18 +75,21 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
   };
 
   const step = TUTORIAL_STEPS[currentStep];
-
-  return (
+ return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
+      <ScrollView 
+        style={styles.overlay}
+        contentContainerStyle={styles.overlayContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         {/* Dark overlay */}
         <View style={styles.darkOverlay} />
-
         {/* Highlight area (spotlight effect) */}
         {step.highlightArea && (
           <View
@@ -194,7 +197,7 @@ function GettingStartedOverlay({ visible, onClose }: { visible: boolean; onClose
             </View>
           </LinearGradient>
         </View>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -484,15 +487,20 @@ const styles = StyleSheet.create({
   },
 
   // Tutorial Overlay Styles
-  overlay: {
+   overlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  overlayContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.3)",
+    zIndex: 1,
   },
-  highlightBox: {
+   highlightBox: {
     position: "absolute",
     backgroundColor: "transparent",
     borderWidth: 3,
@@ -503,6 +511,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 15,
     elevation: 10,
+    zIndex: 2,  // ✅ ADDED
   },
   tutorialCard: {
     position: "absolute",
@@ -513,7 +522,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 15,  // ✅ CHANGED from 10 to 15
+    zIndex: 10,     // ✅ ADDED
   },
   cardGradient: {
     padding: 24,
@@ -631,6 +641,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 400,
     alignItems: "center",
+    zIndex: 5,  // ✅ ADDED
   },
   previewMenuItem: {
     position: "absolute",

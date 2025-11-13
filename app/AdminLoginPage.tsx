@@ -19,11 +19,11 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../lib/api"; // ✅ Make sure your baseURL points to your backend
 
-const showAlert = (title: string, message: string) => {
+const showAlert = (title, message) => {
   if (Platform.OS === "web") {
     window.alert(`${title}\n\n${message}`);
   } else {
-    showAlert(title, message);
+    Alert.alert(title, message);
   }
 };
 

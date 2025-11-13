@@ -42,7 +42,7 @@ type Deal = {
   distance?: number;
   unit?: string;
   category?: string;
-  stock?: number; // ✅ added
+  stock?: boolean; // ✅ Changed to boolean
 };
 
 
@@ -429,21 +429,21 @@ const onRefresh = () => {
               </View>
 
               <View style={styles.stockContainer}>
-                {item.stock && item.stock > 0 ? (
-                  <>
-                    <Ionicons name="cube-outline" size={12} color="#059669" />
-                    <Text style={[styles.stockText, { color: "#059669" }]}>
-                      {item.stock} in stock
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
-                    <Text style={[styles.stockText, { color: "#DC2626" }]}>
-                      No stock available
-                    </Text>
-                  </>
-                )}
+                {item.stock ? ( 
+                <>
+                  <Ionicons name="cube-outline" size={12} color="#059669" />
+                  <Text style={[styles.stockText, { color: "#059669" }]}>
+                    In Stock
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
+                  <Text style={[styles.stockText, { color: "#DC2626" }]}>
+                    Out of Stock
+                  </Text>
+                </>
+              )}
               </View>
 
               <View style={styles.priceSection}>
@@ -490,12 +490,9 @@ const onRefresh = () => {
               </Text>
               <Text style={styles.modalText}>💰 Price: ₱{selectedDeal.price}</Text>
 
-              <Text style={styles.modalText}>
-                📦 Stock:{" "}
-                {selectedDeal.stock && selectedDeal.stock > 0
-                  ? `${selectedDeal.stock} in stock`
-                  : "No stock available"}
-              </Text>
+             <Text style={styles.modalText}>
+              📦 Stock: {selectedDeal.stock ? "In Stock" : "Out of Stock"}
+            </Text>
 
               {selectedDeal.unit && (
                 <Text style={styles.modalText}>📏 Unit: {selectedDeal.unit}</Text>

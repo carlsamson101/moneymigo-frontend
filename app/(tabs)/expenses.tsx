@@ -273,6 +273,8 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
   const [expenses, setExpenses] = useState<{ [date: string]: any[] }>({});
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
   const [budgetAmount, setBudgetAmount] = useState(0);
+const [showVoiceFormatModal, setShowVoiceFormatModal] = useState(false);
+const [showScanGuideModal, setShowScanGuideModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
@@ -293,7 +295,6 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
   const [historyExpenses, setHistoryExpenses] = useState<any[]>([]);
   const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
   const [otherSubcategories, setOtherSubcategories] = useState<string[]>([]);
-// Add this new state at the top with your other useState declarations
 const [historyStartDate, setHistoryStartDate] = useState<Date | null>(null);
 const [historyEndDate, setHistoryEndDate] = useState<Date | null>(null);
 const [ocrDetectedNotes, setOcrDetectedNotes] = useState("");
@@ -336,6 +337,8 @@ useEffect(() => {
     window.addEventListener("click", unlock);
   }
 }, []);
+
+
 
 useEffect(() => {
   // don't speak automatically — wait for user action
@@ -518,6 +521,18 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   return false;
 }
 
+if (/(^expense guide$|show guide|voice guide)/i.test(lower)) {
+  setShowVoiceFormatModal(true);
+  Speech.speak("Sure! I'm showing you the voice command guide...");
+  return true;
+}
+
+if (/(scan guide|receipt guide|how to scan|scanning guide|show scan guide)/i.test(lower)) {
+  setShowScanGuideModal(true);
+  Speech.speak("Got it! Here's how to scan receipts using your camera or photo library.");
+  return true;
+}
+
   // 👋 Greetings & casual intros
   if (/(hi|hello|hey|good (morning|afternoon|evening))/i.test(lower)) {
     Speech.speak(
@@ -527,24 +542,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     return true;
   }
 
-  // ❓ Asking for help or guidance
-  if (/(what can i do|help|how to use|how does this work|what do i say|guide me|confused|need help)/i.test(lower)) {
-    Speech.speak(
-      "No worries! You can track expenses by saying something like add one hundred food note burger, or add fifty transport note jeep. I can also help you scan receipts or check your spending.",
-      { language: "en-US", rate: 1.2 }
-    );
-    return true;
-  }
 
-  // 🧾 Receipt scanning and related queries
-  if (/(receipt|scan|photo|picture|take a pic|camera|read my receipt|how to scan)/i.test(lower)) {
-    Speech.speak(
-      "You can tap the Scan Receipt button below to take a photo or upload one. I'll read the total amount automatically and help you save it as an expense.",
-      { language: "en-US", rate: 1.2 }
-    );
-    setAssistantMood("helpful");
-    return true;
-  }
 
   // 💰 Budget and spending questions
   if (/(budget|how much|spent|left|remaining|money left)/i.test(lower)) {
@@ -565,7 +563,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setTimeout(() => {
       Speech.speak("You're worthy of love, respect, and all the good things life has to offer. Never forget that.", {
         language: "en-US",
-        rate: 1.2,
+        rate: 1.1,
       });
     }, 3500);
     return true;
@@ -576,12 +574,12 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("comforting");
     Speech.speak(
       "Hey, I'm really sorry you feel that way. You deserve kindness and respect. Not everyone will understand your value — but that doesn't mean you're not worth it.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.0 }
     );
     setTimeout(() => {
       Speech.speak("Take a deep breath, okay? You're doing your best, and I'm proud of you.", {
         language: "en-US",
-        rate: 1.1,
+        rate: 1.0,
       });
     }, 3500);
     return true;
@@ -591,7 +589,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("comforting");
     Speech.speak(
       "I know things can feel heavy sometimes. You're doing better than you think — maybe take a short break and have some water.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
@@ -601,7 +599,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("comforting");
     Speech.speak(
       "I know it's tough right now, but you've handled hard things before. Take it one step at a time, and don't forget to breathe.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
@@ -610,7 +608,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(can't sleep|insomnia|tired but can't sleep|wide awake)/i.test(lower)) {
     Speech.speak(
       "Having trouble sleeping? Try putting your phone away for a bit and taking some deep breaths. Your mind needs rest too.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.0 }
     );
     return true;
   }
@@ -618,7 +616,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(all nighter|pulling an all nighter|staying up|not sleeping)/i.test(lower)) {
     Speech.speak(
       "I get it, sometimes we have to stay up. But please try to rest when you can — your health matters more than anything.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -627,7 +625,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(hungry|starving|what should i eat|food recommendation|craving)/i.test(lower)) {
     Speech.speak(
       "Sounds like it's time for a snack! Whatever you choose, maybe track it as a food expense so you can see your eating patterns.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -636,7 +634,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("concerned");
     Speech.speak(
       "Hey, please don't skip meals. Your body and brain need fuel. Grab something small if you can, okay?",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -645,7 +643,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(broke|no money|out of money|can't afford|too expensive)/i.test(lower)) {
     Speech.speak(
       "Money can be really stressful. Let's look at your expenses together and see where we can make adjustments. You've got this.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -654,7 +652,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("happy");
     Speech.speak(
       "Nice! Fresh money coming in. Maybe now's a good time to set aside some savings before spending?",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -664,7 +662,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("comforting");
     Speech.speak(
       "I'm here with you. And remember — it's okay to reach out to people you care about. They probably miss you too.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -672,7 +670,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(had a fight|argument|we fought|got into a fight)/i.test(lower)) {
     Speech.speak(
       "Arguments happen. Give yourself some time to cool down, then maybe try talking it out when you're both ready.",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -681,7 +679,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(rainy|raining|bad weather|gloomy|dark outside)/i.test(lower)) {
     Speech.speak(
       "Rainy days can feel heavy. Stay cozy, maybe have some warm food — and remember to track that coffee expense!",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -691,7 +689,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("comforting");
     Speech.speak(
       "Life can feel overwhelming sometimes. But you're here, you're trying, and that takes real courage. One day at a time, okay?",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -701,7 +699,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("happy");
     Speech.speak(
       "Happy birthday! I hope your day is filled with good food, great people, and maybe a few treats that won't break the budget!",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -710,7 +708,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
     setAssistantMood("happy");
     Speech.speak(
       "That's amazing! I'm so proud of you! Celebrate this win — you earned it!",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -719,7 +717,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   if (/(bored|nothing to do|what should i do)/i.test(lower)) {
     Speech.speak(
       "Feeling bored? How about reviewing your spending goals or maybe treating yourself to something small you've been wanting?",
-      { language: "en-US", rate: 1.2 }
+      { language: "en-US", rate: 1.1 }
     );
     return true;
   }
@@ -728,7 +726,7 @@ if (/^(add|record|save|log)\s+\d+/i.test(lower)) {
   setAssistantMood("happy");
   Speech.speak(
     "Why did the budget go to therapy? Because it had too many issues! Haha... okay, I’ll stick to helping you save money instead.",
-    { language: "en-US", rate: 1.2 }
+    { language: "en-US", rate: 1.1 }
   );
   return true;
 }
@@ -1622,7 +1620,7 @@ async function processReceiptImage(uri) {
       .replace(/[^\x20-\x7E]/g, "")
       .toLowerCase();
 
-    // 4️⃣ 🎯 IMPROVED AMOUNT DETECTION - Exclude VAT/Tax, prioritize subtotal
+    // 4️⃣ 🎯 IMPROVED AMOUNT DETECTION - Exclude VAT/Tax, prioritize actual total
     let detectedAmount = null;
 
     const cleanLines = cleanText
@@ -1632,31 +1630,64 @@ async function processReceiptImage(uri) {
 
     console.log("📄 Cleaned lines:", cleanLines);
 
-    // 🚫 EXCLUDE: Lines with VAT, tax, service charge (these are add-ons, not the main amount)
+    // 🚫 EXCLUDE: Lines with VAT, tax, service charge, transaction IDs (these are NOT the amount to pay)
     const EXCLUDE_PATTERNS = [
       /vat|tax|service\s*charge|sc\s*\d|vatable/i,
+      /vat\s*sales|vat\s*amount|vat\s*exempt/i,
+      /transaction\s*(id|number|no|#)/i,
+      /invoice\s*(id|number|no|#)/i,
+      /reference\s*(id|number|no|#)/i,
+      /order\s*(id|number|no|#)/i,
+      /receipt\s*(id|number|no|#)/i,
+      /^\d{10,}$/i, // Long number sequences (likely IDs)
     ];
 
-    // ✅ PRIORITY 1: Look for SUBTOTAL (amount before taxes)
-    const SUBTOTAL_PATTERNS = [
-      /subtotal|sub\s*total|sub-total/i,
-      /amount\s*due|total\s*amount\s*due/i,
-      /total\s*sales|sales\s*total/i,
+    // ✅ PRIORITY 1: Look for common total labels (including "Eat-In Total", "Amount to Pay", "Billed Amount")
+    const TOTAL_PATTERNS = [
+      /billed\s*amount/i,                  // "Billed Amount"
+      /total\s*due/i,                      // "Total Due"
+      /eat[\s-]*in[\s-]*total/i,           // "Eat-In Total" (McDonald's)
+      /amount[\s]*to[\s]*pay/i,            // "Amount to Pay"
+      /total[\s]*amount[\s]*due/i,         // "Total Amount Due"
+      /amount[\s]*due/i,                   // "Amount Due"
+      /grand[\s]*total/i,                  // "Grand Total"
+      /net[\s]*total/i,                    // "Net Total"
+      /final[\s]*total/i,                  // "Final Total"
+      /subtotal|sub[\s-]*total/i,          // "Subtotal"
+      /total[\s]*sales|sales[\s]*total/i,  // "Total Sales"
+      /payment[\s]*amount/i,               // "Payment Amount"
+      /total[\s]*amount/i,                 // "Total Amount"
     ];
 
-    for (const regex of SUBTOTAL_PATTERNS) {
+    for (const regex of TOTAL_PATTERNS) {
       const match = cleanLines.find(line => {
-        // Skip if line contains VAT/tax keywords
+        // Skip if line contains VAT/tax/ID keywords
         if (EXCLUDE_PATTERNS.some(ex => ex.test(line))) return false;
         return regex.test(line);
       });
 
       if (match) {
+        // Look for amount in the same line
         const numMatch = match.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
         if (numMatch) {
           detectedAmount = parseFloat(numMatch[numMatch.length - 1].replace(/[^\d.]/g, ""));
-          console.log("✅ Found SUBTOTAL:", match, "→", detectedAmount);
+          console.log("✅ Found TOTAL:", match, "→", detectedAmount);
           break;
+        }
+        
+        // Check next line if amount not in same line
+        const matchIndex = cleanLines.indexOf(match);
+        if (matchIndex !== -1 && cleanLines[matchIndex + 1]) {
+          const nextLine = cleanLines[matchIndex + 1];
+          // Skip if next line has exclusion patterns
+          if (!EXCLUDE_PATTERNS.some(ex => ex.test(nextLine))) {
+            const nextNum = nextLine.match(/(\d{1,6}(?:[.,]\d{1,2})?)/g);
+            if (nextNum) {
+              detectedAmount = parseFloat(nextNum[nextNum.length - 1].replace(/[^\d.]/g, ""));
+              console.log("✅ Found TOTAL (next line):", nextLine, "→", detectedAmount);
+              break;
+            }
+          }
         }
       }
     }
@@ -1682,13 +1713,13 @@ async function processReceiptImage(uri) {
       }
     }
 
-    // ✅ PRIORITY 3: "TOTAL" (but exclude if VAT/Tax nearby)
+    // ✅ PRIORITY 3: "TOTAL" or "AMOUNT" (but exclude if VAT/Tax/ID nearby)
     if (!detectedAmount) {
       const contextMatches = [];
       const contextRegex = /total|amount|balance/i;
 
       cleanLines.forEach((line, idx) => {
-        // Skip lines with VAT/tax
+        // Skip lines with VAT/tax/IDs
         if (EXCLUDE_PATTERNS.some(ex => ex.test(line))) return;
 
         if (contextRegex.test(line)) {
@@ -1699,7 +1730,7 @@ async function processReceiptImage(uri) {
             contextMatches.push(...numbers);
           }
 
-          // Check next line (but skip if it has VAT/tax)
+          // Check next line (but skip if it has VAT/tax/IDs)
           if (cleanLines[idx + 1] && !EXCLUDE_PATTERNS.some(ex => ex.test(cleanLines[idx + 1]))) {
             const nextNums = (cleanLines[idx + 1].match(/\d{1,6}(?:[.,]\d{1,2})?/g) || []).map(n =>
               parseFloat(n.replace(/[^\d.]/g, ""))
@@ -1715,17 +1746,17 @@ async function processReceiptImage(uri) {
       }
     }
 
-    // ✅ PRIORITY 4: Fallback - largest number (excluding obvious VAT/tax values)
+    // ✅ PRIORITY 4: Fallback - largest number (excluding obvious VAT/tax/ID values)
     if (!detectedAmount) {
       const allNumbers = cleanText
         .split(/\s+/)
         .filter(word => {
-          // Skip if word contains VAT or tax keywords
+          // Skip if word contains VAT, tax, or ID keywords
           return !EXCLUDE_PATTERNS.some(ex => ex.test(word));
         })
         .flatMap(word => word.match(/\d{1,6}(?:[.,]\d{1,2})?/g) || [])
         .map(n => parseFloat(n.replace(/[^\d.]/g, "")))
-        .filter(n => n > 0);
+        .filter(n => n > 0 && n < 1000000); // Reasonable amount range
 
       if (allNumbers.length) {
         detectedAmount = Math.max(...allNumbers);
@@ -1753,7 +1784,7 @@ async function processReceiptImage(uri) {
 
     // 🧮 Confidence calculation
     let confidence = 0.6;
-    if (detectedAmount && /subtotal|total|withdrawal|deposit/.test(cleanText))
+    if (detectedAmount && /subtotal|total|withdrawal|deposit|billed/.test(cleanText))
       confidence += 0.25;
     if (/landbank|bank|atm|transaction/.test(cleanText)) confidence += 0.15;
     if (confidence > 1) confidence = 1;
@@ -3884,34 +3915,34 @@ const HistorySection = (
   </View>
 )}
 
-{/* Microphone FAB Button */}
+
+
 <TouchableOpacity
   onPress={async () => {
- if (isListening) {
-  setIsListening(false);
-  console.log("🛑 Stopping voice recognition manually...");
-  if (window.stopRecognition) window.stopRecognition();
-  return;
-}
+    if (isListening) {
+      // ⏹️ Stop listening
+      setIsListening(false);
+      console.log("🛑 Stopping voice recognition manually...");
+      if (window.stopRecognition) window.stopRecognition();
+      return;
+    }
 
-
-  // ✅ Start listening (only after user gesture)
-  try {
-    setVoiceTranscript(""); // Clear previous transcript bubble
-    setShowVoiceTip(false);
-    await startVoiceRecognition();
-  } catch (err) {
-    console.error("🎙️ Mic start failed:", err);
-    Alert.alert("Error", "Microphone couldn’t start. Try again.");
-  }
-}}
-
+    // ✅ Start recording directly
+    try {
+      setVoiceTranscript("");
+      setShowVoiceTip(false);
+      await startVoiceRecognition();
+    } catch (err) {
+      console.error("🎙️ Mic start failed:", err);
+      Alert.alert("Error", "Microphone couldn't start. Try again.");
+    }
+  }}
   activeOpacity={0.8}
   style={{
     position: "absolute",
     bottom: isMobile ? 60 : 10,
     right: 16,
-    backgroundColor: isListening ? "#94A3B8" : "#1f4b81",
+    backgroundColor: isListening ? "#EF4444" : "#1f4b81",
     borderRadius: 50,
     width: isMobile ? 35 : 45,
     height: isMobile ? 35 : 45,
@@ -3926,29 +3957,688 @@ const HistorySection = (
   }}
 >
   <Ionicons 
-    name={isListening ? "mic-off" : "mic"} 
+    name={isListening ? "stop" : "mic"} 
     size={28} 
     color="#fff" 
   />
 </TouchableOpacity>
 
-{showVoiceTip && (
-  <View
-    style={{
-      position: "absolute",
-      bottom: 5,
-      alignSelf: "center",
-      backgroundColor: "rgba(37,99,235,0.9)",
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-    }}
+<TouchableOpacity
+  onPress={async () => {
+    if (isListening) {
+      // ⏹️ Stop listening
+      setIsListening(false);
+      console.log("🛑 Stopping voice recognition manually...");
+      if (window.stopRecognition) window.stopRecognition();
+      return;
+    }
+
+    // ✅ Start recording directly
+    try {
+      setVoiceTranscript("");
+      setShowVoiceTip(false);
+      await startVoiceRecognition();
+    } catch (err) {
+      console.error("🎙️ Mic start failed:", err);
+      Alert.alert("Error", "Microphone couldn't start. Try again.");
+    }
+  }}
+  activeOpacity={0.8}
+  style={{
+    position: "absolute",
+    bottom: isMobile ? 60 : 10,
+    right: 16,
+    backgroundColor: isListening ? "#EF4444" : "#1f4b81",
+    borderRadius: 50,
+    width: isMobile ? 35 : 45,
+    height: isMobile ? 35 : 45,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 200,
+  }}
+>
+  <Ionicons 
+    name={isListening ? "stop" : "mic"} 
+    size={28} 
+    color="#fff" 
+  />
+</TouchableOpacity>
+
+{/* 🎤 Voice Command Format Modal */}
+<Modal
+  visible={showVoiceFormatModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowVoiceFormatModal(false)}
+>
+  <Pressable 
+    style={styles.modalOverlay} 
+    onPress={() => setShowVoiceFormatModal(false)}
   >
-    <Text style={{ color: "white", fontSize: 12, textAlign: "center" }}>
-      💡 Format: add + amount + category + note (optional)
-    </Text>
-  </View>
-)}
+    <Pressable 
+      style={[
+        styles.modalContainer, 
+        { 
+          maxWidth: isMobile ? '92%' : 380,
+          maxHeight: isMobile ? '85%' : '90%',
+          padding: isMobile ? 14 : 20,
+        }
+      ]} 
+      onPress={() => {}}
+    >
+      {/* Compact Header */}
+      <View style={{ alignItems: 'center', marginBottom: isMobile ? 12 : 16 }}>
+        <View style={{
+          width: isMobile ? 48 : 56,
+          height: isMobile ? 48 : 56,
+          borderRadius: isMobile ? 24 : 28,
+          backgroundColor: '#EFF6FF',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: isMobile ? 8 : 10,
+        }}>
+          <Ionicons name="mic" size={isMobile ? 24 : 28} color="#2563EB" />
+        </View>
+        <Text style={{ 
+          fontSize: isMobile ? 17 : 20, 
+          fontWeight: '700', 
+          color: '#1E293B',
+        }}>
+          Voice Commands
+        </Text>
+        <Text style={{ 
+          fontSize: isMobile ? 12 : 14, 
+          color: '#64748B', 
+          textAlign: 'center',
+          marginTop: 2,
+        }}>
+          Speak naturally to add expenses
+        </Text>
+      </View>
+
+      <ScrollView 
+        style={{ flex: 1 }} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 8 }}
+      >
+        {/* Command Format */}
+        <View style={{
+          backgroundColor: '#F0F9FF',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 10 : 12,
+          borderWidth: 1,
+          borderColor: '#BFDBFE',
+        }}>
+          <Text style={{ 
+            fontSize: isMobile ? 13 : 14, 
+            fontWeight: '600', 
+            color: '#1E293B',
+            marginBottom: isMobile ? 6 : 8,
+            textAlign: 'center',
+          }}>
+            📝 Format
+          </Text>
+          <Text style={{
+            fontSize: isMobile ? 14 : 16,
+            fontWeight: '700',
+            color: '#2563EB',
+            textAlign: 'center',
+            marginBottom: 4,
+          }}>
+            "Add [amount] [category]"
+          </Text>
+          <Text style={{
+            fontSize: isMobile ? 11 : 12,
+            color: '#475569',
+            textAlign: 'center',
+            fontStyle: 'italic',
+          }}>
+            + optional "note [text]"
+          </Text>
+        </View>
+
+        {/* Compact Examples */}
+        <View style={{ marginBottom: isMobile ? 10 : 12 }}>
+          <Text style={{ 
+            fontSize: isMobile ? 12 : 13, 
+            fontWeight: '600', 
+            color: '#1E293B',
+            marginBottom: isMobile ? 6 : 8,
+          }}>
+            💡 Examples:
+          </Text>
+          
+          {[
+            { text: '"Add 150 food"', icon: 'fast-food', color: '#F59E0B' },
+            { text: '"Add 50 transport note jeep"', icon: 'car', color: '#3B82F6' },
+            { text: '"Add 200 bills note electric"', icon: 'document-text', color: '#EF4444' },
+          ].map((example, idx) => (
+            <View 
+              key={idx}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#F8FAFC',
+                borderRadius: isMobile ? 8 : 10,
+                padding: isMobile ? 8 : 10,
+                marginBottom: isMobile ? 6 : 8,
+              }}
+            >
+              <View style={{
+                width: isMobile ? 28 : 32,
+                height: isMobile ? 28 : 32,
+                borderRadius: isMobile ? 14 : 16,
+                backgroundColor: example.color + '22',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: isMobile ? 8 : 10,
+              }}>
+                <Ionicons name={example.icon as any} size={isMobile ? 14 : 16} color={example.color} />
+              </View>
+              <Text style={{ 
+                fontSize: isMobile ? 12 : 13, 
+                color: '#1E293B',
+                flex: 1,
+              }}>
+                {example.text}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Compact Categories */}
+        <View style={{
+          backgroundColor: '#FEFCE8',
+          borderRadius: isMobile ? 8 : 10,
+          padding: isMobile ? 8 : 10,
+          marginBottom: isMobile ? 10 : 12,
+          borderWidth: 1,
+          borderColor: '#FDE68A',
+        }}>
+          <Text style={{ 
+            fontSize: isMobile ? 11 : 12, 
+            fontWeight: '600', 
+            color: '#854D0E',
+            marginBottom: 4,
+          }}>
+            Categories:
+          </Text>
+          <Text style={{ 
+            fontSize: isMobile ? 10 : 11, 
+            color: '#713F12', 
+            lineHeight: isMobile ? 14 : 16,
+          }}>
+            Food • Transport • Bills • School • Shopping • Savings • Others
+          </Text>
+        </View>
+      </ScrollView>
+
+      {/* Compact Action Buttons */}
+      <View style={{ gap: isMobile ? 6 : 8, marginTop: isMobile ? 8 : 10 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#2563EB',
+            borderRadius: isMobile ? 10 : 12,
+            paddingVertical: isMobile ? 10 : 12,
+            alignItems: 'center',
+            shadowColor: '#2563EB',
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 4,
+          }}
+          onPress={() => {
+            setShowVoiceFormatModal(false);
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="checkmark-circle" size={isMobile ? 16 : 18} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={{ 
+              color: '#fff', 
+              fontSize: isMobile ? 14 : 15, 
+              fontWeight: '600',
+            }}>
+              Got It!
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#F1F5F9',
+            borderRadius: isMobile ? 10 : 12,
+            paddingVertical: isMobile ? 10 : 12,
+            alignItems: 'center',
+          }}
+          onPress={() => setShowVoiceFormatModal(false)}
+        >
+          <Text style={{ 
+            color: '#475569', 
+            fontSize: isMobile ? 13 : 14, 
+            fontWeight: '600',
+          }}>
+            Close
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Compact Tip */}
+      <View style={{
+        marginTop: isMobile ? 8 : 10,
+        padding: isMobile ? 8 : 10,
+        backgroundColor: '#F0F9FF',
+        borderRadius: isMobile ? 6 : 8,
+        borderLeftWidth: 2,
+        borderLeftColor: '#0EA5E9',
+      }}>
+        <Text style={{ 
+          fontSize: isMobile ? 10 : 11, 
+          color: '#0C4A6E', 
+          textAlign: 'center',
+          lineHeight: isMobile ? 14 : 16,
+        }}>
+          💬 You can also chat! Say "hi" or ask for help.
+        </Text>
+      </View>
+    </Pressable>
+  </Pressable>
+</Modal>
+
+{/* 📸 Scan Receipt Guide Modal */}
+<Modal
+  visible={showScanGuideModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowScanGuideModal(false)}
+>
+  <Pressable 
+    style={styles.modalOverlay} 
+    onPress={() => setShowScanGuideModal(false)}
+  >
+    <Pressable 
+      style={[
+        styles.modalContainer, 
+        { 
+          maxWidth: isMobile ? '92%' : 380,
+          maxHeight: isMobile ? '85%' : '90%',
+          padding: isMobile ? 14 : 20,
+        }
+      ]} 
+      onPress={() => {}}
+    >
+      {/* Header */}
+      <View style={{ alignItems: 'center', marginBottom: isMobile ? 12 : 16 }}>
+        <View style={{
+          width: isMobile ? 48 : 56,
+          height: isMobile ? 48 : 56,
+          borderRadius: isMobile ? 24 : 28,
+          backgroundColor: '#EFF6FF',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: isMobile ? 8 : 10,
+        }}>
+          <Ionicons name="camera" size={isMobile ? 24 : 28} color="#2563EB" />
+        </View>
+        <Text style={{ 
+          fontSize: isMobile ? 17 : 20, 
+          fontWeight: '700', 
+          color: '#1E293B',
+        }}>
+          Scan Receipt Guide
+        </Text>
+        <Text style={{ 
+          fontSize: isMobile ? 12 : 14, 
+          color: '#64748B', 
+          textAlign: 'center',
+          marginTop: 2,
+        }}>
+          Auto-detect amounts from receipts
+        </Text>
+      </View>
+
+      <ScrollView 
+        style={{ flex: 1 }} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 8 }}
+      >
+        {/* Step 1: Open Scanner */}
+        <View style={{
+          backgroundColor: '#F0F9FF',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 10 : 12,
+          borderLeftWidth: 3,
+          borderLeftColor: '#2563EB',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{
+              width: isMobile ? 24 : 28,
+              height: isMobile ? 24 : 28,
+              borderRadius: isMobile ? 12 : 14,
+              backgroundColor: '#2563EB',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 8,
+            }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: isMobile ? 12 : 14 }}>1</Text>
+            </View>
+            <Text style={{ 
+              fontSize: isMobile ? 13 : 14, 
+              fontWeight: '700', 
+              color: '#1E293B',
+            }}>
+              Open Scanner
+            </Text>
+          </View>
+          <Text style={{
+            fontSize: isMobile ? 11 : 12,
+            color: '#475569',
+            lineHeight: isMobile ? 16 : 18,
+            marginLeft: isMobile ? 32 : 36,
+          }}>
+            Tap "📸 Scan Receipt" button when adding an expense
+          </Text>
+        </View>
+
+        {/* Step 2: Choose Source */}
+        <View style={{
+          backgroundColor: '#F0FDF4',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 10 : 12,
+          borderLeftWidth: 3,
+          borderLeftColor: '#16A34A',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{
+              width: isMobile ? 24 : 28,
+              height: isMobile ? 24 : 28,
+              borderRadius: isMobile ? 12 : 14,
+              backgroundColor: '#16A34A',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 8,
+            }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: isMobile ? 12 : 14 }}>2</Text>
+            </View>
+            <Text style={{ 
+              fontSize: isMobile ? 13 : 14, 
+              fontWeight: '700', 
+              color: '#1E293B',
+            }}>
+              Choose Source
+            </Text>
+          </View>
+          <View style={{ marginLeft: isMobile ? 32 : 36, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="camera" size={isMobile ? 14 : 16} color="#16A34A" style={{ marginRight: 6 }} />
+              <Text style={{
+                fontSize: isMobile ? 11 : 12,
+                color: '#475569',
+                flex: 1,
+              }}>
+                <Text style={{ fontWeight: '600' }}>Camera:</Text> Take a new photo
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="images" size={isMobile ? 14 : 16} color="#16A34A" style={{ marginRight: 6 }} />
+              <Text style={{
+                fontSize: isMobile ? 11 : 12,
+                color: '#475569',
+                flex: 1,
+              }}>
+                <Text style={{ fontWeight: '600' }}>Photos:</Text> Upload from gallery
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Step 3: Capture Receipt */}
+        <View style={{
+          backgroundColor: '#FEF3C7',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 10 : 12,
+          borderLeftWidth: 3,
+          borderLeftColor: '#F59E0B',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{
+              width: isMobile ? 24 : 28,
+              height: isMobile ? 24 : 28,
+              borderRadius: isMobile ? 12 : 14,
+              backgroundColor: '#F59E0B',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 8,
+            }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: isMobile ? 12 : 14 }}>3</Text>
+            </View>
+            <Text style={{ 
+              fontSize: isMobile ? 13 : 14, 
+              fontWeight: '700', 
+              color: '#1E293B',
+            }}>
+              Capture Receipt
+            </Text>
+          </View>
+          <Text style={{
+            fontSize: isMobile ? 11 : 12,
+            color: '#475569',
+            lineHeight: isMobile ? 16 : 18,
+            marginLeft: isMobile ? 32 : 36,
+          }}>
+            Make sure the receipt is clear, well-lit, and the text is readable
+          </Text>
+        </View>
+
+        {/* Step 4: Review & Confirm */}
+        <View style={{
+          backgroundColor: '#FEE2E2',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 10 : 12,
+          borderLeftWidth: 3,
+          borderLeftColor: '#EF4444',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{
+              width: isMobile ? 24 : 28,
+              height: isMobile ? 24 : 28,
+              borderRadius: isMobile ? 12 : 14,
+              backgroundColor: '#EF4444',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 8,
+            }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: isMobile ? 12 : 14 }}>4</Text>
+            </View>
+            <Text style={{ 
+              fontSize: isMobile ? 13 : 14, 
+              fontWeight: '700', 
+              color: '#1E293B',
+            }}>
+              Review & Confirm
+            </Text>
+          </View>
+          <Text style={{
+            fontSize: isMobile ? 11 : 12,
+            color: '#475569',
+            lineHeight: isMobile ? 16 : 18,
+            marginLeft: isMobile ? 32 : 36,
+          }}>
+            The app will auto-detect the amount and category. Verify and adjust if needed before saving
+          </Text>
+        </View>
+
+        {/* Tips Section */}
+        <View style={{
+          backgroundColor: '#F8FAFC',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 10 : 12,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Ionicons name="bulb" size={isMobile ? 16 : 18} color="#F59E0B" style={{ marginRight: 6 }} />
+            <Text style={{ 
+              fontSize: isMobile ? 12 : 13, 
+              fontWeight: '700', 
+              color: '#1E293B',
+            }}>
+              Tips for Better Results
+            </Text>
+          </View>
+          
+          <View style={{ gap: 6, marginLeft: isMobile ? 22 : 24 }}>
+            {[
+              'Ensure good lighting',
+              'Avoid shadows and glare',
+              'Keep receipt flat and straight',
+              'Focus on the total amount area',
+              'Works with printed & digital receipts',
+            ].map((tip, idx) => (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <Text style={{ color: '#2563EB', marginRight: 6, fontSize: isMobile ? 11 : 12 }}>•</Text>
+                <Text style={{ 
+                  fontSize: isMobile ? 10 : 11, 
+                  color: '#475569',
+                  flex: 1,
+                  lineHeight: isMobile ? 14 : 16,
+                }}>
+                  {tip}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* What Gets Detected */}
+        <View style={{
+          backgroundColor: '#ECFDF5',
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 10 : 14,
+          borderWidth: 1,
+          borderColor: '#A7F3D0',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Ionicons name="checkmark-circle" size={isMobile ? 16 : 18} color="#10B981" style={{ marginRight: 6 }} />
+            <Text style={{ 
+              fontSize: isMobile ? 12 : 13, 
+              fontWeight: '700', 
+              color: '#1E293B',
+            }}>
+              What Gets Detected
+            </Text>
+          </View>
+          
+          <View style={{ gap: 4, marginLeft: isMobile ? 22 : 24 }}>
+            <Text style={{ 
+              fontSize: isMobile ? 10 : 11, 
+              color: '#475569',
+              lineHeight: isMobile ? 14 : 16,
+            }}>
+              <Text style={{ fontWeight: '600' }}>✓ Amount:</Text> Subtotal, total, or transaction amount
+            </Text>
+            <Text style={{ 
+              fontSize: isMobile ? 10 : 11, 
+              color: '#475569',
+              lineHeight: isMobile ? 14 : 16,
+            }}>
+              <Text style={{ fontWeight: '600' }}>✓ Category:</Text> Auto-suggested based on merchant
+            </Text>
+            <Text style={{ 
+              fontSize: isMobile ? 10 : 11, 
+              color: '#475569',
+              lineHeight: isMobile ? 14 : 16,
+            }}>
+              <Text style={{ fontWeight: '600' }}>✓ Date:</Text> Defaults to today (adjustable)
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Action Buttons */}
+      <View style={{ gap: isMobile ? 6 : 8, marginTop: isMobile ? 8 : 10 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#2563EB',
+            borderRadius: isMobile ? 10 : 12,
+            paddingVertical: isMobile ? 10 : 12,
+            alignItems: 'center',
+            shadowColor: '#2563EB',
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 4,
+          }}
+          onPress={() => {
+            setShowScanGuideModal(false);
+            setTimeout(() => {
+              handleScanReceipt();
+            }, 300);
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="camera" size={isMobile ? 16 : 18} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={{ 
+              color: '#fff', 
+              fontSize: isMobile ? 14 : 15, 
+              fontWeight: '600',
+            }}>
+              Try Scanning Now
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#F1F5F9',
+            borderRadius: isMobile ? 10 : 12,
+            paddingVertical: isMobile ? 10 : 12,
+            alignItems: 'center',
+          }}
+          onPress={() => setShowScanGuideModal(false)}
+        >
+          <Text style={{ 
+            color: '#475569', 
+            fontSize: isMobile ? 13 : 14, 
+            fontWeight: '600',
+          }}>
+            Close
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Voice Command Tip */}
+      <View style={{
+        marginTop: isMobile ? 8 : 10,
+        padding: isMobile ? 8 : 10,
+        backgroundColor: '#F0F9FF',
+        borderRadius: isMobile ? 6 : 8,
+        borderLeftWidth: 2,
+        borderLeftColor: '#0EA5E9',
+      }}>
+        <Text style={{ 
+          fontSize: isMobile ? 10 : 11, 
+          color: '#0C4A6E', 
+          textAlign: 'center',
+          lineHeight: isMobile ? 14 : 16,
+        }}>
+          💬 Say "scan guide" anytime to see this again
+        </Text>
+      </View>
+    </Pressable>
+  </Pressable>
+</Modal>
+
   </View>
   );
   

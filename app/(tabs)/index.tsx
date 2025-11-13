@@ -944,20 +944,28 @@ const categoryIcons: any = {
   try {
     const user = await getToken();
     if (!user || !user.id) return;
-    // 🔥 Log period sent
-    console.log('[FETCH BUDGET] period:', budgetPeriod);
+
+    // 🔥 FIX: set safe fallback
+    const period =
+      budgetPeriod?.toLowerCase() ||
+      user.budgetPeriod?.toLowerCase() ||
+      "weekly";
+
+    console.log("FETCH REMAINING BUDGET → period:", period);
 
     const res = await api.get('/auth/balance', {
       params: {
         userId: user.id,
-        period: (budgetPeriod ?? '').toLowerCase(),
+        period,
       },
     });
+
     setRemainingBudget(res.data.remainingBudget);
     setBudgetAmount(res.data.budgetAmount);
-  } catch (err) {}
+  } catch (err) {
+    console.log("❌ fetchRemainingBudget error:", err?.response?.data || err);
+  }
 };
-
 
 const updateBudgetPeriod = async (
   newPeriod: string,
@@ -2064,33 +2072,39 @@ useEffect(() => {
       alignItems: 'center', 
       gap: 8,
     }]}>
-      <Text 
-        style={{ 
-          fontSize: (() => {
-            // ✅ Auto-resize based on amount length
-            const amount = remainingBudget || 0;
-            const digitCount = Math.floor(Math.log10(Math.abs(amount))) + 1;
-            
-            if (digitCount >= 7) return isMobile ? 12 : 14; // 1,000,000+
-            if (digitCount >= 6) return isMobile ? 14 : 16; // 100,000+
-            if (digitCount >= 5) return isMobile ? 16 : 18; // 10,000+
-            return isMobile ? 18 : 20; // Default
-          })(),
-          fontWeight: '800', 
-          color: '#1f4b81ff',
-          flex: 1, // ✅ Takes available space
-          flexShrink: 1, // ✅ Can shrink if needed
-        }}
-        numberOfLines={1}
-        adjustsFontSizeToFit={true} // ✅ Auto-shrinks to fit
-        minimumFontScale={0.5} // ✅ Can shrink up to 50%
-      >
-        ₱{remainingBudget
-          ? Number(remainingBudget).toLocaleString('en-PH', {
-              minimumFractionDigits: 2,
-            })
-          : '0.00'}
-      </Text>
+      <Text
+  style={{
+    fontSize: (() => {
+      const amount = remainingBudget || 0;
+
+      // FIXED DIGIT COUNT
+      const amountStr = String(
+        Number(amount).toFixed(2).replace('.', '')
+      );
+      const digitCount = amountStr.length;
+
+      if (digitCount >= 9) return isMobile ? 12 : 14; // 10M+
+      if (digitCount >= 7) return isMobile ? 14 : 16; // 1M+
+      if (digitCount >= 6) return isMobile ? 16 : 18; // 100k+
+      return isMobile ? 19 : 20; // Default
+    })(),
+    fontWeight: "800",
+    color: "#1f4b81ff",
+    flexShrink: 1,
+    width: "100%",
+
+  }}
+  numberOfLines={1}
+  adjustsFontSizeToFit={true}
+  minimumFontScale={0.5}
+>
+  ₱
+  {remainingBudget
+    ? Number(remainingBudget).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+      })
+    : "0.00"}
+</Text>
         {/* ✅ Add Budget Button */}
         <TouchableOpacity
           onPress={() => setShowBudgetAction(true)}

@@ -46,6 +46,7 @@ import UniversalMap from "../components/UniversalMap";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { checkStoreAuth } from "../lib/checkStoreAuth";
 import { Platform } from 'react-native';
+
 // Voice Recognition Setup with proper typing
 let SpeechRecognition: any = null;
 
@@ -138,6 +139,8 @@ type Item = {
   unit: string;
   currency: string;
   category?: string;
+  stock?: boolean; // ✅ NEW
+
 };
 
 type StoreLocation = {
@@ -160,6 +163,7 @@ const StoreDashboard = () => {
 const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 const [deleteDealConfirmVisible, setDeleteDealConfirmVisible] = useState(false);
 const [deleteDealTargetId, setDeleteDealTargetId] = useState<string | null>(null);
+const [selectedStockFilter, setSelectedStockFilter] = useState<"all" | "in" | "out">("all");
 
 const [addDealModalVisible, setAddDealModalVisible] = useState(false);
 const [dealMessage, setDealMessage] = useState("");
@@ -402,6 +406,74 @@ const applyVoiceItemCommand = async (command) => {
 
   const lower = command.toLowerCase().trim();
 
+  // 🆕 🔊 Voice: Update stock
+const stockMatch =
+  lower.match(/update all\s+([\w\s]+?)\s+(?:to|into)\s+(on stock|off stock|in stock|out of stock)/i) ||
+  lower.match(/set all\s+([\w\s]+?)\s+(?:to|into)\s+(on stock|off stock|in stock|out of stock)/i) ||
+  lower.match(/change all\s+([\w\s]+?)\s+(?:to|into)\s+(on stock|off stock|in stock|out of stock)/i);
+
+if (stockMatch) {
+  const productKeyword = stockMatch[1].trim().toLowerCase();
+  const stockValueRaw = stockMatch[2].trim().toLowerCase();
+
+  // normalize variations
+  const stockValue =
+    stockValueRaw.includes("on") || stockValueRaw.includes("in")
+      ? true
+      : false;
+
+  console.log("🆕 🔊 Voice stock update:", productKeyword, "→", stockValue);
+
+  try {
+    const res = await api.get(`/storeItems/${storeName}`);
+    const allItems = res.data || [];
+
+    // match by itemName or category
+let matches = allItems.filter(
+  (p) =>
+    p.itemName.toLowerCase().includes(productKeyword) ||
+    p.category?.toLowerCase().includes(productKeyword)
+);
+
+// ⭐ NEW FIX: If keyword means "everything"
+if (
+  productKeyword === "all" ||
+  productKeyword === "items" ||
+  productKeyword === "products" ||
+  productKeyword === "everything"
+) {
+  matches = allItems;
+}
+
+    if (matches.length === 0) {
+      const msg = `I couldn't find any items related to ${productKeyword}.`;
+      speakWeb(msg, { language: "en-US", rate: 1.3 });
+      Alert.alert("No Matches", msg);
+      return;
+    }
+
+    for (const item of matches) {
+      await api.put(`/storeItems/${item._id}`, {
+        stock: stockValue,
+      });
+    }
+
+    const msg = `Updated ${matches.length} items related to ${productKeyword} to ${
+      stockValue ? "in stock" : "out of stock"
+    }.`;
+    speakWeb(msg, { language: "en-US", rate: 1.3 });
+    Alert.alert("✅ Stock Updated", msg);
+    fetchItems();
+  } catch (err) {
+    console.error("❌ Stock update failed:", err.response?.data || err.message);
+    speakWeb("Sorry, I couldn’t update stock. Please try again.", {
+      language: "en-US",
+      rate: 1.3,
+    });
+  }
+
+  return; // stop here
+}
   // 🧩 Handle special command: update all X category to Y
   const updateMatch =
     lower.match(/update all\s+([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
@@ -695,6 +767,8 @@ const deleteDealHandler = async (dealId: string) => {
         currency: "PHP",
         unit,
         category,
+        stock: true, 
+
       });
       setItemName("");
       setPrice("");
@@ -746,7 +820,7 @@ const deleteDealHandler = async (dealId: string) => {
         currency: "PHP",
         unit: editItem.unit,
         category: editItem.category || "other",
-        stock: editItem.stock ?? 0,
+        stock: Boolean(editItem.stock),
     };
 
     console.log("📝 Updating item:", editItem._id, payload);
@@ -767,11 +841,28 @@ const deleteDealHandler = async (dealId: string) => {
   }
 };
 
-  const filteredItems = items.filter((i) => {
-    const matchesSearch = i.itemName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategoryFilter === "all" || i.category === selectedCategoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+ const filteredItems = items.filter((i) => {
+  const matchesSearch = i.itemName.toLowerCase().includes(searchQuery.toLowerCase());
+  const matchesCategory = selectedCategoryFilter === "all" || i.category === selectedCategoryFilter;
+
+ let matchesStock = true;
+
+// Normalize stock to boolean
+const normalizedStock =
+  i.stock === true ||
+  i.stock === "true" ||
+  i.stock === 1
+    ? true
+    : false;
+
+// Apply filter
+if (selectedStockFilter === "in") {
+  matchesStock = normalizedStock === true;
+} else if (selectedStockFilter === "out") {
+  matchesStock = normalizedStock === false;
+}
+  return matchesSearch && matchesCategory && matchesStock;
+});
 
   // Get category icon
   const getCategoryIcon = (category?: string) => {
@@ -1159,7 +1250,63 @@ const deleteDealHandler = async (dealId: string) => {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            {/* Stock Filter */}
+
           </View>
+          <View style={{ flexDirection: "row", marginTop: 10 }}>
+  <TouchableOpacity
+    onPress={() => setSelectedStockFilter("all")}
+    style={[
+      styles.filterChip,
+      { marginRight: 8 },
+      selectedStockFilter === "all" && styles.filterChipActive
+    ]}
+  >
+    <Text
+      style={[
+        styles.filterChipText,
+        selectedStockFilter === "all" && styles.filterChipTextActive
+      ]}
+    >
+      All Stock
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => setSelectedStockFilter("in")}
+    style={[
+      styles.filterChip,
+      { marginRight: 8 },
+      selectedStockFilter === "in" && styles.filterChipActive
+    ]}
+  >
+    <Text
+      style={[
+        styles.filterChipText,
+        selectedStockFilter === "in" && styles.filterChipTextActive
+      ]}
+    >
+      In Stock
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => setSelectedStockFilter("out")}
+    style={[
+      styles.filterChip,
+      selectedStockFilter === "out" && styles.filterChipActive
+    ]}
+  >
+    <Text
+      style={[
+        styles.filterChipText,
+        selectedStockFilter === "out" && styles.filterChipTextActive
+      ]}
+    >
+      Out of Stock
+    </Text>
+  </TouchableOpacity>
+</View>
           
            {filteredItems.length === 0 ? (
             <View style={styles.emptyState}>
@@ -1193,6 +1340,16 @@ const deleteDealHandler = async (dealId: string) => {
                     </View>
                     
                     <Text style={styles.productUnit}>per {item.unit}</Text>
+                    <Text
+                      style={{
+                        marginTop: 4,
+                        fontSize: 12,
+                        fontWeight: "600",
+                        color: item.stock ? "#16A9B8" : "#EF4444",
+                      }}
+                    >
+                      {item.stock ? "In Stock" : "Out of Stock"}
+                    </Text>
 
                     {item.category && (
                       <View style={styles.categoryBadge}>
@@ -1361,6 +1518,23 @@ const deleteDealHandler = async (dealId: string) => {
                     </ScrollView>
                   )}
                 </View>
+
+                <View style={[styles.inputGroup, { flexDirection: "row", alignItems: "center", marginTop: 12 }]}>
+                <Text style={[styles.inputLabel, { flex: 1 }]}>Stock Status</Text>
+
+                <View
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: "#4ade80",
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "700" }}>
+                    In Stock
+                  </Text>
+                </View>
+              </View>
               </ScrollView>
               
               <View style={styles.modalActions}>
@@ -1864,6 +2038,26 @@ const deleteDealHandler = async (dealId: string) => {
                     </ScrollView>
                   )}
                 </View>
+
+                <View style={[styles.inputGroup, { flexDirection: "row", alignItems: "center", marginTop: 12 }]}>
+  <Text style={[styles.inputLabel, { flex: 1 }]}>Stock Status</Text>
+
+  <TouchableOpacity
+    onPress={() =>
+      setEditItem(prev => prev && { ...prev, stock: !prev.stock })
+    }
+    style={{
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: editItem?.stock ? "#4ade80" : "#EF4444",
+    }}
+  >
+    <Text style={{ color: "white", fontWeight: "700" }}>
+      {editItem?.stock ? "In Stock" : "Out of Stock"}
+    </Text>
+  </TouchableOpacity>
+</View>
               </ScrollView>
               
               <View style={styles.modalActions}>

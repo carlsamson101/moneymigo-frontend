@@ -9,6 +9,7 @@ import { saveToken, getToken } from '../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../lib/api';
 import { TextInput as RNTextInput } from "react-native";
+import { removeToken } from "../lib/auth";
 
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === "web") {
@@ -158,9 +159,16 @@ function AppLogin() {
           console.log("✅ Token valid — logging in automatically");
           router.replace("/(tabs)");
         } catch (err) {
-          console.log("❌ Token invalid, clearing...");
-          await AsyncStorage.multiRemove(["migo-email"]);
-        }
+  console.log("❌ Token invalid or expired — clearing session");
+
+  await removeToken();         // <--- use your central cleanup function
+  await AsyncStorage.removeItem("migo-email");
+  await AsyncStorage.removeItem("authExpiry");
+
+  router.replace("/login");
+  return;
+}
+
       } else {
         // 📴 Offline — trust cached login
         console.log("📦 Offline mode: using saved session");
@@ -216,6 +224,8 @@ function AppLogin() {
     const now = new Date();
     const expiry = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
 
+    console.log("LOGIN RESPONSE:", JSON.stringify(response.data, null, 2));
+
     await saveToken({
       token: response.data.user.token,
       firstName: response.data.user.firstName,
@@ -223,6 +233,7 @@ function AppLogin() {
       id: response.data.user.id,
       budgetPeriod: response.data.user.budgetPeriod,
       avatarUrl: response.data.user.avatarUrl || null,
+        
     });
 
     await AsyncStorage.setItem('authExpiry', expiry.toISOString());
@@ -421,6 +432,7 @@ if (response.data.needsVerification) {
     id: response.data.user.id,
     budgetPeriod: response.data.user.budgetPeriod,
     avatarUrl: response.data.user.avatarUrl || null,
+    
   });
   await AsyncStorage.setItem('authExpiry', expiry.toISOString());
   await AsyncStorage.setItem('migo-email', email);

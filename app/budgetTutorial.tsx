@@ -60,7 +60,7 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: Hourglass,
     highlightKey: "unallocated-pill",
     color: "#1f4b81",
-    position: { top: 270, left: 20, right: 20 }, // Move card to top
+    position: { top: 270, left: 20, right: 20 },
     highlightArea: { 
       top: Platform.OS === "ios" ? 480 : 635, 
       left: SCREEN_WIDTH * 0.440,
@@ -77,7 +77,7 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: Settings,
     highlightKey: "set-allocation-btn",
     color: "#1f4b81",
-    position: { top: 340, left: 20, right: 20 }, // Move card to top
+    position: { top: 340, left: 20, right: 20 },
     highlightArea: { 
      top: Platform.OS === "ios" ? 480 : 735, 
       left: SCREEN_WIDTH * 0.440,
@@ -94,7 +94,7 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: RefreshCw,
     highlightKey: "clear-all-btn",
     color: "#1f4b81",
-     position: { top: 440, left: 20, right: 20 }, // Move card to top
+     position: { top: 440, left: 20, right: 20 },
     highlightArea: { 
      top: Platform.OS === "ios" ? 480 : 805, 
       left: SCREEN_WIDTH * 0.440,
@@ -111,7 +111,7 @@ const BUDGET_TUTORIAL_STEPS = [
     icon: Copy,
     highlightKey: "copy-period-btn",
     color: "#1f4b81",
-     position: { top: 440, left: 20, right: 20 }, // Move card to top
+     position: { top: 440, left: 20, right: 20 },
     highlightArea: { 
      top: Platform.OS === "ios" ? 480 : 880, 
       left: SCREEN_WIDTH * 0.440,
@@ -167,10 +167,12 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Animated.View style={[styles.tutorialOverlay, { opacity: fadeAnim }]}>
-        {/* Dark overlay backdrop */}
-        <View style={styles.darkOverlay} />
-
+      <ScrollView 
+        style={styles.tutorialOverlay}
+        contentContainerStyle={styles.overlayContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         {/* Highlight box */}
         {step.highlightArea && (
           <View
@@ -254,7 +256,7 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
             </TouchableOpacity>
           </View>
         </View>
-      </Animated.View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -569,14 +571,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
   },
-  // Tutorial Overlay Styles (matching home tutorial)
+  // Tutorial Overlay Styles
   tutorialOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  darkOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.16)",
+  overlayContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
   },
   highlightBox: {
     position: "absolute",
@@ -589,6 +591,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 15,
     elevation: 10,
+    zIndex: 2,
   },
   tutorialCard: {
     position: "absolute",
@@ -600,7 +603,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 15,
+    zIndex: 10,
   },
   tutorialIconContainer: {
     width: 64,

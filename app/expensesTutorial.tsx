@@ -50,7 +50,11 @@ const EXPENSES_TUTORIAL_STEPS = [
     title: "Camera Scan (Mobile Browser Only)",
     description: "📱 Tap 'Scan Receipt' to use your camera. AI extracts amount, category, and date automatically!",
     icon: "camera-outline",
-    position: { top: SCREEN_HEIGHT * 0.25, left: 20, width: SCREEN_WIDTH * 0.4 },
+    position: { 
+      bottom: 80, 
+      left: 20, 
+      right: 20 
+    },
     highlightArea: { 
       top: SCREEN_HEIGHT * 0.35,
       left: 30,
@@ -66,9 +70,9 @@ const EXPENSES_TUTORIAL_STEPS = [
     description: "Enter expense details manually: amount, category, notes, and date. Then tap Save.",
     icon: "create-outline",
     position: { 
-      top: SCREEN_WIDTH < 768 ? SCREEN_HEIGHT * 0.05 : SCREEN_HEIGHT * 0.25, 
+      bottom: 80,
       left: 20, 
-      width: SCREEN_WIDTH < 768 ? SCREEN_WIDTH - 40 : SCREEN_WIDTH * 0.4 
+      right: 20
     },
     highlightArea: { 
       top: SCREEN_HEIGHT * 0.35,
@@ -147,157 +151,172 @@ function TutorialOverlay({ visible, onClose }) {
       animationType="fade"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        {/* Dark overlay */}
-        <View style={styles.darkOverlay} />
+      {/* ✅ Pressable to block background clicks */}
+      <Pressable 
+        style={styles.overlay}
+        onPress={() => {}} // Blocks clicks from passing through
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          scrollEnabled={true}
+        >
+          {/* Dark overlay - now inside ScrollView */}
+          <Pressable 
+            style={styles.darkOverlay}
+            onPress={() => {}} // Prevents clicks on overlay
+          />
 
-        {/* Show Add Transaction Modal for steps 3-4 */}
-        {showAddModal && step.showModal && (
-          <View style={styles.addModalContainer}>
-            <View style={styles.addModalContent}>
-              <Text style={styles.addModalTitle}>Transaction</Text>
+          {/* Show Add Transaction Modal for steps 3-4 */}
+          {showAddModal && step.showModal && (
+            <View style={styles.addModalContainer} pointerEvents="box-none">
+              <View style={styles.addModalContent}>
+                <Text style={styles.addModalTitle}>Transaction</Text>
 
-              {/* Camera Scan Button - Highlighted for step 3 */}
-              <TouchableOpacity
-                style={[
-                  styles.scanButton,
-                  step.highlightButton === "camera" && styles.highlightedButton
-                ]}
-                disabled
-              >
-                <Text style={styles.scanButtonText}>📸 Scan Receipt</Text>
-              </TouchableOpacity>
+                {/* Camera Scan Button - Highlighted for step 3 */}
+                <TouchableOpacity
+                  style={[
+                    styles.scanButton,
+                    step.highlightButton === "camera" && styles.highlightedButton
+                  ]}
+                  disabled
+                >
+                  <Text style={styles.scanButtonText}>📸 Scan Receipt</Text>
+                </TouchableOpacity>
 
-              <TextInput
-                placeholder="Amount"
-                value=""
-                editable={false}
-                style={styles.input}
-              />
+                <TextInput
+                  placeholder="Amount"
+                  value=""
+                  editable={false}
+                  style={styles.input}
+                />
 
-              <View style={[styles.input, { justifyContent: 'center' }]}>
-                <Text style={{ color: '#64748B' }}>Select Category</Text>
-              </View>
-
-              <TextInput
-                placeholder="Notes (optional)"
-                value=""
-                editable={false}
-                style={styles.input}
-              />
-
-              <View style={styles.dateSection}>
-                <Text style={styles.dateLabel}>Date</Text>
-                <View style={styles.dateInput}>
-                  <Ionicons name="calendar-outline" size={18} color="#6366F1" />
-                  <Text style={styles.dateText}>Select Date</Text>
+                <View style={[styles.input, { justifyContent: 'center' }]}>
+                  <Text style={{ color: '#64748B' }}>Select Category</Text>
                 </View>
+
+                <TextInput
+                  placeholder="Notes (optional)"
+                  value=""
+                  editable={false}
+                  style={styles.input}
+                />
+
+                <View style={styles.dateSection}>
+                  <Text style={styles.dateLabel}>Date</Text>
+                  <View style={styles.dateInput}>
+                    <Ionicons name="calendar-outline" size={18} color="#6366F1" />
+                    <Text style={styles.dateText}>Select Date</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={[styles.modalSubmitButton, styles.modalPrimaryBtn]} disabled>
+                  <Text style={styles.submitText}>Save</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.modalSubmitButton, styles.modalOutlineBtn]} disabled>
+                  <Text style={styles.outlineText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-
-              <TouchableOpacity style={[styles.modalSubmitButton, styles.modalPrimaryBtn]} disabled>
-                <Text style={styles.submitText}>Save</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[styles.modalSubmitButton, styles.modalOutlineBtn]} disabled>
-                <Text style={styles.outlineText}>Cancel</Text>
-              </TouchableOpacity>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Highlight area (spotlight effect) */}
-        {step.highlightArea && step.id !== 3 && step.id !== 4 && (
+          {/* Highlight area (spotlight effect) */}
+          {step.highlightArea && step.id !== 3 && step.id !== 4 && (
+            <View
+              style={[
+                styles.highlightBox,
+                {
+                  top: step.highlightArea.top,
+                  left: step.highlightArea.left,
+                  right: step.highlightArea.right,
+                  bottom: step.highlightArea.bottom,
+                  width: step.highlightArea.width,
+                  height: step.highlightArea.height,
+                },
+              ]}
+              pointerEvents="none"
+            />
+          )}
+
+          {/* Tutorial card */}
           <View
             style={[
-              styles.highlightBox,
+              styles.tutorialCard,
               {
-                top: step.highlightArea.top,
-                left: step.highlightArea.left,
-                right: step.highlightArea.right,
-                bottom: step.highlightArea.bottom,
-                width: step.highlightArea.width,
-                height: step.highlightArea.height,
+                top: step.position.top,
+                left: step.position.left,
+                right: step.position.right,
+                bottom: step.position.bottom,
+                width: step.position.width,
               },
             ]}
-          />
-        )}
-
-        {/* Tutorial card */}
-        <View
-          style={[
-            styles.tutorialCard,
-            {
-              top: step.position.top,
-              left: step.position.left,
-              right: step.position.right,
-              bottom: step.position.bottom,
-              width: step.position.width,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={["#1F2937", "#374151"]}
-            style={styles.cardGradient}
           >
-            {/* Icon */}
-            <View style={styles.iconContainer}>
-              <Ionicons name={step.icon} size={32} color="#1f4b81" />
-            </View>
+            <LinearGradient
+              colors={["#1F2937", "#374151"]}
+              style={styles.cardGradient}
+            >
+              {/* Icon */}
+              <View style={styles.iconContainer}>
+                <Ionicons name={step.icon} size={32} color="#1f4b81" />
+              </View>
 
-            {/* Content */}
-            <Text style={styles.tutorialTitle}>{step.title}</Text>
-            <Text style={styles.tutorialDescription}>{step.description}</Text>
+              {/* Content */}
+              <Text style={styles.tutorialTitle}>{step.title}</Text>
+              <Text style={styles.tutorialDescription}>{step.description}</Text>
 
-            {/* Progress dots */}
-            <View style={styles.dotsContainer}>
-              {EXPENSES_TUTORIAL_STEPS.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.dot,
-                    currentStep === index && styles.activeDot,
-                  ]}
-                />
-              ))}
-            </View>
+              {/* Progress dots */}
+              <View style={styles.dotsContainer}>
+                {EXPENSES_TUTORIAL_STEPS.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.dot,
+                      currentStep === index && styles.activeDot,
+                    ]}
+                  />
+                ))}
+              </View>
 
-            {/* Navigation buttons */}
-            <View style={styles.buttonRow}>
-              {currentStep > 0 && (
+              {/* Navigation buttons */}
+              <View style={styles.buttonRow}>
+                {currentStep > 0 && (
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={handlePrevious}
+                  >
+                    <Ionicons name="arrow-back" size={18} color="#9CA3AF" />
+                    <Text style={styles.secondaryBtnText}>Back</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={handlePrevious}
+                  style={styles.skipBtn}
+                  onPress={handleSkip}
                 >
-                  <Ionicons name="arrow-back" size={18} color="#9CA3AF" />
-                  <Text style={styles.secondaryBtnText}>Back</Text>
+                  <Text style={styles.skipBtnText}>Skip</Text>
                 </TouchableOpacity>
-              )}
 
-              <TouchableOpacity
-                style={styles.skipBtn}
-                onPress={handleSkip}
-              >
-                <Text style={styles.skipBtnText}>Skip</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={handleNext}
-              >
-                <LinearGradient
-                  colors={["#1f4b81", "#1f4b81"]}
-                  style={styles.primaryBtnGradient}
+                <TouchableOpacity
+                  style={styles.primaryBtn}
+                  onPress={handleNext}
                 >
-                  <Text style={styles.primaryBtnText}>
-                    {currentStep === EXPENSES_TUTORIAL_STEPS.length - 1 ? "Got it!" : "Next"}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={18} color="#fff" />
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
-      </View>
+                  <LinearGradient
+                    colors={["#1f4b81", "#1f4b81"]}
+                    style={styles.primaryBtnGradient}
+                  >
+                    <Text style={styles.primaryBtnText}>
+                      {currentStep === EXPENSES_TUTORIAL_STEPS.length - 1 ? "Got it!" : "Next"}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </ScrollView>
+      </Pressable>
     </Modal>
   );
 }
@@ -368,7 +387,7 @@ export default function ExpensesTutorialScreen() {
       </ScrollView>
 
       {/* FAB for Add Expense */}
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} disabled={showTutorial}>
         <LinearGradient
           colors={['#1f4b81ff', '#7fb1d6ff']}
           style={styles.fabGradient}
@@ -381,6 +400,7 @@ export default function ExpensesTutorialScreen() {
       <TouchableOpacity
         activeOpacity={0.8}
         style={styles.micFab}
+        disabled={showTutorial}
       >
         <Ionicons name="mic" size={28} color="#fff" />
       </TouchableOpacity>
@@ -580,7 +600,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: SCREEN_WIDTH < 768 ? SCREEN_HEIGHT * 0.15 : SCREEN_HEIGHT * 0.2,
     alignSelf: "center",
-    zIndex: 100,
+    zIndex: 5,
     maxHeight: SCREEN_HEIGHT * 0.7,
   },
   addModalContent: {
@@ -594,7 +614,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 15,
+    elevation: 8,
   },
   addModalTitle: {
     fontWeight: "bold",
@@ -675,21 +695,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#1f4b81",
   },
-  submitButton: {
-    width: "100%",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  primaryBtn: {
-    backgroundColor: "#1f4b81",
-  },
-  outlineBtn: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: "#1f4b81",
-  },
   submitText: {
     color: "#fff",
     fontWeight: "600",
@@ -704,11 +709,16 @@ const styles = StyleSheet.create({
   // Tutorial Overlay Styles
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.15)",
+    zIndex: 1,
   },
   highlightBox: {
     position: "absolute",
@@ -721,6 +731,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 15,
     elevation: 10,
+    zIndex: 2,
   },
   tutorialCard: {
     position: "absolute",
@@ -730,7 +741,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 20,
+    zIndex: 100,
   },
   cardGradient: {
     padding: 24,

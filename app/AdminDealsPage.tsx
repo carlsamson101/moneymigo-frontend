@@ -9,6 +9,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
+  Dimensions,
+  Platform,
   SafeAreaView,
   ScrollView,
   Pressable,
@@ -17,11 +19,44 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Picker } from "@react-native-picker/picker";
 
 import api from "../lib/api";
 import { router } from "expo-router";
 import { checkAdminAuth } from "../lib/adminAuthGuard";
 
+import { usePathname } from "expo-router";
+
+
+const UNIT_OPTIONS = [
+  { label: "Piece", value: "piece" },
+  { label: "Kilo", value: "kilo" },
+  { label: "Gram", value: "gram" },
+  { label: "Liter", value: "liter" },
+  { label: "Milliliter (ml)", value: "ml" },
+  { label: "Pack", value: "pack" },
+  { label: "Dozen", value: "dozen" },
+  { label: "Tray", value: "tray" },
+  { label: "Box", value: "box" },
+  { label: "Bundle", value: "bundle" },
+  { label: "Sack", value: "sack" },
+  { label: "Other", value: "other" },
+];
+
+const CATEGORY_OPTIONS = [
+  { label: "Instant Noodles", value: "instant noodles" },
+  { label: "Canned Goods", value: "canned goods" },
+  { label: "Snacks", value: "snacks" },
+  { label: "Beverages", value: "beverages" },
+  { label: "Cooking Essentials", value: "cooking essentials" },
+  { label: "Personal Care", value: "personal care" },
+  { label: "Household", value: "household" },
+  { label: "Laundry", value: "laundry" },
+  { label: "Medicine", value: "medicine" },
+  { label: "School Supplies", value: "school supplies" },
+  { label: "Condiments", value: "condiments" },
+  { label: "Other", value: "other" },
+];
 
 
 type Item = {
@@ -30,7 +65,7 @@ type Item = {
   itemName: string;
   price: number;
   unit?: string;
-  stock?: number; // ✅ new field
+  stock: boolean;// ✅ new field
   category?: string; // ✅ Added category
 
 };
@@ -60,27 +95,38 @@ export default function AdminDealsPage() {
   const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const [selectedStore, setSelectedStore] = useState<StoreData | null>(null);
   const [storeDetailsVisible, setStoreDetailsVisible] = useState(false);
-const [newStock, setNewStock] = useState("");
+const [newStock, setNewStock] = useState(true);
 const [editCategory, setEditCategory] = useState("");
 const [selectedCategory, setSelectedCategory] = useState("all");
 const [itemSearchQuery, setItemSearchQuery] = useState("");
 const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+const pathname = usePathname();
+ const [sidebarVisible, setSidebarVisible] = useState(false);
+  const { width } = Dimensions.get('window');
+  const isMobile = width < 768;
+  const [availableStores, setAvailableStores] = useState<string[]>([]);
+const [newCategory, setNewCategory] = useState("other");
+const [editStock, setEditStock] = useState(true);
 
 useEffect(() => {
   checkAdminAuth();
 }, []);
 
-  const fetchItems = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get("/storeItems");
-      setItems(res.data);
-    } catch (err) {
-      console.error("❌ Fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchItems = async () => {
+  setLoading(true);
+  try {
+    const res = await api.get("/storeItems");
+    setItems(res.data);
+    
+    // ✅ Extract unique store names
+    const uniqueStores = [...new Set(res.data.map((item: Item) => item.storeName))];
+    setAvailableStores(uniqueStores);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchItems();
@@ -90,23 +136,32 @@ const startEdit = (item: Item) => {
   setEditingId(item._id);
   setEditName(item.itemName);
   setEditPrice(item.price.toString());
-  setEditUnit(item.unit || "");
+  setEditUnit(item.unit || "piece");
+  setEditCategory(item.category || "other");
+
+  // ⭐ Add this:
+setEditStock(item.stock);
+
   setEditModalVisible(true);
 };
 
-
-  const saveEdit = async (id: string) => {
-    try {
-      await api.put(`/storeItems/${id}`, {
-        price: parseFloat(editPrice),
-        unit: editUnit,
-      });
-      setEditingId(null);
-      fetchItems();
-    } catch (err) {
-      console.error("❌ Update item error:", err);
-    }
-  };
+ const saveEdit = async (id: string) => {
+  try {
+  await api.put(`/storeItems/${id}`, {
+  price: parseFloat(editPrice),
+  unit: editUnit,
+  category: editCategory,
+stock: editStock,
+});
+    setEditingId(null);
+    setEditModalVisible(false);
+    fetchItems();
+    Alert.alert("Success", "Item updated successfully!");
+  } catch (err) {
+    console.error("❌ Update item error:", err);
+    Alert.alert("Error", "Failed to update item");
+  }
+};
 
   const deleteItem = async (id: string) => {
     try {
@@ -143,7 +198,8 @@ const startEdit = (item: Item) => {
   const totalItems = items.length;
 
  const addItem = async () => {
-  if (!newStoreName || !newItemName || !newPrice) {
+  if (!newStoreName || !newItemName || !newPrice || !newUnit || !newCategory) {
+    Alert.alert("Missing Fields", "Please fill all required fields");
     return;
   }
 
@@ -153,8 +209,9 @@ const startEdit = (item: Item) => {
       itemName: newItemName,
       price: parseFloat(newPrice),
       unit: newUnit,
+      category: newCategory,
       currency: "PHP",
-      stock: parseInt(newStock) || 0, // ✅ include stock
+      stock: newStock,
     });
 
     setAddModalVisible(false);
@@ -162,16 +219,20 @@ const startEdit = (item: Item) => {
     setNewItemName("");
     setNewPrice("");
     setNewUnit("piece");
-    setNewStock(""); // ✅ reset stock
+    setNewCategory("other");
+    setNewStock("");
     fetchItems();
+    Alert.alert("Success", "Item added successfully!");
   } catch (err: any) {
     console.error("❌ Add item error:", err.response?.data || err.message);
+    Alert.alert("Error", err.response?.data?.error || "Failed to add item");
   }
 };
 
 
   const openStoreDetails = (store: StoreData) => {
     setSelectedStore(store);
+    
     setStoreDetailsVisible(true);
   };
 
@@ -193,29 +254,75 @@ const startEdit = (item: Item) => {
           </View>
 
           <View style={styles.sidebarMenu}>
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push("/AdminHomePage")}
-            >
-              <Ionicons name="home" size={24} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.sidebarText}>Home</Text>
-            </TouchableOpacity>
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminHomePage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminHomePage");
+    }}
+  >
+    <Ionicons 
+      name="home" 
+      size={24} 
+      color={pathname === "/AdminHomePage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminHomePage" && styles.sidebarTextActive
+    ]}>
+      Home
+    </Text>
+  </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push("/AdminToolsPage")}
-            >
-              <Ionicons name="settings-outline" size={24} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.sidebarText}>Tools</Text>
-            </TouchableOpacity>
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminToolsPage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminToolsPage");
+    }}
+  >
+    <Ionicons 
+      name="settings-outline" 
+      size={24} 
+      color={pathname === "/AdminToolsPage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminToolsPage" && styles.sidebarTextActive
+    ]}>
+      Tools
+    </Text>
+  </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.sidebarItem, styles.sidebarItemActive]}
-            >
-              <Ionicons name="pricetag" size={24} color="#A4C639" />
-              <Text style={[styles.sidebarText, styles.sidebarTextActive]}>Deals</Text>
-            </TouchableOpacity>
-          </View>
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminDealsPage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminDealsPage");
+    }}
+  >
+    <Ionicons 
+      name="pricetag-outline" 
+      size={24} 
+      color={pathname === "/AdminDealsPage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminDealsPage" && styles.sidebarTextActive
+    ]}>
+      Deals
+    </Text>
+  </TouchableOpacity>
+</View>
 
         {/* ===== Logout Button ===== */}
 <TouchableOpacity
@@ -470,41 +577,49 @@ const startEdit = (item: Item) => {
 {/* 🧮 Editable Stock */}
 <View style={styles.stockRow}>
   <Ionicons name="cube-outline" size={16} color="#059669" />
-  <TextInput
-    style={styles.stockInput}
-    value={item.stock?.toString() || "0"}
-    keyboardType="numeric"
-    onChangeText={async (text) => {
-      const newStock = parseInt(text) || 0;
 
-      // 🔁 Update locally
-      setSelectedStore((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((i) =>
-                i._id === item._id ? { ...i, stock: newStock } : i
-              ),
-            }
-          : prev
-      );
+  <TouchableOpacity
+  onPress={async () => {
+    const newValue = !item.stock;
 
-      // 💾 Save to backend
-      try {
-        await api.put(`/storeItems/${item._id}`, { stock: newStock });
-      } catch (err) {
-        console.error("❌ Stock update error:", error.response?.data || err.message);
-      }
-    }}
-    placeholder="0"
-    placeholderTextColor="#94A3B8"
-  />
-  <Text style={styles.stockLabel}>in stock</Text>
+    // Update store modal UI
+    setSelectedStore(prev =>
+      prev ? {
+        ...prev,
+        items: prev.items.map(i =>
+          i._id === item._id ? { ...i, stock: newValue } : i
+        ),
+      } : prev
+    );
+
+    // Update global items so fetchItems doesn't undo changes
+    setItems(prev =>
+      prev.map(i =>
+        i._id === item._id ? { ...i, stock: newValue } : i
+      )
+    );
+
+    // Save backend
+    await api.put(`/storeItems/${item._id}`, { stock: newValue });
+  }}
+  style={{
+    backgroundColor: item.stock ? "#16A9B8" : "#E2E8F0",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginTop: 6
+  }}
+>
+  <Text style={{ color: item.stock ? "white" : "#475569", fontWeight: "700" }}>
+    {item.stock ? "In Stock" : "Out of Stock"}
+  </Text>
+</TouchableOpacity>
+
+
+ 
 </View>
 
-{item.stock <= 5 && (
-  <Text style={styles.lowStockWarning}>⚠️ Low stock</Text>
-)}
+
 
 
         {/* Actions */}
@@ -532,112 +647,162 @@ const startEdit = (item: Item) => {
   </SafeAreaView>
 </Modal>
 
+{/* Add Item Modal */}
+<Modal
+  visible={addModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setAddModalVisible(false)}
+>
+  <Pressable style={styles.modalOverlay} onPress={() => setAddModalVisible(false)}>
+    <Pressable style={styles.addModal} onPress={() => {}}>
+      <View style={styles.modalHeader}>
+        <View style={styles.modalIconWrapper}>
+          <Ionicons name="add-circle" size={32} color="#16A9B8" />
+        </View>
+        <Text style={styles.modalTitle}>Add New Item</Text>
+        <Text style={styles.modalSubtitle}>Enter item details below</Text>
+      </View>
 
-      {/* Add Item Modal */}
-      <Modal
-        visible={addModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddModalVisible(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setAddModalVisible(false)}>
-          <Pressable style={styles.addModal} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalIconWrapper}>
-                <Ionicons name="add-circle" size={32} color="#16A9B8" />
-              </View>
-              <Text style={styles.modalTitle}>Add New Item</Text>
-              <Text style={styles.modalSubtitle}>Enter item details below</Text>
-            </View>
-
-            <View style={styles.modalBody}>
-             <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Stocks Left</Text>
-            <View style={styles.inputWithIcon}>
-              <Ionicons name="cube-outline" size={18} color="#64748B" />
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g. 10"
-                keyboardType="numeric"
-                value={newStock}
-                onChangeText={setNewStock}
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
+      <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+        {/* Store Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Store Name *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={newStoreName}
+              onValueChange={(value) => setNewStoreName(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select a store..." value="" />
+              {availableStores.map((store) => (
+                <Picker.Item key={store} label={store} value={store} />
+              ))}
+            </Picker>
           </View>
+        </View>
+
+        {/* Item Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Item Name *</Text>
+          <View style={styles.inputWithIcon}>
+            <Ionicons name="cube-outline" size={18} color="#64748B" />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Lucky Me Pancit Canton"
+              value={newItemName}
+              onChangeText={setNewItemName}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
+        </View>
+
+        {/* Category */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Category *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={newCategory}
+              onValueChange={(value) => setNewCategory(value)}
+              style={styles.picker}
+            >
+              {CATEGORY_OPTIONS.map((cat) => (
+                <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        {/* Price */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Price *</Text>
+          <View style={styles.inputWithIcon}>
+            <MaterialCommunityIcons name="currency-php" size={18} color="#64748B" />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="0.00"
+              keyboardType="numeric"
+              value={newPrice}
+              onChangeText={setNewPrice}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
+        </View>
+
+        {/* Unit */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Unit *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={newUnit}
+              onValueChange={(value) => setNewUnit(value)}
+              style={styles.picker}
+            >
+              {UNIT_OPTIONS.map((unit) => (
+                <Picker.Item key={unit.value} label={unit.label} value={unit.value} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        {/* Stock */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Stock Quantity</Text>
+          <View style={styles.inputWithIcon}>
+            <Ionicons name="layers-outline" size={18} color="#64748B" />
+          <TouchableOpacity
+  style={[
+    {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      backgroundColor: newStock ? "#16A9B8" : "#E2E8F0",
+      marginTop: 10,
+    },
+  ]}
+  onPress={() => setNewStock((prev) => !prev)}
+>
+  <Text
+    style={{
+      color: newStock ? "white" : "#475569",
+      fontWeight: "700",
+    }}
+  >
+    {newStock ? "In Stock" : "Out of Stock"}
+  </Text>
+</TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      <View style={styles.modalActions}>
+        <TouchableOpacity
+          style={styles.modalCancelBtn}
+          onPress={() => setAddModalVisible(false)}
+        >
+          <Text style={styles.modalCancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <LinearGradient
+          colors={['#16A9B8', '#0D7C8A']}
+          style={styles.modalSaveBtn}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <TouchableOpacity 
+            style={styles.modalSaveTouchable}
+            onPress={addItem}
+          >
+            <Ionicons name="checkmark" size={20} color="white" />
+            <Text style={styles.modalSaveText}>Add Item</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+    </Pressable>
+  </Pressable>
+</Modal>
 
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Item Name</Text>
-                <View style={styles.inputWithIcon}>
-                  <Ionicons name="cube-outline" size={18} color="#64748B" />
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="e.g. Eggs"
-                    value={newItemName}
-                    onChangeText={setNewItemName}
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Price</Text>
-                <View style={styles.inputWithIcon}>
-                  <MaterialCommunityIcons name="currency-php" size={18} color="#64748B" />
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="0.00"
-                    keyboardType="numeric"
-                    value={newPrice}
-                    onChangeText={setNewPrice}
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Unit</Text>
-                <View style={styles.inputWithIcon}>
-                  <Ionicons name="list-outline" size={18} color="#64748B" />
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="e.g. kilo, pack, piece"
-                    value={newUnit}
-                    onChangeText={setNewUnit}
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setAddModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <LinearGradient
-                colors={['#16A9B8', '#0D7C8A']}
-                style={styles.modalSaveBtn}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <TouchableOpacity 
-                  style={styles.modalSaveTouchable}
-                  onPress={addItem}
-                >
-                  <Ionicons name="checkmark" size={20} color="white" />
-                  <Text style={styles.modalSaveText}>Add Item</Text>
-                </TouchableOpacity>
-              </LinearGradient>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Edit Item Modal */}
+  {/* Edit Item Modal */}
 <Modal
   visible={editModalVisible}
   transparent
@@ -654,22 +819,39 @@ const startEdit = (item: Item) => {
         <Text style={styles.modalSubtitle}>Update the details below</Text>
       </View>
 
-      <View style={styles.modalBody}>
+      <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+        {/* Item Name (Read-only) */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Item Name</Text>
           <View style={styles.inputWithIcon}>
-            <Ionicons name="cube-outline" size={18} color="#64748B" />
+            <Ionicons name="cube-outline" size={18} color="#94A3B8" />
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { color: '#94A3B8' }]}
               value={editName}
               editable={false}
-              placeholderTextColor="#94A3B8"
             />
           </View>
         </View>
 
+        {/* Category */}
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Price</Text>
+          <Text style={styles.inputLabel}>Category *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={editCategory}
+              onValueChange={(value) => setEditCategory(value)}
+              style={styles.picker}
+            >
+              {CATEGORY_OPTIONS.map((cat) => (
+                <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        {/* Price */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Price *</Text>
           <View style={styles.inputWithIcon}>
             <MaterialCommunityIcons name="currency-php" size={18} color="#64748B" />
             <TextInput
@@ -683,20 +865,51 @@ const startEdit = (item: Item) => {
           </View>
         </View>
 
+        {/* Unit */}
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Unit</Text>
-          <View style={styles.inputWithIcon}>
-            <Ionicons name="list-outline" size={18} color="#64748B" />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. kilo, pack, piece"
-              value={editUnit}
-              onChangeText={setEditUnit}
-              placeholderTextColor="#94A3B8"
-            />
+          <Text style={styles.inputLabel}>Unit *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={editUnit}
+              onValueChange={(value) => setEditUnit(value)}
+              style={styles.picker}
+            >
+              {UNIT_OPTIONS.map((unit) => (
+                <Picker.Item key={unit.value} label={unit.label} value={unit.value} />
+              ))}
+            </Picker>
           </View>
         </View>
-      </View>
+
+        {/* Stock */}
+<View style={styles.inputGroup}>
+  <Text style={styles.inputLabel}>Stock *</Text>
+  <View style={styles.inputWithIcon}>
+    <Ionicons name="layers-outline" size={18} color="#64748B" />
+    <TouchableOpacity
+  style={[
+    {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      backgroundColor: editStock ? "#16A9B8" : "#E2E8F0",
+      marginTop: 10,
+    },
+  ]}
+  onPress={() => setEditStock((prev) => !prev)}
+>
+  <Text
+    style={{
+      color: editStock ? "white" : "#475569",
+      fontWeight: "700",
+    }}
+  >
+    {editStock ? "In Stock" : "Out of Stock"}
+  </Text>
+</TouchableOpacity>
+  </View>
+</View>
+      </ScrollView>
 
       <View style={styles.modalActions}>
         <TouchableOpacity
@@ -717,7 +930,6 @@ const startEdit = (item: Item) => {
             onPress={async () => {
               if (editingId) {
                 await saveEdit(editingId);
-                setEditModalVisible(false);
               }
             }}
           >
@@ -1686,6 +1898,16 @@ modalCancelText: {
 modalDeleteText: {
   color: "#fff",
   fontWeight: "600",
+},
+pickerContainer: {
+  backgroundColor: '#F7FAFC',
+  borderRadius: 12,
+  borderWidth: 2,
+  borderColor: '#E2E8F0',
+  overflow: 'hidden',
+},
+picker: { 
+  height: 50,
 },
 
 });

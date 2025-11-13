@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Platform,
   Modal,
   ActivityIndicator,
   SafeAreaView,
@@ -20,13 +21,13 @@ import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import { Switch } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Linking } from "react-native";
+import { usePathname } from "expo-router";
 
 import { Picker } from "@react-native-picker/picker";  
 import api from "../lib/api";
 import { checkAdminAuth } from "../lib/adminAuthGuard";
 
 
-const { width } = Dimensions.get('window');
 
 
 type Tool = {
@@ -51,6 +52,11 @@ export default function AdminToolsPage() {
   const [visible, setVisible] = useState(true);
   const [editingToolId, setEditingToolId] = useState<string | null>(null);
 const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+
+const pathname = usePathname();
+ const [sidebarVisible, setSidebarVisible] = useState(false);
+  const { width } = Dimensions.get('window');
+  const isMobile = width < 768;
 
 useEffect(() => {
   checkAdminAuth();
@@ -214,29 +220,74 @@ useEffect(() => {
           <Text style={styles.sidebarTitle}>Admin Panel</Text>
         </View>
 
-      <View style={styles.sidebarMenu}>
-       <TouchableOpacity
-                    style={styles.sidebarItem}
-                    onPress={() => router.push("/AdminHomePage")}
-                  >
-                    <Ionicons name="home" size={24} color="#A4C639" />
-                    <Text style={styles.sidebarText}>Home</Text>
-                  </TouchableOpacity>
-
+<View style={styles.sidebarMenu}>
   <TouchableOpacity
-    style={[styles.sidebarItem, styles.sidebarItemActive]}
-    onPress={() => router.push("/AdminToolsPage")}
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminHomePage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminHomePage");
+    }}
   >
-    <Ionicons name="settings-outline" size={24} color="#A4C639" />
-    <Text style={[styles.sidebarText, styles.sidebarTextActive]}>Tools</Text>
+    <Ionicons 
+      name="home" 
+      size={24} 
+      color={pathname === "/AdminHomePage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminHomePage" && styles.sidebarTextActive
+    ]}>
+      Home
+    </Text>
   </TouchableOpacity>
 
   <TouchableOpacity
-    style={styles.sidebarItem}
-    onPress={() => router.push("/AdminDealsPage")}
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminToolsPage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminToolsPage");
+    }}
   >
-    <Ionicons name="pricetag-outline" size={24} color="rgba(255,255,255,0.7)" />
-    <Text style={styles.sidebarText}>Deals</Text>
+    <Ionicons 
+      name="settings-outline" 
+      size={24} 
+      color={pathname === "/AdminToolsPage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminToolsPage" && styles.sidebarTextActive
+    ]}>
+      Tools
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.sidebarItem,
+      pathname === "/AdminDealsPage" && styles.sidebarItemActive
+    ]}
+    onPress={() => {
+      if (isMobile) setSidebarVisible(false);
+      router.push("/AdminDealsPage");
+    }}
+  >
+    <Ionicons 
+      name="pricetag-outline" 
+      size={24} 
+      color={pathname === "/AdminDealsPage" ? "#A4C639" : "rgba(255,255,255,0.7)"} 
+    />
+    <Text style={[
+      styles.sidebarText,
+      pathname === "/AdminDealsPage" && styles.sidebarTextActive
+    ]}>
+      Deals
+    </Text>
   </TouchableOpacity>
 </View>
 {/* ===== Logout Button ===== */}
