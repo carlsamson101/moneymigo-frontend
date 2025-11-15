@@ -436,34 +436,46 @@ const pathname = usePathname();
         </ScrollView>
       </View>
 
-      {/* ===== Delete Confirmation Modal ===== */}
-      <Modal transparent visible={confirmVisible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Confirm Delete</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to delete{" "}
-              {targetType === "store"
-                ? `store "${targetName}"`
-                : `user "${targetName}"`}?
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelBtn]}
-                onPress={() => setConfirmVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.deleteBtnModal]}
-                onPress={handleDeleteConfirm}
-              >
-                <Text style={styles.modalDeleteText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+     {/* ===== Delete Confirmation Modal ===== */}
+<Modal transparent visible={confirmVisible} animationType="fade">
+  <View style={styles.modalOverlay}>
+    
+    {/* background overlay (tap outside to close) */}
+    <Pressable 
+      style={StyleSheet.absoluteFill} 
+      onPress={() => setConfirmVisible(false)} 
+    />
+
+    {/* Dialog box */}
+    <View style={styles.dialogBox}>
+      <Text style={styles.dialogTitle}>Confirm Delete</Text>
+
+      <Text style={styles.dialogMessage}>
+        Are you sure you want to delete{" "}
+        {targetType === "store"
+          ? `store "${targetName}"`
+          : `user "${targetName}"`}?
+      </Text>
+
+      <View style={styles.dialogActions}>
+        <TouchableOpacity 
+          style={styles.dialogCancelBtn}
+          onPress={() => setConfirmVisible(false)}
+        >
+          <Text style={styles.dialogCancelText}>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.dialogConfirmBtn}
+          onPress={handleDeleteConfirm}
+        >
+          <Text style={styles.dialogConfirmText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+
 
       {/* ===== Edit Store Modal ===== */}
       <Modal transparent visible={editStoreVisible} animationType="fade">

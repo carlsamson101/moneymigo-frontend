@@ -133,6 +133,7 @@ const OverspendWarning = ({ overspentTransactions, categoryColors }: any) => {
         borderColor: "#FCA5A5",
         padding: 14,
         marginVertical: 12,
+       
       }}
     >
       <TouchableOpacity
@@ -4649,6 +4650,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f3f6fa',
+    
   },
 
   
@@ -5077,5 +5079,9 @@ voiceHintText: {
   fontWeight: "500",
   lineHeight: 18,
 },
+scrollContent: {
+  paddingBottom: 25,   
+}
+
 
 });

@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from "@react-navigation/native";
+
 import { 
   View, 
   Text, 
@@ -43,6 +45,56 @@ type UserData = {
   };
 };
 
+
+function getPeriodDateRange(
+  period: string | null,
+  startDate: Date | null,
+  endDate: Date | null
+): { min: Date; max: Date } {
+  const now = new Date();
+  let start, end;
+
+  // Normalize casing so "daily" → "Daily", "weekly" → "Weekly", etc.
+  period = period ? period.charAt(0).toUpperCase() + period.slice(1).toLowerCase() : null;
+
+  if (period === 'Custom' && startDate && endDate) {
+    start = new Date(startDate);
+    end = new Date(endDate);
+    console.log("📌 Custom Range:", { start, end });
+    return { min: start, max: end };
+  }
+
+  if (period === 'Daily' && startDate) {
+    start = new Date(startDate);
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+    console.log("📌 Daily Range:", { start, end });
+    return { min: start, max: end };
+  }
+
+  if (period === 'Weekly' && startDate) {
+    start = new Date(startDate);
+    end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    console.log("📌 Weekly Range:", { start, end });
+    return { min: start, max: end };
+  }
+
+  if (period === 'Monthly' && startDate) {
+    start = new Date(startDate);
+    end = new Date(start);
+    end.setMonth(start.getMonth() + 1);
+    console.log("📌 Monthly Range:", { start, end });
+    return { min: start, max: end };
+  }
+
+  start = new Date(now);
+  end = new Date(start);
+  end.setDate(start.getDate() + 1);
+  console.log("📌 Default 24hr Range:", { start, end });
+  return { min: start, max: end };
+}
+
 export default function AnalyticsPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -50,8 +102,15 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
 
+  useFocusEffect(
+  React.useCallback(() => {
+    // 👇 This forces your useEffect to run again
+    setLoading(true);  
+  }, [])
+);
   useEffect(() => {
     (async () => {
+        if (!loading) return;   // avoid unnecessary runs
       const token = await getToken();
       if (!token?.id) return;
 
@@ -72,19 +131,34 @@ export default function AnalyticsPage() {
         setExpenses(allExpensesRes.data.expenses || []);
 
         // Current period start and end
-        let periodStart, periodEnd;
-        if (user.budgetPeriod === 'Custom' && user.customBudgetRange) {
-          periodStart = new Date(user.customBudgetRange.budgetPeriodStart);
-          periodEnd = new Date(user.customBudgetRange.budgetPeriodEnd);
-        } else {
-          periodStart = new Date(user.budgetPeriodStart || new Date());
-          periodEnd = new Date(user.budgetPeriodEnd || new Date());
-        }
+       // ✅ With this:
+const periodStart = user.budgetPeriodStart ? new Date(user.budgetPeriodStart) : null;
+const periodEnd = user.budgetPeriodEnd ? new Date(user.budgetPeriodEnd) : null;
 
-        const currentPeriodRes = await api.get(
-          `/expenses/history?userId=${token.id}&start=${periodStart.toISOString().slice(0, 10)}&end=${periodEnd.toISOString().slice(0, 10)}`
-        );
-        setCurrentPeriodExpenses(currentPeriodRes.data.expenses || []);
+const { min: periodStartDate, max: periodEndDate } = getPeriodDateRange(
+  user.budgetPeriod,
+  periodStart,
+  periodEnd
+);
+
+// 🔥 Make end date include full day (important!)
+const finalEndDate = new Date(periodEndDate);
+finalEndDate.setHours(23, 59, 59, 999);
+
+// Start of day
+const startOfDay = new Date(periodStartDate);
+startOfDay.setHours(0, 0, 0, 0);
+
+// End of day (full day)
+const endOfDay = new Date(periodEndDate);
+endOfDay.setHours(23, 59, 59, 999);
+
+// Correct API call (matches Home Page + backend)
+const currentPeriodRes = await api.get(`/expenses/user/${token.id}`);
+
+setCurrentPeriodExpenses(currentPeriodRes.data || []);
+
+
 
         // Animate content in
         Animated.timing(fadeAnim, {
@@ -99,7 +173,7 @@ export default function AnalyticsPage() {
         setLoading(false);
       }
     })();
-  }, []);
+}, [loading]);
 
   if (loading) {
     return (
