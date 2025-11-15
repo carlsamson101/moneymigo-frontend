@@ -114,18 +114,6 @@ export default function AppInfoPage() {
               </View>
             </View>
 
-            <View style={styles.comparisonRow}>
-              <Text style={styles.featureName}>⚡ Loading Speed</Text>
-              <View style={styles.comparisonColumns}>
-                <View style={styles.comparisonCell}>
-                  <Text style={styles.comparisonValue}>Good</Text>
-                </View>
-                <View style={[styles.comparisonCell, styles.highlightCell]}>
-                  <Ionicons name="flash" size={16} color="#1f4b81" />
-                  <Text style={styles.comparisonValueApp}>Lightning</Text>
-                </View>
-              </View>
-            </View>
 
             <View style={styles.comparisonRow}>
               <Text style={styles.featureName}>📱 Push Notifications</Text>
@@ -190,7 +178,7 @@ export default function AppInfoPage() {
             <View style={styles.exclusiveContent}>
               <Text style={styles.exclusiveTitle}>Work Offline</Text>
               <Text style={styles.exclusiveDescription}>
-                Access your data anytime, anywhere - no internet required
+                Access Expense Page anytime, anywhere - no internet required
               </Text>
             </View>
           </View>
