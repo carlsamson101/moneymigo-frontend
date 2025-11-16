@@ -474,12 +474,11 @@ if (
 
   return; // stop here
 }
-  // 🧩 Handle special command: update all X category to Y
+ // 🧩 Handle special command: update all X category to Y
   const updateMatch =
-    lower.match(/update all\s+([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
-    lower.match(/change all\s+([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
+    lower.match(/update all\s+(?:items?\s+)?(?:with\s+)?([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
+    lower.match(/change all\s+(?:items?\s+)?(?:with\s+)?([\w\s]+?)\s+(?:categories?|category)\s+(?:to|into)\s+([\w\s]+)/i) ||
     lower.match(/set\s+(?:category|categories)\s+of\s+([\w\s]+?)\s+(?:to|into)\s+([\w\s]+)/i);
-
   if (updateMatch) {
     const productKeyword = updateMatch[1].trim().toLowerCase();
     const newCategory = updateMatch[2].trim().toLowerCase();

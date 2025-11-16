@@ -55,7 +55,7 @@ const BUILT_IN_CATEGORIES: Category[] = [
   { name: 'Shopping', icon: <Ionicons name="cart-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
   // 👇 Add Savings here so it's treated as top-level
   { name: 'Savings', icon: <Ionicons name="cash-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  { name: 'Others', icon: <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color="#1f4b81ff" />, color: '#1f4b81ff' },
+  { name: 'Others', icon: <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color="#fbfbfbff" />, color: '#1f4b81ff' },
 ];
 
 const OTHERS_KEY = "Others";
@@ -174,14 +174,18 @@ export default function BudgetScreen() {
   };
 
   const toggleOthers = () => {
+  setOthersExpanded((prev) => {
+    const next = !prev;
     Animated.timing(othersAnim, {
-      toValue: othersExpanded ? 0 : 1,
+      toValue: next ? 1 : 0,
       duration: 300,
       easing: Easing.out(Easing.ease),
       useNativeDriver: false,
     }).start();
-    setOthersExpanded(!othersExpanded);
-  };
+    return next;
+  });
+};
+
 
   useFocusEffect(
     React.useCallback(() => {
@@ -208,29 +212,44 @@ export default function BudgetScreen() {
     }, [])
   );
 
-  // Load categories (including user custom ones)
-  useEffect(() => {
-    (async () => {
-      const user = await getToken();
-      if (!user?.id) return;
+useEffect(() => {
+  (async () => {
+    const user = await getToken();
+    if (!user?.id) return;
 
-      const stored = await AsyncStorage.getItem(`customCategories_${user.id}`);
-      const custom = stored ? JSON.parse(stored) : [];
+    const stored = await AsyncStorage.getItem(`customCategories_${user.id}`);
+    const custom = stored ? JSON.parse(stored) : [];
 
-      const merged = [
-        ...BUILT_IN_CATEGORIES,
-        ...custom.map((cat: string) => ({
-          name: cat,
-          icon: <Ionicons name="pricetag-outline" size={20} color="#fff" />,
-          color: "#74B9FF",
-          parent: cat.startsWith("Others:") ? OTHERS_KEY : undefined,
-        })),
-      ];
+    console.log("🧩 Loaded custom categories from storage:", custom);
 
-      setCustomCategories(custom);
-      setCategories(merged);
-    })();
-  }, []);
+    const merged = [
+      ...BUILT_IN_CATEGORIES,
+      ...custom.map((cat: string) => ({
+        name: cat,
+        parent: OTHERS_KEY, // ✅ Must always have this for grouping
+        icon:
+          BUILT_IN_CATEGORIES.find(c => c.name === OTHERS_KEY)?.icon || (
+            <Ionicons
+              name="ellipsis-horizontal-circle-outline"
+              size={20}
+              color="#f2efef"
+            />
+          ),
+        color:
+          BUILT_IN_CATEGORIES.find(c => c.name === OTHERS_KEY)?.color ||
+          "#1f4b81ff",
+      })),
+    ];
+
+    console.log("✅ Final merged categories:", merged);
+
+    setCategories(merged);
+  })();
+}, []);
+
+
+
+
 
   const computeOthersBudget = (budgets: Budget[]) => {
     const subcategories = customCategories;
@@ -321,65 +340,61 @@ const fetchExpenses = async (
         foundCategories.add(exp.category);
       }
     }
+
+    // ✅ Update expense totals
     setExpensesByCategory(byCategory);
-    const updatedCategories = categories.map((c) => {
-  const isBuiltIn = BUILT_IN_CATEGORIES.some((b) => b.name === c.name);
-  if (!isBuiltIn && c.name !== OTHERS_KEY && !c.parent) {
-    return { ...c, parent: OTHERS_KEY }; // Auto-group legacy custom ones
-  }
-  return c;
-});
 
-setCategories(updatedCategories);
-
-
+    // ✅ Single unified category update (no double set)
     setCategories((prev) => {
       const existingNames = new Set(prev.map((c) => c.name));
 
+      // Add new categories discovered in expenses
       const extras = Array.from(foundCategories)
-        .filter((c) => !existingNames.has(c))
+        .filter((name) => !existingNames.has(name))
         .map((name) => {
-          if (name.startsWith("Others:")) {
-            return {
-              name,
-              parent: "Others", // 👈 ensures grouping under Others
-              icon:
-                BUILT_IN_CATEGORIES.find((c) => c.name === "Others")?.icon || (
-                  <Ionicons
-                    name="ellipsis-horizontal-circle-outline"
-                    size={22}
-                    color="#fff"
-                  />
-                ),
-              color:
-                BUILT_IN_CATEGORIES.find((c) => c.name === "Others")?.color ||
-                "#74B9FF",
-            };
-          }
+          const isSub = name.startsWith("Others:");
+          const displayName = name.replace(/^Others:/, "");
 
           return {
-            name,
-            icon:
-              BUILT_IN_CATEGORIES.find((c) => c.name === name)?.icon || (
-                <Ionicons
-                  name="pricetag-outline"
-                  size={20}
-                  color="#fff"
-                />
-              ),
-            color:
-              BUILT_IN_CATEGORIES.find((c) => c.name === name)?.color ||
-              "#74B9FF",
-          };
+  name,
+  displayName,
+  parent: isSub ? OTHERS_KEY : undefined,
+  icon:
+    BUILT_IN_CATEGORIES.find((c) => c.name === OTHERS_KEY)?.icon || (
+      <Ionicons name="ellipsis-horizontal-circle-outline" size={20} color="#fff" />
+    ),
+  color:
+    BUILT_IN_CATEGORIES.find((c) => c.name === OTHERS_KEY)?.color || "#1f4b81ff",
+};
+
         });
 
-      if (extras.length === 0) return prev;
-      return [...prev, ...extras];
+      // Fix existing categories to ensure consistency
+      const updated = prev.map((c) => {
+        const isBuiltIn = BUILT_IN_CATEGORIES.some((b) => b.name === c.name);
+        if (
+          !isBuiltIn &&
+          c.name !== OTHERS_KEY &&
+          c.name.startsWith("Others:") &&
+          !c.parent
+        ) {
+          return {
+            ...c,
+            parent: OTHERS_KEY,
+            displayName: c.name.replace(/^Others:/, ""),
+          };
+        }
+        return c;
+      });
+
+      // Return updated + any new found categories
+      return [...updated, ...extras];
     });
   } catch (err) {
     console.error("fetchExpenses error:", err);
   }
 };
+
 
 
   // Helper functions and derived values
@@ -608,47 +623,101 @@ setCategories(updatedCategories);
     }
   };
 
-  const saveMultiPercentAllocations = async () => {
-    const user = await getToken();
-    if (!user?.id || !budgetPeriodStart || !budgetPeriodEnd) return;
+const saveMultiPercentAllocations = async () => {
+  const user = await getToken();
+  if (!user?.id || !budgetPeriodStart || !budgetPeriodEnd) return;
 
-    let totalUsed = 0;
-    const requests: Promise<any>[] = [];
+  let totalUsed = 0;
+  const requests: Promise<any>[] = [];
 
-    for (const cat of categories) {
-      if (cat.name === "Others") continue;
+  // 🧩 Helper: ensure Others prefix for custom categories
+  const ensureOthersPrefix = (name: string) => {
+    if (BUILT_IN_CATEGORIES.some(b => b.name === name)) return name; // built-in stays as is
+    if (name.startsWith("Others:")) return name; // already prefixed
+    return `Others:${name}`; // prefix custom ones
+  };
 
-      const percent = Number((percentInputs as Record<string, string | number>)[cat.name] || 0);
-      if (percent <= 0) continue;
+  for (const cat of categories) {
+    if (cat.name === OTHERS_KEY) continue; // skip parent "Others" row
 
-      totalUsed += percent;
-      const amount = Math.round((percent / 100) * totalBudget);
+    const percent = Number(
+      (percentInputs as Record<string, string | number>)[cat.name] || 0
+    );
+    if (percent <= 0) continue;
 
-      requests.push(api.post("/budgets", {
+    totalUsed += percent;
+    const amount = Math.round((percent / 100) * totalBudget);
+    const categoryName = ensureOthersPrefix(cat.name);
+
+    requests.push(
+      api.post("/budgets", {
         userId: user.id,
-        category: cat.name,
+        category: categoryName,
         amount,
         periodType: budgetPeriod,
         periodStart: budgetPeriodStart.toISOString(),
         periodEnd: budgetPeriodEnd.toISOString(),
-      }));
+      })
+    );
+  }
+
+  if (totalUsed > 100) {
+    Alert.alert("Error", "Total allocation exceeds 100% of the budget.");
+    return;
+  }
+
+  try {
+    // 🔹 Save all allocations
+    await Promise.all(requests);
+    await fetchBudgets();
+
+    // 🔹 Collect new custom subcategories (non-built-ins)
+    const customSubs = Object.keys(percentInputs)
+      .filter(name => !BUILT_IN_CATEGORIES.some(b => b.name === name))
+      .map(name => name.replace(/^Others:/, "")); // remove prefix before storing
+
+    if (customSubs.length > 0) {
+      // 🔹 Save them to AsyncStorage (for mobile persistence)
+      await AsyncStorage.setItem(
+        `customCategories_${user.id}`,
+        JSON.stringify(customSubs)
+      );
+      console.log("✅ Synced custom categories to AsyncStorage:", customSubs);
+
+      // 🩵 NEW: Immediately merge into categories state so mobile shows instantly
+      setCategories(prev => {
+        const existingNames = new Set(prev.map(c => c.name));
+        const newCustom = customSubs
+          .filter(name => !existingNames.has(`Others:${name}`))
+          .map(name => ({
+            name: `Others:${name}`,
+            parent: OTHERS_KEY,
+            icon:
+              BUILT_IN_CATEGORIES.find(c => c.name === OTHERS_KEY)?.icon || (
+                <Ionicons
+                  name="ellipsis-horizontal-circle-outline"
+                  size={20}
+                  color="#fff"
+                />
+              ),
+            color:
+              BUILT_IN_CATEGORIES.find(c => c.name === OTHERS_KEY)?.color ||
+              "#1f4b81ff",
+          }));
+
+        return [...prev, ...newCustom];
+      });
     }
 
-    if (totalUsed > 100) {
-      Alert.alert("Error", "Total allocation exceeds 100% of the budget.");
-      return;
-    }
+    setShowPercentModal(false);
+    setPercentInputs({});
+  } catch (e) {
+    console.log("Save failed", e);
+    Alert.alert("Error", "Failed to save allocations.");
+  }
+};
 
-    try {
-      await Promise.all(requests);
-      await fetchBudgets();
-      setShowPercentModal(false);
-      setPercentInputs({});
-    } catch (e) {
-      console.log("Save failed", e);
-      Alert.alert("Error", "Failed to save allocations.");
-    }
-  };
+
 
   const unplannedCategories = categories
     .map(c => {
@@ -709,7 +778,7 @@ const BudgetPieChart = ({ categories, getBudgetForCategory, OTHERS_KEY, totalBud
 
   const hasData = chartData.some((d) => d.value > 0);
   if (!hasData) {
-    chartData.push({ name: "No Allocations Yet", value: 1, color: "#656363ff" });
+    chartData.push({ name: "No Allocations Yet", value: 1, color: "#444" });
   }
 
   /* 💻 Web version */
@@ -747,7 +816,7 @@ const BudgetPieChart = ({ categories, getBudgetForCategory, OTHERS_KEY, totalBud
                   return [`₱${value.toLocaleString()} (${percent}%)`, name];
                 }}
                 contentStyle={{
-                  backgroundColor: "#969292ff",
+                  backgroundColor: "#fef7f7ff",
                   border: "none",
                   borderRadius: 8,
                   color: "#fff",
@@ -863,6 +932,7 @@ return (
 
 
 
+    
 
 
 
@@ -880,24 +950,15 @@ return (
   <View style={styles.backgroundCircle1} />
   <View style={styles.backgroundCircle2} />
   
-          <TouchableOpacity
-  style={{
-    position: "absolute",
-    top: 50, // adjust for safe area
-    left: 20,
-    zIndex: 999, // 👈 ensures it stays above chart
-    backgroundColor: "rgba(37, 99, 235, 0.9)",
-    padding: 8,
-    borderRadius: 20,
-  }}
-  onPress={() => {
-    if (router.canGoBack()) router.back();
-    else router.push("/(tabs)/home");
-  }}
-  activeOpacity={0.7}
->
-  <Ionicons name="arrow-back" size={22} color="#fff" />
-</TouchableOpacity>
+  {Platform.OS !== "web" && (
+     <TouchableOpacity
+          style={styles.backButton}
+            onPress={() => router.back()}
+          activeOpacity={0.8}
+             >
+             <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+  )}
 
   <View style={styles.headerContent}>
     {/* Compact Title Section */}
@@ -1156,6 +1217,7 @@ return (
     <Text style={styles.secondaryActionText}>Clear All</Text>
   </TouchableOpacity>
 
+
 <TouchableOpacity
   style={styles.copyPeriodBtn}
   onPress={async () => {
@@ -1358,22 +1420,26 @@ return (
    
   {/* Header */}
   <LinearGradient
-  colors={['#1f4b81ff', '#7fb1d6ff']}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 0 }}
-  style={styles.tableHeader}
->
-  <Text style={styles.headerTextCategories}>Categories</Text>
-  <Text style={styles.headerTextBudget}>Budget</Text>
-  <Text style={styles.headerTextRemaining}>Remaining</Text>
-</LinearGradient>
+       colors={['#1f4b81ff', '#7fb1d6ff']}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+    style={styles.tableHeader}
+  >
+    <Text style={[styles.headerText, { textAlign: "left" }]}>Categories</Text>
+    <Text style={styles.headerTextBudget}>Budget</Text>
+    <Text style={[styles.headerText, { textAlign: "right" }]}>Remaining</Text>
+  </LinearGradient>
 
   {/* Categories (one single scrollview) */}
-  <ScrollView
-    contentContainerStyle={{ paddingBottom: 20 }}
-    showsVerticalScrollIndicator={false}
-  >
-    {categories.filter(c => c.name !== OTHERS_KEY).map(({ name: cat, icon, color, parent }, idx, arr) => {
+ {/* ==================== CATEGORIES SCROLL ==================== */}
+<ScrollView
+  contentContainerStyle={{ paddingBottom: 20 }}
+  showsVerticalScrollIndicator={false}
+>
+  {/* ==================== MAIN CATEGORIES ==================== */}
+  {categories
+    .filter(c => c.name !== OTHERS_KEY && !c.parent)
+    .map(({ name: cat, icon, color }) => {
       const budget = getBudgetForCategory(cat);
       const spent = expensesByCategory[cat] || 0;
       const allocated = budget?.amount ?? 0;
@@ -1383,147 +1449,312 @@ return (
         : 0;
       const progressRatio = allocated > 0 ? Math.min(spent / allocated, 1) : 0;
       const progressColor = getProgressColor(progressRatio);
-      const isSubOfOthers = parent === OTHERS_KEY;
-
-
-      const prevItem = arr[idx - 1] as { parent?: string };
-      const showOthersDivider = isSubOfOthers && (!prevItem || prevItem.parent !== OTHERS_KEY);
 
       return (
-        <React.Fragment key={cat}>
-          {showOthersDivider && (
-            <TouchableOpacity style={styles.othersDivider} onPress={toggleOthers} activeOpacity={0.7}>
-              <View style={styles.dividerLine} />
-              <View style={styles.dividerLabel}>
-                <Ionicons
-                  name={othersExpanded ? "chevron-down" : "chevron-forward"}
-                  size={18}
-                  color="#74B9FF"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.dividerText}>{OTHERS_KEY}</Text>
-              </View>
-              <View style={styles.dividerLine} />
-            </TouchableOpacity>
+        <TouchableOpacity
+          key={cat}
+          style={styles.categoryCard}
+          onPress={() => {
+            setEditingCategory(cat);
+            setInputValue(budget ? String(budget.amount) : "");
+            setShowModal(true);
+          }}
+          activeOpacity={0.85}
+        >
+          {/* progress */}
+          {(allocated > 0 || spent > 0) && (
+            <View style={styles.progressContainer}>
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${Math.min(progressRatio * 100, 100)}%`,
+                    backgroundColor: progressColor + "20",
+                  },
+                ]}
+              />
+            </View>
           )}
 
-          {(!isSubOfOthers || othersExpanded) && (
-            <TouchableOpacity
-              style={[styles.categoryCard, isSubOfOthers && styles.subcategoryCard]}
-              onPress={() => {
-                setEditingCategory(cat);
-                setInputValue(budget ? String(budget.amount) : "");
-                setShowModal(true);
-              }}
-              activeOpacity={0.85}
-            >
-              {/* Progress indicator */}
-            {(allocated > 0 || spent > 0) && (
-  <View style={styles.progressContainer}>
-    <View
-      style={[
-        styles.progressBar,
-        {
-          width: allocated > 0
-            ? `${Math.min(progressRatio * 100, 100)}%`
-            : "100%", // unplanned always shows full width
-          backgroundColor: allocated > 0
-            ? progressColor + "20"
-            : "#9ca3af55", // gray fill for unplanned
-        },
-      ]}
-    />
-  </View>
-)}
-
-
-              <View style={styles.categoryContent}>
-                {/* Category Info */}
-                <View style={styles.colCategory}>
-                  <View style={[styles.categoryIcon, { backgroundColor: color }]}>{icon}</View>
-                 <View style={styles.categoryDetails}>
-                <Text style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">{cat}</Text>
-                <Text style={styles.categoryPercent}>{percent}% of budget</Text>
+          <View style={styles.categoryContent}>
+            <View style={styles.colCategory}>
+              <View style={[styles.categoryIcon, { backgroundColor: color }]}>
+                {icon}
               </View>
-                </View>
-
-                {/* Budget */}
-                <View style={styles.colBudget}>
-  {allocated > 0 ? (
-    // ✅ Normal budget set
-    <Text style={styles.budgetAmount}>₱{allocated.toLocaleString()}</Text>
-  ) : spent > 0 ? (
-    // 🚨 No allocation but some spending
-    totalExpenses <= totalBudget ? (
-      // 🟠 Still within total budget
-      <View style={styles.unplannedSpendingBadge}>
-        <Text style={styles.unplannedSpendingText}>Unplanned Spending</Text>
-      </View>
-    ) : (
-      // 🔴 Pushed outside total budget
-      <View style={styles.unplannedOverspentBadge}>
-        <Text style={styles.unplannedOverspentText}>Unplanned Overspent Spending</Text>
-      </View>
-    )
-  ) : (
-    // 🟡 No budget, no spending
-    <View style={styles.noBudgetBadge}>
-      <Text style={styles.noBudgetText}>Not Set</Text>
-    </View>
-  )}
-
-  <Text style={styles.spentAmount}>
-    Spent ₱{spent.toLocaleString()}
-  </Text>
-</View>
-
-
-
-                {/* Remaining */}
-                <View style={styles.colRemaining}>
-                  {allocated > 0 ? (
-                    <>
-                      <Text
-                        style={[
-                          styles.remainingAmount,
-                          { color: left >= 0 ? "#00b894" : "#d63031" },
-                        ]}
-                      >
-                        {left >= 0 ? "₱" : "-₱"}
-                        {Math.abs(left).toLocaleString()}
-                      </Text>
-                      <View
-                        style={[
-                          styles.statusIndicator,
-                          {
-                            backgroundColor:
-                              progressRatio >= 1
-                                ? "#d63031"
-                                : progressRatio >= 0.8
-                                ? "#e17055"
-                                : "#00b894",
-                          },
-                        ]}
-                      >
-                        <Text style={styles.statusText}>
-                          {Math.round(progressRatio * 100)}% of {cat} budget used
-                        </Text>
-                      </View>
-                    </>
-                  ) : (
-                    <View style={styles.unplannedBadge}>
-                      <Ionicons name="alert-circle" size={16} color="#1f4b81ff" />
-                      <Text style={styles.unplannedText}>Unplanned</Text>
-                    </View>
-                  )}
-                </View>
+              <View style={styles.categoryDetails}>
+                <Text style={styles.categoryName}>{cat}</Text>
+                {allocated > 0 && (
+                  <Text style={styles.categoryPercent}>
+                    {percent}% of budget
+                  </Text>
+                )}
               </View>
-            </TouchableOpacity>
-          )}
-        </React.Fragment>
+            </View>
+
+            {/* Budget & Remaining */}
+            <View style={styles.colBudget}>
+              {allocated > 0 ? (
+                <Text style={styles.budgetAmount}>
+                  ₱{allocated.toLocaleString()}
+                </Text>
+              ) : (
+                <View style={styles.noBudgetBadge}>
+                  <Text style={styles.noBudgetText}>Not Set</Text>
+                </View>
+              )}
+              <Text style={styles.spentAmount}>
+                Spent ₱{spent.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={styles.colRemaining}>
+              {allocated > 0 ? (
+                <>
+                  <Text
+                    style={[
+                      styles.remainingAmount,
+                      { color: left >= 0 ? "#00b894" : "#d63031" },
+                    ]}
+                  >
+                    {left >= 0 ? "₱" : "-₱"}
+                    {Math.abs(left).toLocaleString()}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusIndicator,
+                      {
+                        backgroundColor:
+                          progressRatio >= 1
+                            ? "#d63031"
+                            : progressRatio >= 0.8
+                            ? "#e17055"
+                            : "#00b894",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.statusText}>
+                      {Math.round(progressRatio * 100)}% of {cat} budget used
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.unplannedBadge}>
+                  <Ionicons name="alert-circle" size={16} color="#1f4b81ff" />
+                  <Text style={styles.unplannedText}>Unplanned</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
       );
     })}
-  </ScrollView>
+
+  {/* ==================== OTHERS SECTION ==================== */}
+ {/* ==================== OTHERS SECTION (mobile-ready) ==================== */}
+{(() => {
+  // Always compute subcategories first (prevents undefined issues on mobile)
+  const subcats = Array.isArray(categories)
+    ? categories.filter(c => c.parent === OTHERS_KEY)
+    : [];
+
+  // If no subcategories yet, render nothing
+  if (subcats.length === 0) return null;
+
+  return (
+    <View style={{ marginTop: 10 }}>
+      {/* Divider / Toggle */}
+      <TouchableOpacity
+        onPress={() => {
+          console.log("Others toggled:", !othersExpanded);
+          toggleOthers();
+        }}
+        activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+        style={[
+          styles.othersDivider,
+          {
+            paddingVertical: 12,
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 10,
+          },
+        ]}
+      >
+        <View style={styles.dividerLine} />
+        <View
+          style={[
+            styles.dividerLabel,
+            {
+              flexDirection: "row",
+              alignItems: "center",
+            },
+          ]}
+        >
+          <Ionicons
+            name={othersExpanded ? "chevron-down" : "chevron-forward"}
+            size={20}
+            color="#74B9FF"
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.dividerText,
+              { fontWeight: "600", color: "#74B9FF" },
+            ]}
+          >
+            {OTHERS_KEY}
+          </Text>
+        </View>
+        <View style={styles.dividerLine} />
+      </TouchableOpacity>
+
+      {/* Subcategories (expanded view) */}
+      {othersExpanded && (
+        <Animated.View
+          style={{
+            overflow: "hidden",
+            opacity: othersAnim,
+            transform: [
+              {
+                scaleY: othersAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.95, 1],
+                }),
+              },
+            ],
+          }}
+        >
+          {subcats.map(({ name: cat, icon, color }) => {
+            const budget = getBudgetForCategory(cat);
+            const spent = expensesByCategory[cat] || 0;
+            const allocated = budget?.amount ?? 0;
+            const left = allocated > 0 ? allocated - spent : 0;
+            const percent =
+              allocated > 0 && totalBudget > 0
+                ? Math.round((allocated / totalBudget) * 100)
+                : 0;
+            const progressRatio =
+              allocated > 0 ? Math.min(spent / allocated, 1) : 0;
+            const progressColor = getProgressColor(progressRatio);
+
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.categoryCard, styles.subcategoryCard]}
+                onPress={() => {
+                  setEditingCategory(cat);
+                  setInputValue(budget ? String(budget.amount) : "");
+                  setShowModal(true);
+                }}
+                activeOpacity={0.85}
+              >
+                {(allocated > 0 || spent > 0) && (
+                  <View style={styles.progressContainer}>
+                    <View
+                      style={[
+                        styles.progressBar,
+                        {
+                          width: `${Math.min(progressRatio * 100, 100)}%`,
+                          backgroundColor: progressColor + "20",
+                        },
+                      ]}
+                    />
+                  </View>
+                )}
+
+                <View style={styles.categoryContent}>
+                  {/* Left icon + label */}
+                  <View style={styles.colCategory}>
+                    <View
+                      style={[
+                        styles.categoryIcon,
+                        { backgroundColor: color || "#1f4b81ff" },
+                      ]}
+                    >
+                      {icon}
+                    </View>
+                    <View style={styles.categoryDetails}>
+                      <Text style={styles.categoryName}>
+                        {cat.replace(/^Others:/, "")}
+                      </Text>
+                      {allocated > 0 && (
+                        <Text style={styles.categoryPercent}>
+                          {percent}% of budget
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Middle budget column */}
+                  <View style={styles.colBudget}>
+                    {allocated > 0 ? (
+                      <Text style={styles.budgetAmount}>
+                        ₱{allocated.toLocaleString()}
+                      </Text>
+                    ) : (
+                      <View style={styles.noBudgetBadge}>
+                        <Text style={styles.noBudgetText}>Not Set</Text>
+                      </View>
+                    )}
+                    <Text style={styles.spentAmount}>
+                      Spent ₱{spent.toLocaleString()}
+                    </Text>
+                  </View>
+
+                  {/* Right remaining column */}
+                  <View style={styles.colRemaining}>
+                    {allocated > 0 ? (
+                      <>
+                        <Text
+                          style={[
+                            styles.remainingAmount,
+                            { color: left >= 0 ? "#00b894" : "#d63031" },
+                          ]}
+                        >
+                          {left >= 0 ? "₱" : "-₱"}
+                          {Math.abs(left).toLocaleString()}
+                        </Text>
+                        <View
+                          style={[
+                            styles.statusIndicator,
+                            {
+                              backgroundColor:
+                                progressRatio >= 1
+                                  ? "#d63031"
+                                  : progressRatio >= 0.8
+                                  ? "#e17055"
+                                  : "#00b894",
+                            },
+                          ]}
+                        >
+                          <Text style={styles.statusText}>
+                            {Math.round(progressRatio * 100)}% of{" "}
+                            {cat.replace(/^Others:/, "")} budget used
+                          </Text>
+                        </View>
+                      </>
+                    ) : (
+                      <View style={styles.unplannedBadge}>
+                        <Ionicons
+                          name="alert-circle"
+                          size={16}
+                          color="#1f4b81ff"
+                        />
+                        <Text style={styles.unplannedText}>Unplanned</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </Animated.View>
+      )}
+    </View>
+  );
+})()}
+
+</ScrollView>
+
 </View>
 
 
@@ -1657,7 +1888,8 @@ return (
                               <View style={[styles.miniIcon, { backgroundColor: sub.color }]}>
                                 {sub.icon}
                               </View>
-                              <Text style={styles.subcategoryName}>{sub.name}</Text>
+                              <Text style={styles.subcategoryName}>{sub.name.replace(/^Others:/, "")}</Text>
+
                             </View>
                             
                             <View style={styles.percentInputContainer}>
@@ -1740,7 +1972,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-
+   heading: {
+      textAlign: "center",           // ✅ text itself centered
+      fontSize: 24,
+      fontWeight: "700",
+      color: "#fff",
+       marginTop:10,
+    },
   actionSection: {
     flexDirection: 'column',
     alignItems: 'center',
@@ -1938,32 +2176,31 @@ secondaryActionText: {
   },
 
   // Categories Section
-categoriesContainer: {
-  flex: 1,
-  paddingHorizontal: 20,
-},
+  categoriesContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
 
-tableHeaderWrapper: {
+  tableHeaderWrapper: {
   marginBottom: 0,
-  shadowColor: '#262e51',
+  shadowColor: '#262e51',   // ✅ shadow hue based on your gradient
   shadowOpacity: 0.5,
   shadowRadius: 6,
   shadowOffset: { width: 0, height: 3 },
-  elevation: 6,
+  elevation: 6,             // ✅ Android shadow
 },
-
 categoriesWrapper: {
-  flex: 1, 
+    flex: 1, 
   marginHorizontal: 16,
   marginBottom: 20,
   borderRadius: 16,
-  overflow: "hidden",
+  overflow: "hidden",          // ✅ rounded edges apply to children
   backgroundColor: "#fff",
-  shadowColor: "#262e51",
+  shadowColor: "#262e51",      // ✅ matches your gradient hue
   shadowOpacity: 0.25,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 4 },
-  elevation: 6,
+  elevation: 6,                // ✅ Android shadow
 },
 
 tableHeader: {
@@ -1975,71 +2212,47 @@ tableHeader: {
 
 categoriesList: {
   paddingVertical: 8,
-  backgroundColor: "#f9fafb",
+  backgroundColor: "#f9fafb",  // ✅ subtle background
 },
 
-headerTextCategories: {
-  width: isMobile ? 100 : 140,
-  fontSize: 13,
-  fontWeight: '700',
-  color: '#fff',
-  textTransform: 'uppercase',
-  letterSpacing: 0.5,
-  textAlign: 'left',
-},
-
-headerTextBudget: {
+headerText: {
   flex: 1,
   fontSize: 13,
   fontWeight: '700',
   color: '#fff',
   textTransform: 'uppercase',
   letterSpacing: 0.5,
-  textAlign: 'center',
 },
 
-headerTextRemaining: {
-  width: isMobile ? 90 : 110,
-  fontSize: 13,
-  fontWeight: '700',
-  color: '#fff',
-  textTransform: 'uppercase',
-  letterSpacing: 0.5,
-  textAlign: 'right',
-},
 
-// Category Cards
-categoryCard: {
-  backgroundColor: '#fff',
-  borderRadius: 0,
-  marginBottom: 12,
-  overflow: 'hidden',
-  elevation: 2,
-  shadowColor: '#000',
-  shadowOpacity: 0.05,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-  position: 'relative',
-},
-
-subcategoryCard: {
-  marginLeft: 20,
-  backgroundColor: '#f8fafc',
-},
-
-progressContainer: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-},
-
-progressBar: {
-  height: '100%',
-  borderRadius: 16,
-},
-
+  // Category Cards
+  categoryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 0,
+    marginBottom: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    position: 'relative',
+  },
+  subcategoryCard: {
+    marginLeft: 20,
+    backgroundColor: '#f8fafc',
+  },
+  progressContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 16,
+  },
 categoryContent: {
   flexDirection: "row",
   alignItems: "center",
@@ -2048,15 +2261,13 @@ categoryContent: {
   paddingHorizontal: 12,
   backgroundColor: "#F9FAFB",
   borderRadius: 10,
+  flexWrap: "nowrap",       // ❗ prevent wrapping
 },
-
-categoryInfo: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  width: isMobile ? 100 : 140,
-  minWidth: 0,
-},
-
+  categoryInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 categoryIcon: {
   width: 36,
   height: 36,
@@ -2064,26 +2275,23 @@ categoryIcon: {
   marginRight: 8,
   justifyContent: "center",
   alignItems: "center",
-  flexShrink: 0,
 },
-
-categoryDetails: {
-  flex: 1,
-  minWidth: 0,
-},
-
-categoryName: {
+  categoryDetails: {
+    flex: 1,
+  },
+ categoryName: {
   color: "#1E293B",
   fontSize: 13,
   fontWeight: "600",
-  flexShrink: 1,
+  flexShrink: 1,            // ✅ allow text to shrink instead of wrapping
+  flexWrap: "nowrap",       // ✅ prevent new lines
+  textAlign: "left",
 },
-
-categoryPercent: {
-  fontSize: 12,
-  color: '#64748b',
-  fontWeight: '500',
-},
+  categoryPercent: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
 
   // Budget Column
 budgetColumn: {
@@ -2383,11 +2591,10 @@ percentInputContainer: {
     fontWeight: 'bold',
   },
  colCategory: {
- flexDirection: "row",
+  flexDirection: "row",
   alignItems: "center",
-  flex: 1,           // ✅ allow full use of row space
-  minWidth: 0,       // ✅ critical to avoid wrapping
-  overflow: 'hidden', // ✅ prevent text overflow          // allow shrinking
+  flex: 0.2,                // give text more horizontal space
+  minWidth: 0,              // allow shrinking
 },
 colBudget: {
   flex: 1,
@@ -2466,10 +2673,10 @@ headerTextBudget: {
 },
   backButton: {
     position: 'absolute',
-    left: 10,
-    top: Platform.OS === 'isMobile' ? 60 : 45,
-    width: 35,
-    height: 35,
+    left: 20,
+    top: Platform.OS === 'isMobile' ? 70 : 47,
+    width: 40,
+    height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
@@ -2565,7 +2772,6 @@ chartHeading: {
   },
   summaryCardsColumn: {
   flexGrow: 1,
-  marginTop: 5,
   justifyContent: "center",
   alignSelf: width < 700 ? "center" : "flex-start",
   gap: 14,
@@ -2636,13 +2842,7 @@ headerContent: {
     gap: 8,
     alignItems: 'center',
   },
-   heading: {
-      textAlign: "center",           // ✅ text itself centered
-      fontSize: 24,
-      fontWeight: "700",
-      color: "#fff",
-       marginTop:10,
-    },
+ 
    durationPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2663,25 +2863,38 @@ headerContent: {
 });
   
  
- 
 if (isMobile) {
   Object.assign(styles, {
     categoryContent: {
       ...styles.categoryContent,
       flexDirection: "row",
       alignItems: "center",
-      flexWrap: "nowrap", // ❗ prevent wrapping
+      justifyContent: "space-between",
+      flexWrap: "nowrap",
       paddingVertical: 8,
+      paddingHorizontal: 10,
     },
     colCategory: {
       ...styles.colCategory,
-      flex: 0.6, // allow more space for text
-      flexShrink: 1, // allow text to shrink before breaking
+      flex: 0.8,
+      flexDirection: "row",
+      alignItems: "center",
+      minWidth: 0,
+    },
+    colBudget: {
+      ...styles.colBudget,
+      flex: 0.6,
+      alignItems: "center",
+    },
+    colRemaining: {
+      ...styles.colRemaining,
+      flex: 0.6,
+      alignItems: "flex-end",
     },
     categoryName: {
       ...styles.categoryName,
-      flexWrap: "nowrap",
       flexShrink: 1,
+      flexWrap: "nowrap",
       textAlign: "left",
       fontSize: 13,
     },
@@ -2695,92 +2908,79 @@ if (isMobile) {
       fontSize: 12,
       textAlign: "right",
     },
-     categoryContent: {
-      ...styles.categoryContent,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "nowrap",
-      paddingVertical: 8,
-      paddingHorizontal: 10,
+    // ✅ ADD THESE SUBCATEGORY STYLES
+    subcategoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+      paddingLeft: 40,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.05)',
     },
-    colCategory: {
-      ...styles.colCategory,
-      flex: 0.8,        // 🟢 give category more width
-      flexDirection: "row",
-      alignItems: "center",
+    subcategoryInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
       minWidth: 0,
     },
-    colBudget: {
-      ...styles.colBudget,
-      flex: 0.6,        // 🟠 slightly smaller
-      alignItems: "center",
+    subcategoryName: {
+      color: '#94A3B8',
+      fontSize: 14,
+      flex: 1,
+      minWidth: 0,
     },
-    colRemaining: {
-      ...styles.colRemaining,
-      flex: 0.6,        // 🟠 slightly smaller
-      alignItems: "flex-end",
-    },
-    categoryName: {
-      ...styles.categoryName,
-      flexShrink: 1,
-      flexWrap: "nowrap",
-      textAlign: "left",
-      fontSize: 13,
-    },
-        tableHeader: {
+    tableHeader: {
       ...styles.tableHeader,
       paddingHorizontal: 16,
     },
     headerText: {
       ...styles.headerText,
-      flex: 0.8, // Categories column width
+      flex: 0.8,
       textAlign: "left",
-
     },
     headerTextBudget: {
       ...styles.headerTextBudget,
-      flex: 0.9,            // ⬅️ give more width to push it right
-      textAlign: "center",  // ⬅️ center the word in that column
-      marginLeft: 12,       // ⬅️ fine-tune spacing to match content
-     
+      flex: 0.9,
+      textAlign: "center",
+      marginLeft: 12,
     },
     headerTextRemaining: {
       ...styles.headerText,
       flex: 0.7,
       textAlign: "right",
     },
-unplannedSpendingBadge: {
-  backgroundColor: '#1f4b81ff',
-  paddingHorizontal: 6,     // 🔹 reduced horizontal padding
-  paddingVertical: 3,       // 🔹 slightly smaller height
-  borderRadius: 8,          // 🔹 tighter corners for small screens
-  marginBottom: 2,
-  alignSelf: 'center',      // centers within column
-},
-unplannedSpendingText: {
-  fontSize: isMobile ? 10 : 11,  // 🔹 smaller on mobile
-  color: '#fff',
-  fontWeight: '700',
-  textAlign: 'center',
-},
-
-  headerGradient: {
-      ...styles.headerGradient,
-      alignItems: "center",          // ✅ center horizontally
-      justifyContent: "flex-start",
-      paddingTop: 14,
-      paddingBottom: 8,
-       marginTop: 10,  
+    unplannedSpendingBadge: {
+      backgroundColor: '#1f4b81ff',
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 8,
+      marginBottom: 2,
+      alignSelf: 'center',
     },
-    headerContent: {
-      ...styles.headerContent,
-      alignItems: "center",          // ✅ force center of all children
-      justifyContent: "center",
+    unplannedSpendingText: {
+      fontSize: 10,
+      color: '#fff',
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    headerGradient: {
       width: "100%",
-      marginTop: 10,  
+      flexShrink: 1,
+      flexGrow: 0,
+      flexBasis: "auto",
+      flexDirection: "column",
+      justifyContent: "flex-start",
+      alignItems: "center",
+      paddingTop: Platform.OS === "ios" ? 10 : 20,
+      paddingBottom: 10,
+      paddingHorizontal: 12,
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+      position: "relative",
+      overflow: "hidden",
     },
-
     backgroundCircle1: {
       ...styles.backgroundCircle1,
       width: 100,
@@ -2797,28 +2997,28 @@ unplannedSpendingText: {
       right: -10,
       opacity: 0.08,
     },
-
-    
-
     headerContent: {
       ...styles.headerContent,
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+      marginTop: 10,
       paddingVertical: 20,
     },
-
-    // 🔹 Title Section
-   titleSection: {
+    titleSection: {
       ...styles.titleSection,
-      alignItems: "center",          // ✅ center title + date pill
+      alignItems: "center",
       justifyContent: "center",
       textAlign: "center",
       marginBottom: 10,
     },
     heading: {
-      textAlign: "center",           // ✅ text itself centered
+      ...styles.heading,
+      textAlign: "center",
       fontSize: 24,
       fontWeight: "700",
       color: "#fff",
-       marginTop:10,
+      marginTop: 10,
     },
     durationPill: {
       ...styles.durationPill,
@@ -2836,22 +3036,19 @@ unplannedSpendingText: {
       color: "#e0eaff",
       marginLeft: 3,
     },
-
     chartSection: {
-  width: 150,
-  height: 150,
-  alignItems: "center",
-  justifyContent: "center",
-  marginRight: -6,              // ✅ nudge donut slightly left
-  transform: [{ translateX: -8 }],
-},
-
-    // 🔹 Summary Cards
-   summaryCardsColumn: {
+      ...styles.chartSection,
+      width: 150,
+      height: 150,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: -6,
+      transform: [{ translateX: -8 }],
+    },
+    summaryCardsColumn: {
       ...styles.summaryCardsColumn,
       flexDirection: "column",
       alignItems: "center",
-      marginTop: 5,
       justifyContent: "center",
       width: "90%",
       gap: 6,
@@ -2898,73 +3095,56 @@ unplannedSpendingText: {
       fontSize: 10,
       color: "#ffb3b3",
     },
-headerGradient: {
-  width: "100%",
-  flexShrink: 1,              // ✅ allow it to shrink to content height
-  flexGrow: 0,                // ✅ don't fill parent
-  flexBasis: "auto",          // ✅ size based on children
-  flexDirection: "column",
-  justifyContent: "flex-start",
-  alignItems: "center",
-  paddingTop: Platform.OS === "ios" ? 10 : 20,
-  paddingBottom: 10,          // ✅ smaller bottom space
-  paddingHorizontal: 12,
-  borderBottomLeftRadius: 24,
-  borderBottomRightRadius: 24,
-  position: "relative",
-  overflow: "hidden",
+subcategoryRow: {
+  ...styles.subcategoryRow,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingVertical: 10,
+  paddingLeft: 35,
+  paddingRight: 8,
+  borderTopWidth: 1,
+  borderTopColor: 'rgba(255,255,255,0.05)',
+  gap: 6,
+},
+subcategoryInfo: {
+  ...styles.subcategoryInfo,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  flex: 0,
+  minWidth: 0,
+  maxWidth: 100,
+},
+subcategoryName: {
+  ...styles.subcategoryName,
+  color: '#94A3B8',
+  fontSize: 12,
+  flex: 1,
+  minWidth: 0,
+},
+percentInputContainer: {
+  ...styles.percentInputContainer,
+  flexDirection: 'row',
+  alignItems: 'center',
+  minWidth: 60,
+},
+percentInput: {
+  ...styles.percentInput,
+  width: 40,
+  fontSize: 13,
+},
+pesoEquivalent: {
+  ...styles.pesoEquivalent,
+  fontSize: 12,
+  minWidth: 50,
+  textAlign: 'right',
 },
 
-
-    chartSection: {
-      ...styles.chartSection,
-      width: 180,
-      height: 180,
-      marginBottom: 8,
-      transform: [{ scale: 0.9 }],
-    },
-    summaryCardsColumn: {
-      ...styles.summaryCardsColumn,
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 5,
-      gap: 8,
-      width: "90%",
-    },
-    summaryCard: {
-      ...styles.summaryCard,
-      width: "100%",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      backgroundColor: "rgba(255,255,255,0.1)",
-      borderRadius: 10,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-    },
-    cardIcon: {
-      ...styles.cardIcon,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      marginRight: 8,
-    },
-    cardLabel: {
-      ...styles.cardLabel,
-      fontSize: 11,
-    },
-    cardValue: {
-      ...styles.cardValue,
-      fontSize: 14,
-    },
-    cardSubtext: {
-      ...styles.cardSubtext,
-      fontSize: 10,
-    },
   });
+} 
 
-}
+
 Object.assign(styles, {
   chartAndCardsContainer: {
     flexDirection: width < 800 ? "column" : "row", // stack on phone
@@ -2987,7 +3167,6 @@ Object.assign(styles, {
 
   summaryCardsColumn: {
     justifyContent: "center",
-    marginTop: 5,
     alignItems: width < 800 ? "center" : "flex-start",
     gap: width < 500 ? 6 : 10,
     maxWidth: width < 700 ? "90%" : 340,

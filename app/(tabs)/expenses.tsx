@@ -412,7 +412,7 @@ const getCategoryColor = (category: string) => {
   dateISO?: string; // optional 'today'/'yesterday' support
 };
 
-// Canonical categories & aliases → map to your app categories
+// Update your CATEGORY_ALIASES to include Gaming and other subcategories
 const CATEGORY_ALIASES: Record<string, string[]> = {
   Food: ["food", "meal", "meals", "snack", "snacks", "coffee", "drink", "drinks", "groceries", "grocery", "restaurant"],
   Transport: ["transport", "transportation", "fare", "taxi", "grab", "uber", "jeep", "bus", "tricycle", "fuel", "gas", "parking"],
@@ -421,6 +421,10 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
   Shopping: ["shopping", "shop", "store", "mall", "clothes", "clothing", "shoes", "gadget", "grocery", "watsons", "lazada", "shopee"],
   Savings: ["savings", "save", "deposit", "bank", "atm", "withdrawal"],
   Others: ["others", "other", "misc", "miscellaneous"],
+  // ✅ ADD: Dynamic subcategories (Gaming, Makeup, etc.)
+  "Others - Gaming": ["gaming", "game", "games", "playstation", "xbox", "steam"],
+  "Others - Makeup": ["makeup", "make up", "cosmetics", "lipstick", "foundation"],
+  "Others - Entertainment": ["entertainment", "movie", "movies", "concert", "netflix"],
 };
 
 // quick reverse-lookup for category detection
@@ -1030,10 +1034,35 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
   for (const clause of clauses) {
     const lower = clause.toLowerCase().trim();
 
-    // 🎯 Match flexible formats:
-    // add 120 food note lunch
-    // add 120 to food note lunch
-    // add 120 to food yesterday note dinner
+    // 🎯 NEW: Handle "add 50 others to [any custom name]" format
+    const othersMatch = lower.match(/add\s+(\d+(?:\.\d+)?)\s+others?\s+to\s+(.+?)(?:\s+note\s+(.+))?$/i);
+    
+    if (othersMatch) {
+      const amount = parseFloat(othersMatch[1]);
+      const customName = othersMatch[2].trim();
+      const notes = othersMatch[3] ? othersMatch[3].trim() : "";
+      
+      // ✅ Create "Others - [Custom Name]" format (Title Case each word)
+      const formattedName = customName
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      
+      const category = `Others - ${formattedName}`;
+      
+      console.log("✨ Created custom Others category:", category);
+      
+      parsed.push({ 
+        amount, 
+        category, 
+        notes, 
+        dateISO: new Date().toISOString() 
+      });
+      
+      continue; // Skip normal parsing
+    }
+
+    // 🎯 Existing match patterns for standard categories
     const match = lower.match(/add\s+(\d+(?:\.\d+)?)\s*(?:to|in)?\s*([a-zA-Z ]+)?(?:\s+(yesterday|today))?(?:\s+note\s+(.+))?/i);
 
     let amount: number | null = null;
@@ -1044,7 +1073,7 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
     if (match) {
       amount = parseFloat(match[1]);
 
-      // 🧹 Clean up raw category text (remove filler words like 'in', 'to', 'note')
+      // 🧹 Clean up raw category text
       const rawCat = (match[2] || "")
         .toLowerCase()
         .replace(/\b(in|to|for|at|on|note)\b/g, "")
@@ -1065,21 +1094,28 @@ function parseVoiceCommand(command: string): ParsedVoiceExpense[] {
       // 🧭 Smart category mapping
       let matchedCategory = null;
 
-      // 1️⃣ Exact match
-      if (rawCat && CATEGORY_LOOKUP[rawCat]) {
-        matchedCategory = CATEGORY_LOOKUP[rawCat];
-      } else if (rawCat) {
-        // 2️⃣ Fuzzy match through aliases
-        for (const [alias, canon] of Object.entries(CATEGORY_LOOKUP)) {
-          if (
-            rawCat.includes(alias) ||
-            alias.includes(rawCat) ||
-            rawCat.split(" ").some((w) => alias === w)
-          ) {
-            matchedCategory = canon;
-            break;
-          }
+      // 1️⃣ Check if it matches known categories (Food, Transport, etc.)
+      for (const [alias, canon] of Object.entries(CATEGORY_LOOKUP)) {
+        if (
+          rawCat === alias ||
+          rawCat.includes(alias) ||
+          alias.includes(rawCat)
+        ) {
+          matchedCategory = canon;
+          break;
         }
+      }
+
+      // 2️⃣ If not found in known categories, treat as custom "Others - X"
+      if (!matchedCategory && rawCat && rawCat !== "others" && rawCat !== "other") {
+        // Format as Title Case
+        const formattedName = rawCat
+          .split(" ")
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+        
+        matchedCategory = `Others - ${formattedName}`;
+        console.log("✨ Auto-created Others subcategory:", matchedCategory);
       }
 
       // 3️⃣ Default fallback
