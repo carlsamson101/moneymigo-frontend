@@ -2258,10 +2258,20 @@ categoryContent: {
   alignItems: "center",
   justifyContent: "space-between",
   paddingVertical: 10,
-  paddingHorizontal: 12,
+  paddingHorizontal: 8,        // ✅ reduced from 12
   backgroundColor: "#F9FAFB",
   borderRadius: 10,
-  flexWrap: "nowrap",       // ❗ prevent wrapping
+  flexWrap: "nowrap",
+  minHeight: 60,               // ✅ added minimum height
+},
+
+// 2️⃣ Fix colCategory (around line 1509)
+colCategory: {
+  flexDirection: "row",
+  alignItems: "center",
+  flex: 1,                     // ✅ changed from 0.2
+  minWidth: 80,                // ✅ added minimum width
+  maxWidth: 120,               // ✅ added maximum width
 },
   categoryInfo: {
     flex: 1,
@@ -2281,11 +2291,12 @@ categoryIcon: {
   },
  categoryName: {
   color: "#1E293B",
-  fontSize: 13,
+  fontSize: 12,                // ✅ reduced from 13
   fontWeight: "600",
-  flexShrink: 1,            // ✅ allow text to shrink instead of wrapping
-  flexWrap: "nowrap",       // ✅ prevent new lines
+  flexShrink: 1,
+  flexWrap: "nowrap",
   textAlign: "left",
+  numberOfLines: 1,            // ✅ added single line limit
 },
   categoryPercent: {
     fontSize: 12,
@@ -2590,16 +2601,19 @@ percentInputContainer: {
     fontSize: 16,
     fontWeight: 'bold',
   },
- colCategory: {
-  flexDirection: "row",
-  alignItems: "center",
-  flex: 0.2,                // give text more horizontal space
-  minWidth: 0,              // allow shrinking
-},
-colBudget: {
+ colBudget: {
   flex: 1,
   alignItems: "center",
+  minWidth: 70,                // ✅ added minimum width
 },
+
+// 4️⃣ Fix colRemaining (around line 1771)
+colRemaining: {
+  flex: 1,
+  alignItems: "flex-end",
+  minWidth: 80,                // ✅ added minimum width
+},
+
 colRemaining: {
   flex: 1,
   alignItems: "flex-end",
@@ -2865,105 +2879,141 @@ headerContent: {
  
 if (isMobile) {
   Object.assign(styles, {
-    categoryContent: {
+     categoryContent: {
       ...styles.categoryContent,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       flexWrap: "nowrap",
       paddingVertical: 8,
-      paddingHorizontal: 10,
+      paddingHorizontal: 8,          // ✅ reduced from 10
+      minHeight: 60,                 // ✅ added
     },
     colCategory: {
       ...styles.colCategory,
-      flex: 0.8,
+      flex: 1,                       // ✅ changed from 0.8
       flexDirection: "row",
       alignItems: "center",
-      minWidth: 0,
+      minWidth: 70,                  // ✅ changed from 0
+      maxWidth: 110,                 // ✅ added
     },
     colBudget: {
       ...styles.colBudget,
-      flex: 0.6,
+      flex: 1,                       // ✅ changed from 0.6
       alignItems: "center",
+      minWidth: 65,                  // ✅ added
     },
     colRemaining: {
       ...styles.colRemaining,
-      flex: 0.6,
+      flex: 1,                       // ✅ changed from 0.6
       alignItems: "flex-end",
+      minWidth: 75,                  // ✅ added
     },
     categoryName: {
       ...styles.categoryName,
       flexShrink: 1,
       flexWrap: "nowrap",
       textAlign: "left",
-      fontSize: 13,
+      fontSize: 11,                  // ✅ reduced from 13
+      numberOfLines: 1,              // ✅ added
+    },
+    categoryIcon: {                  // ✅ NEW: reduce icon size
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      marginRight: 6,
+      justifyContent: "center",
+      alignItems: "center",
     },
     budgetAmount: {
       ...styles.budgetAmount,
-      fontSize: 12,
-      textAlign: "right",
+      fontSize: 11,                  // ✅ reduced from 12
+      textAlign: "center",           // ✅ changed from "right"
     },
     remainingAmount: {
       ...styles.remainingAmount,
-      fontSize: 12,
+      fontSize: 11,                  // ✅ reduced from 12
       textAlign: "right",
     },
-    // ✅ ADD THESE SUBCATEGORY STYLES
+    spentAmount: {                   // ✅ NEW: reduce spent text size
+      fontSize: 10,
+      color: '#64748b',
+      fontWeight: '500',
+    },
+    statusText: {                    // ✅ NEW: reduce status text size
+      fontSize: 10,
+      fontWeight: '500',
+      color: '#fff',
+      textAlign: 'center',
+      paddingHorizontal: 3,
+    },
+    // ✅ SUBCATEGORY STYLES
     subcategoryRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 12,
-      paddingLeft: 40,
+      paddingVertical: 10,           // ✅ reduced from 12
+      paddingLeft: 35,               // ✅ reduced from 40
+      paddingRight: 8,               // ✅ added
       borderTopWidth: 1,
       borderTopColor: 'rgba(255,255,255,0.05)',
     },
     subcategoryInfo: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 6,                        // ✅ reduced from 8
       flex: 1,
       minWidth: 0,
+      maxWidth: 100,                 // ✅ added
     },
     subcategoryName: {
       color: '#94A3B8',
-      fontSize: 14,
+      fontSize: 11,                  // ✅ reduced from 14
       flex: 1,
       minWidth: 0,
+      numberOfLines: 1,              // ✅ added
     },
     tableHeader: {
       ...styles.tableHeader,
-      paddingHorizontal: 16,
+      paddingHorizontal: 12,         // ✅ reduced from 16
     },
     headerText: {
       ...styles.headerText,
-      flex: 0.8,
+      flex: 1,                       // ✅ changed from 0.8
       textAlign: "left",
+      fontSize: 11,                  // ✅ added
     },
     headerTextBudget: {
       ...styles.headerTextBudget,
-      flex: 0.9,
+      flex: 1,                       // ✅ changed from 0.9
       textAlign: "center",
-      marginLeft: 12,
+      marginLeft: 0,                 // ✅ changed from 12
+      fontSize: 11,                  // ✅ added
     },
     headerTextRemaining: {
       ...styles.headerText,
-      flex: 0.7,
+      flex: 1,                       // ✅ changed from 0.7
       textAlign: "right",
+      fontSize: 11,                  // ✅ added
     },
     unplannedSpendingBadge: {
       backgroundColor: '#1f4b81ff',
-      paddingHorizontal: 6,
-      paddingVertical: 3,
+      paddingHorizontal: 5,          // ✅ reduced from 6
+      paddingVertical: 2,            // ✅ reduced from 3
       borderRadius: 8,
       marginBottom: 2,
       alignSelf: 'center',
     },
     unplannedSpendingText: {
-      fontSize: 10,
+      fontSize: 9,                   // ✅ reduced from 10
       color: '#fff',
       fontWeight: '700',
       textAlign: 'center',
+    },
+    noBudgetText: {                  // ✅ NEW: reduce "Not Set" badge text
+      fontSize: 10,
+      color: '#6b7280',
+      fontWeight: '600',
     },
     headerGradient: {
       width: "100%",

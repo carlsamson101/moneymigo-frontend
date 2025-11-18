@@ -129,7 +129,7 @@ if (Platform.OS !== 'web') {
   DateTimePicker = require('@react-native-community/datetimepicker').default;
 }
 const { width } = Dimensions.get('window');
-const numColumns = width > 768 ? 5 : width > 480 ? 3 : 2;
+const numColumns = width > 1200 ? 6 : width > 900 ? 5 : width > 600 ? 4 : 3;
 
 type Item = {
   _id: string;
@@ -1324,8 +1324,11 @@ if (selectedStockFilter === "in") {
               key={numColumns}
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
-                <View style={[styles.productCard, { width: (width - 24 - (numColumns - 1) * 10) / numColumns }]}>
-                  <View style={styles.productImagePlaceholder}>
+              <View style={[styles.productCard, { 
+                width: (width - 32 - (numColumns - 1) * 12) / numColumns,
+                maxWidth: 250 // prevents cards from being too wide on large screens
+              }]}>                  
+              <View style={styles.productImagePlaceholder}>
                     <Ionicons name={getCategoryIcon(item.category)} size={32} color="#16A9B8" />
                   </View>
                   
@@ -2589,17 +2592,16 @@ statBadge: {
     color: "white",
   },
 
-  gridContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 40,
-  },
+ gridContent: {
+  paddingHorizontal: 16, // changed from 12
+  paddingBottom: 40,
+},
 
-  columnWrapper: {
-    gap: 10,
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  },
-
+columnWrapper: {
+  gap: 12, // changed from 10
+  marginBottom: 12, // changed from 10
+  paddingHorizontal: 0, // changed from 4
+},
   emptyState: {
     flex: 1,
     justifyContent: "center",
