@@ -1431,7 +1431,7 @@ return (
   </LinearGradient>
 
   {/* Categories (one single scrollview) */}
- {/* ==================== CATEGORIES SCROLL ==================== */}
+{/* ==================== CATEGORIES SCROLL ==================== */}
 <ScrollView
   contentContainerStyle={{ paddingBottom: 20 }}
   showsVerticalScrollIndicator={false}
@@ -1448,7 +1448,12 @@ return (
         ? Math.round((allocated / totalBudget) * 100)
         : 0;
       const progressRatio = allocated > 0 ? Math.min(spent / allocated, 1) : 0;
-      const progressColor = getProgressColor(progressRatio);
+      // Blue → Orange → Red progression
+      const progressColor = 
+        progressRatio >= 1 ? '#dc3545' :      // Red when over budget
+        progressRatio >= 0.9 ? '#fd7e14' :    // Orange at 90%
+        progressRatio >= 0.75 ? '#ffc107' :   // Yellow at 75%
+        '#007bff';                             // Blue when safe
 
       return (
         <TouchableOpacity
@@ -1461,17 +1466,16 @@ return (
           }}
           activeOpacity={0.85}
         >
-          {/* progress */}
+          {/* Progress background - fills entire card */}
           {(allocated > 0 || spent > 0) && (
-            <View style={styles.progressContainer}>
+            <View style={StyleSheet.absoluteFill}>
               <View
-                style={[
-                  styles.progressBar,
-                  {
-                    width: `${Math.min(progressRatio * 100, 100)}%`,
-                    backgroundColor: progressColor + "20",
-                  },
-                ]}
+                style={{
+                  width: `${Math.min(progressRatio * 100, 100)}%`,
+                  height: '100%',
+                  backgroundColor: progressColor,
+                  opacity: 0.15,
+                }}
               />
             </View>
           )}
@@ -1550,210 +1554,215 @@ return (
     })}
 
   {/* ==================== OTHERS SECTION ==================== */}
- {/* ==================== OTHERS SECTION (mobile-ready) ==================== */}
-{(() => {
-  // Always compute subcategories first (prevents undefined issues on mobile)
-  const subcats = Array.isArray(categories)
-    ? categories.filter(c => c.parent === OTHERS_KEY)
-    : [];
+  {/* ==================== OTHERS SECTION (mobile-ready) ==================== */}
+  {(() => {
+    // Always compute subcategories first (prevents undefined issues on mobile)
+    const subcats = Array.isArray(categories)
+      ? categories.filter(c => c.parent === OTHERS_KEY)
+      : [];
 
-  // If no subcategories yet, render nothing
-  if (subcats.length === 0) return null;
+    // If no subcategories yet, render nothing
+    if (subcats.length === 0) return null;
 
-  return (
-    <View style={{ marginTop: 10 }}>
-      {/* Divider / Toggle */}
-      <TouchableOpacity
-        onPress={() => {
-          console.log("Others toggled:", !othersExpanded);
-          toggleOthers();
-        }}
-        activeOpacity={0.7}
-        hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
-        style={[
-          styles.othersDivider,
-          {
-            paddingVertical: 12,
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderRadius: 10,
-          },
-        ]}
-      >
-        <View style={styles.dividerLine} />
-        <View
+    return (
+      <View style={{ marginTop: 10 }}>
+        {/* Divider / Toggle */}
+        <TouchableOpacity
+          onPress={() => {
+            console.log("Others toggled:", !othersExpanded);
+            toggleOthers();
+          }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
           style={[
-            styles.dividerLabel,
+            styles.othersDivider,
             {
-              flexDirection: "row",
-              alignItems: "center",
+              paddingVertical: 12,
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 10,
             },
           ]}
         >
-          <Ionicons
-            name={othersExpanded ? "chevron-down" : "chevron-forward"}
-            size={20}
-            color="#74B9FF"
-            style={{ marginRight: 6 }}
-          />
-          <Text
+          <View style={styles.dividerLine} />
+          <View
             style={[
-              styles.dividerText,
-              { fontWeight: "600", color: "#74B9FF" },
+              styles.dividerLabel,
+              {
+                flexDirection: "row",
+                alignItems: "center",
+              },
             ]}
           >
-            {OTHERS_KEY}
-          </Text>
-        </View>
-        <View style={styles.dividerLine} />
-      </TouchableOpacity>
+            <Ionicons
+              name={othersExpanded ? "chevron-down" : "chevron-forward"}
+              size={20}
+              color="#74B9FF"
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.dividerText,
+                { fontWeight: "600", color: "#74B9FF" },
+              ]}
+            >
+              {OTHERS_KEY}
+            </Text>
+          </View>
+          <View style={styles.dividerLine} />
+        </TouchableOpacity>
 
-      {/* Subcategories (expanded view) */}
-      {othersExpanded && (
-        <Animated.View
-          style={{
-            overflow: "hidden",
-            opacity: othersAnim,
-            transform: [
-              {
-                scaleY: othersAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.95, 1],
-                }),
-              },
-            ],
-          }}
-        >
-          {subcats.map(({ name: cat, icon, color }) => {
-            const budget = getBudgetForCategory(cat);
-            const spent = expensesByCategory[cat] || 0;
-            const allocated = budget?.amount ?? 0;
-            const left = allocated > 0 ? allocated - spent : 0;
-            const percent =
-              allocated > 0 && totalBudget > 0
-                ? Math.round((allocated / totalBudget) * 100)
-                : 0;
-            const progressRatio =
-              allocated > 0 ? Math.min(spent / allocated, 1) : 0;
-            const progressColor = getProgressColor(progressRatio);
+        {/* Subcategories (expanded view) */}
+        {othersExpanded && (
+          <Animated.View
+            style={{
+              overflow: "hidden",
+              opacity: othersAnim,
+              transform: [
+                {
+                  scaleY: othersAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.95, 1],
+                  }),
+                },
+              ],
+            }}
+          >
+            {subcats.map(({ name: cat, icon, color }) => {
+              const budget = getBudgetForCategory(cat);
+              const spent = expensesByCategory[cat] || 0;
+              const allocated = budget?.amount ?? 0;
+              const left = allocated > 0 ? allocated - spent : 0;
+              const percent =
+                allocated > 0 && totalBudget > 0
+                  ? Math.round((allocated / totalBudget) * 100)
+                  : 0;
+              const progressRatio =
+                allocated > 0 ? Math.min(spent / allocated, 1) : 0;
+              // Blue → Orange → Red progression
+              const progressColor = 
+                progressRatio >= 1 ? '#dc3545' :      // Red when over budget
+                progressRatio >= 0.9 ? '#fd7e14' :    // Orange at 90%
+                progressRatio >= 0.75 ? '#ffc107' :   // Yellow at 75%
+                '#007bff';                             // Blue when safe
 
-            return (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.categoryCard, styles.subcategoryCard]}
-                onPress={() => {
-                  setEditingCategory(cat);
-                  setInputValue(budget ? String(budget.amount) : "");
-                  setShowModal(true);
-                }}
-                activeOpacity={0.85}
-              >
-                {(allocated > 0 || spent > 0) && (
-                  <View style={styles.progressContainer}>
-                    <View
-                      style={[
-                        styles.progressBar,
-                        {
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.categoryCard, styles.subcategoryCard]}
+                  onPress={() => {
+                    setEditingCategory(cat);
+                    setInputValue(budget ? String(budget.amount) : "");
+                    setShowModal(true);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  {/* Progress background - fills entire card */}
+                  {(allocated > 0 || spent > 0) && (
+                    <View style={StyleSheet.absoluteFill}>
+                      <View
+                        style={{
                           width: `${Math.min(progressRatio * 100, 100)}%`,
-                          backgroundColor: progressColor + "20",
-                        },
-                      ]}
-                    />
-                  </View>
-                )}
-
-                <View style={styles.categoryContent}>
-                  {/* Left icon + label */}
-                  <View style={styles.colCategory}>
-                    <View
-                      style={[
-                        styles.categoryIcon,
-                        { backgroundColor: color || "#1f4b81ff" },
-                      ]}
-                    >
-                      {icon}
+                          height: '100%',
+                          backgroundColor: progressColor,
+                          opacity: 0.15,
+                        }}
+                      />
                     </View>
-                    <View style={styles.categoryDetails}>
-                      <Text style={styles.categoryName}>
-                        {cat.replace(/^Others:/, "")}
-                      </Text>
-                      {allocated > 0 && (
-                        <Text style={styles.categoryPercent}>
-                          {percent}% of budget
+                  )}
+
+                  <View style={styles.categoryContent}>
+                    {/* Left icon + label */}
+                    <View style={styles.colCategory}>
+                      <View
+                        style={[
+                          styles.categoryIcon,
+                          { backgroundColor: color || "#1f4b81ff" },
+                        ]}
+                      >
+                        {icon}
+                      </View>
+                      <View style={styles.categoryDetails}>
+                        <Text style={styles.categoryName}>
+                          {cat.replace(/^Others:/, "")}
                         </Text>
+                        {allocated > 0 && (
+                          <Text style={styles.categoryPercent}>
+                            {percent}% of budget
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Middle budget column */}
+                    <View style={styles.colBudget}>
+                      {allocated > 0 ? (
+                        <Text style={styles.budgetAmount}>
+                          ₱{allocated.toLocaleString()}
+                        </Text>
+                      ) : (
+                        <View style={styles.noBudgetBadge}>
+                          <Text style={styles.noBudgetText}>Not Set</Text>
+                        </View>
+                      )}
+                      <Text style={styles.spentAmount}>
+                        Spent ₱{spent.toLocaleString()}
+                      </Text>
+                    </View>
+
+                    {/* Right remaining column */}
+                    <View style={styles.colRemaining}>
+                      {allocated > 0 ? (
+                        <>
+                          <Text
+                            style={[
+                              styles.remainingAmount,
+                              { color: left >= 0 ? "#00b894" : "#d63031" },
+                            ]}
+                          >
+                            {left >= 0 ? "₱" : "-₱"}
+                            {Math.abs(left).toLocaleString()}
+                          </Text>
+                          <View
+                            style={[
+                              styles.statusIndicator,
+                              {
+                                backgroundColor:
+                                  progressRatio >= 1
+                                    ? "#d63031"
+                                    : progressRatio >= 0.8
+                                    ? "#e17055"
+                                    : "#00b894",
+                              },
+                            ]}
+                          >
+                            <Text style={styles.statusText}>
+                              {Math.round(progressRatio * 100)}% of{" "}
+                              {cat.replace(/^Others:/, "")} budget used
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <View style={styles.unplannedBadge}>
+                          <Ionicons
+                            name="alert-circle"
+                            size={16}
+                            color="#1f4b81ff"
+                          />
+                          <Text style={styles.unplannedText}>Unplanned</Text>
+                        </View>
                       )}
                     </View>
                   </View>
-
-                  {/* Middle budget column */}
-                  <View style={styles.colBudget}>
-                    {allocated > 0 ? (
-                      <Text style={styles.budgetAmount}>
-                        ₱{allocated.toLocaleString()}
-                      </Text>
-                    ) : (
-                      <View style={styles.noBudgetBadge}>
-                        <Text style={styles.noBudgetText}>Not Set</Text>
-                      </View>
-                    )}
-                    <Text style={styles.spentAmount}>
-                      Spent ₱{spent.toLocaleString()}
-                    </Text>
-                  </View>
-
-                  {/* Right remaining column */}
-                  <View style={styles.colRemaining}>
-                    {allocated > 0 ? (
-                      <>
-                        <Text
-                          style={[
-                            styles.remainingAmount,
-                            { color: left >= 0 ? "#00b894" : "#d63031" },
-                          ]}
-                        >
-                          {left >= 0 ? "₱" : "-₱"}
-                          {Math.abs(left).toLocaleString()}
-                        </Text>
-                        <View
-                          style={[
-                            styles.statusIndicator,
-                            {
-                              backgroundColor:
-                                progressRatio >= 1
-                                  ? "#d63031"
-                                  : progressRatio >= 0.8
-                                  ? "#e17055"
-                                  : "#00b894",
-                            },
-                          ]}
-                        >
-                          <Text style={styles.statusText}>
-                            {Math.round(progressRatio * 100)}% of{" "}
-                            {cat.replace(/^Others:/, "")} budget used
-                          </Text>
-                        </View>
-                      </>
-                    ) : (
-                      <View style={styles.unplannedBadge}>
-                        <Ionicons
-                          name="alert-circle"
-                          size={16}
-                          color="#1f4b81ff"
-                        />
-                        <Text style={styles.unplannedText}>Unplanned</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </Animated.View>
-      )}
-    </View>
-  );
-})()}
-
+                </TouchableOpacity>
+              );
+            })}
+          </Animated.View>
+        )}
+      </View>
+    );
+  })()}
 </ScrollView>
+
 
 </View>
 
@@ -2226,33 +2235,25 @@ headerText: {
 
 
   // Category Cards
-  categoryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 0,
-    marginBottom: 12,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    position: 'relative',
-  },
-  subcategoryCard: {
-    marginLeft: 20,
-    backgroundColor: '#f8fafc',
-  },
-  progressContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 16,
-  },
+categoryCard: {	
+  backgroundColor: '#fff',
+  borderRadius: 12,           // Add border radius for rounded corners
+  marginBottom: 12,
+  overflow: 'hidden',         // CRITICAL: clips the progress background
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  position: 'relative',       // Enables absolute positioning for progress
+  padding: 16,                // Add padding for content
+},
+
+subcategoryCard: {
+  marginLeft: 20,
+  backgroundColor: '#f8fafc',
+},
+
 categoryContent: {
   flexDirection: "row",
   alignItems: "center",

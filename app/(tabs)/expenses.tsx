@@ -277,6 +277,18 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
 const [showVoiceFormatModal, setShowVoiceFormatModal] = useState(false);
 const [showScanGuideModal, setShowScanGuideModal] = useState(false);
 
+const [showPlannedModal, setShowPlannedModal] = useState(false);
+const [plannedExpenses, setPlannedExpenses] = useState<any[]>([]);
+const [plannedExpanded, setPlannedExpanded] = useState(false);
+const [newPlannedName, setNewPlannedName] = useState('');
+const [newPlannedAmount, setNewPlannedAmount] = useState('');
+const [newPlannedCategory, setNewPlannedCategory] = useState('Select Category');
+const [newPlannedRecurring, setNewPlannedRecurring] = useState(false);
+const [searchingMarketplace, setSearchingMarketplace] = useState(false);
+const [showDealsModal, setShowDealsModal] = useState(false);
+const [selectedPlannedDeals, setSelectedPlannedDeals] = useState<any[]>([]);
+const [selectedPlannedItem, setSelectedPlannedItem] = useState<any>(null);
+
   const [loading, setLoading] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [showExpenseDetailModal, setShowExpenseDetailModal] = useState(false);
@@ -309,7 +321,7 @@ const [showWarning, setShowWarning] = useState(false);
 const warningAnim = useRef(new Animated.Value(0)).current; // opacity & slide
 const [showVoiceTip, setShowVoiceTip] = useState(false);
 const [hasShownTip, setHasShownTip] = useState(false);
-
+const [categoryCallerModal, setCategoryCallerModal] = useState<'add' | 'planned' | null>(null);
 // 🔍 OCR confirmation states
 const [showOcrModal, setShowOcrModal] = useState(false);
 const [ocrRawText, setOcrRawText] = useState("");
@@ -1366,6 +1378,166 @@ const fetchBudget = async () => {
   }
 };
 
+// Load planned expenses
+const loadPlannedExpenses = async () => {
+  try {
+    const user = await getToken();
+    if (!user?.id) return;
+    const stored = await AsyncStorage.getItem(`plannedExpenses_${user.id}`);
+    if (stored) setPlannedExpenses(JSON.parse(stored));
+  } catch (err) {
+    console.error("Failed to load planned expenses:", err);
+  }
+};
+
+// Save planned expenses
+const savePlannedExpenses = async (expenses: any[]) => {
+  try {
+    const user = await getToken();
+    if (!user?.id) return;
+    await AsyncStorage.setItem(`plannedExpenses_${user.id}`, JSON.stringify(expenses));
+    setPlannedExpenses(expenses);
+  } catch (err) {
+    console.error("Failed to save planned expenses:", err);
+  }
+};
+
+// Search marketplace for item
+const searchMarketplace = async (itemName: string) => {
+  setSearchingMarketplace(true);
+  try {
+    const params = {
+      lat: 8.228,
+      lng: 124.245,
+      radius: 10000,
+      item: itemName.trim(),
+      limit: 20, 
+    };
+    
+    const response = await api.get('/deals', { params });
+    
+    if (response.data?.length > 0) {
+      // Get the cheapest deal
+      const cheapestDeal = response.data.reduce((min: any, deal: any) => 
+        deal.price < min.price ? deal : min
+      );
+      
+      return {
+        found: true,
+        price: cheapestDeal.price,
+        dealId: cheapestDeal._id,
+        itemName: cheapestDeal.itemName,
+        storeName: cheapestDeal.storeName,
+        stock: cheapestDeal.stock,
+        unit: cheapestDeal.unit,
+        category: cheapestDeal.category,
+        distance: cheapestDeal.distance,
+        allDeals: response.data, 
+      };
+    }
+    return { found: false };
+  } catch (err) {
+    console.error("Marketplace search failed:", err);
+    return { found: false };
+  } finally {
+    setSearchingMarketplace(false);
+  }
+};
+
+// Add planned expense
+const handleAddPlannedExpense = async () => {
+  if (!newPlannedName.trim() || !newPlannedAmount || newPlannedCategory === 'Select Category') {
+    Alert.alert("Incomplete", "Please fill in all fields");
+    return;
+  }
+
+  const marketplaceResult = await searchMarketplace(newPlannedName);
+  
+  const newPlanned = {
+    id: Date.now().toString(),
+    name: newPlannedName.trim(),
+    category: newPlannedCategory,
+    estimatedAmount: parseFloat(newPlannedAmount),
+    actualAmount: marketplaceResult.found ? marketplaceResult.price : null,
+    source: marketplaceResult.found ? 'Marketplace' : 'Manual',
+    marketplaceData: marketplaceResult.found ? {
+      dealId: marketplaceResult.dealId,
+      itemName: marketplaceResult.itemName,
+      storeName: marketplaceResult.storeName,
+      price: marketplaceResult.price,
+      stock: marketplaceResult.stock,
+      unit: marketplaceResult.unit,
+      category: marketplaceResult.category,
+      distance: marketplaceResult.distance,
+      allDeals: marketplaceResult.allDeals, // All matching deals
+    } : null,
+    recurring: newPlannedRecurring,
+    status: 'planned',
+    createdAt: new Date().toISOString(),
+  };
+
+  const updated = [...plannedExpenses, newPlanned];
+  await savePlannedExpenses(updated);
+  
+  setNewPlannedName('');
+  setNewPlannedAmount('');
+  setNewPlannedCategory('Select Category');
+  setNewPlannedRecurring(false);
+  setShowPlannedModal(false);
+  
+  if (marketplaceResult.found) {
+    const savingsText = newPlanned.estimatedAmount > marketplaceResult.price 
+      ? ` (Save ₱${(newPlanned.estimatedAmount - marketplaceResult.price).toFixed(2)}!)`
+      : '';
+    
+    Alert.alert(
+      "✅ Found in Marketplace!",
+      `${marketplaceResult.itemName}\n` +
+      `Store: ${marketplaceResult.storeName}\n` +
+      `Price: ₱${marketplaceResult.price}${savingsText}\n` +
+      `Stock: ${marketplaceResult.stock ? 'Available' : 'Out of Stock'}`,
+      [{ text: "OK" }]
+    );
+  }
+};
+
+// Commit planned expense to actual
+const handleCommitPlanned = async (planned: any) => {
+  const user = await getToken();
+  if (!user?.id) return;
+
+  const amount = planned.actualAmount || planned.estimatedAmount;
+  
+  const payload = {
+    amount,
+    category: planned.category,
+    notes: `Planned: ${planned.name}${planned.source === 'Marketplace' ? ' (from Marketplace)' : ''}`,
+    userId: user.id,
+    date: new Date().toISOString(),
+  };
+
+  try {
+    await api.post("/expenses", payload);
+    
+    // Remove from planned if not recurring
+    if (!planned.recurring) {
+      const updated = plannedExpenses.filter(p => p.id !== planned.id);
+      await savePlannedExpenses(updated);
+    }
+    
+    Alert.alert("Success", "Expense committed!");
+    fetchExpenses();
+  } catch (err) {
+    console.error("Failed to commit:", err);
+    Alert.alert("Error", "Failed to commit expense");
+  }
+};
+
+// Delete planned expense
+const handleDeletePlanned = async (id: string) => {
+  const updated = plannedExpenses.filter(p => p.id !== id);
+  await savePlannedExpenses(updated);
+};
 
 
   const handleChangePeriod = async (newPeriod: string) => {
@@ -1903,6 +2075,9 @@ async function processReceiptImage(uri) {
 )}
 
 
+useEffect(() => {
+  loadPlannedExpenses();
+}, []);
 
   const handleAddExpense = async () => {
   const user = await getToken();
@@ -2581,6 +2756,179 @@ const HistorySection = (
           </View>
         </Modal>
 
+        {/* Planned Expenses Section */}
+<View style={styles.plannedCard}>
+  <TouchableOpacity
+    onPress={() => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setPlannedExpanded(!plannedExpanded);
+    }}
+    style={styles.plannedHeader}
+    activeOpacity={0.88}
+  >
+    <View style={styles.plannedHeaderLeft}>
+      <Ionicons name="calendar-outline" size={20} color="#2563EB" style={{ marginRight: 10 }} />
+      <View>
+        <Text style={styles.plannedTitle}>Planned Expenses</Text>
+       <Text style={styles.plannedSubtitle}>
+  {plannedExpenses.length} items • ₱
+  {plannedExpenses.reduce((sum, p) => sum + (p.actualAmount || p.estimatedAmount), 0).toFixed(2)} estimated
+  {(() => {
+    const totalSavings = plannedExpenses.reduce((sum, p) => {
+      if (p.actualAmount && p.actualAmount < p.estimatedAmount) {
+        return sum + (p.estimatedAmount - p.actualAmount);
+      }
+      return sum;
+    }, 0);
+    return totalSavings > 0 ? ` • Save ₱${totalSavings.toFixed(2)}` : '';
+  })()}
+</Text>
+      </View>
+    </View>
+    <Ionicons
+      name={plannedExpanded ? "chevron-up" : "chevron-down"}
+      size={20}
+      color="#2563EB"
+    />
+  </TouchableOpacity>
+
+  {plannedExpanded && (
+    <View style={styles.plannedContent}>
+      {plannedExpenses.length === 0 ? (
+        <Text style={styles.emptyPlannedText}>No planned expenses yet</Text>
+      ) : (
+        plannedExpenses.map((planned) => (
+          <View key={planned.id} style={styles.plannedItem}>
+  <View style={styles.plannedItemLeft}>
+    <View style={[styles.iconCircle, { backgroundColor: getCategoryColor(planned.category) + '22' }]}>
+      {getCategoryIconComponent(planned.category)}
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.plannedItemName}>{planned.name}</Text>
+      
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {/* Estimated vs Actual Price */}
+        {planned.actualAmount && planned.actualAmount < planned.estimatedAmount ? (
+          <>
+            <Text style={[styles.plannedItemAmount, { textDecorationLine: 'line-through', color: '#9CA3AF' }]}>
+              ₱{planned.estimatedAmount.toFixed(2)}
+            </Text>
+            <Text style={[styles.plannedItemAmount, { color: '#16A34A' }]}>
+              ₱{planned.actualAmount.toFixed(2)}
+            </Text>
+            <View style={[styles.marketplaceBadge, { backgroundColor: '#DCFCE7' }]}>
+              <Text style={styles.marketplaceBadgeText}>
+                Save ₱{(planned.estimatedAmount - planned.actualAmount).toFixed(2)}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.plannedItemAmount}>
+            ₱{(planned.actualAmount || planned.estimatedAmount).toFixed(2)}
+          </Text>
+        )}
+        
+       {/* Marketplace Badge */}
+{planned.source === 'Marketplace' && (
+  <TouchableOpacity 
+    onPress={() => {
+      if (planned.marketplaceData?.allDeals) {
+        setSelectedPlannedItem(planned); // ✅ Track which item we're updating
+        setSelectedPlannedDeals(planned.marketplaceData.allDeals);
+        setShowDealsModal(true);
+      }
+    }}
+    style={styles.marketplaceBadge}
+  >
+    <Ionicons name="storefront" size={10} color="#16A34A" />
+    <Text style={styles.marketplaceBadgeText}>
+      {planned.marketplaceData?.storeName || 'Marketplace'}
+    </Text>
+  </TouchableOpacity>
+)}
+        
+        {/* Stock Status */}
+        {planned.marketplaceData?.stock !== undefined && (
+          <View style={[
+            styles.marketplaceBadge, 
+            { 
+              backgroundColor: planned.marketplaceData.stock ? '#DCFCE7' : '#FEE2E2',
+              borderColor: planned.marketplaceData.stock ? '#BBF7D0' : '#FECACA',
+            }
+          ]}>
+            <Ionicons 
+              name={planned.marketplaceData.stock ? "checkmark-circle" : "close-circle"} 
+              size={10} 
+              color={planned.marketplaceData.stock ? "#16A34A" : "#DC2626"} 
+            />
+            <Text style={[
+              styles.marketplaceBadgeText, 
+              { color: planned.marketplaceData.stock ? "#16A34A" : "#DC2626" }
+            ]}>
+              {planned.marketplaceData.stock ? "In Stock" : "Out of Stock"}
+            </Text>
+          </View>
+        )}
+        
+        {/* Recurring Badge */}
+        {planned.recurring && (
+          <View style={[styles.marketplaceBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+            <Ionicons name="repeat" size={10} color="#D97706" />
+            <Text style={[styles.marketplaceBadgeText, { color: '#D97706' }]}>Monthly</Text>
+          </View>
+        )}
+      </View>
+      
+      {/* Store & Distance Info */}
+      {planned.marketplaceData && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
+          {planned.marketplaceData.distance && (
+            <Text style={{ fontSize: 11, color: '#6B7280' }}>
+              {(planned.marketplaceData.distance / 1000).toFixed(1)} km away
+            </Text>
+          )}
+          {planned.marketplaceData.unit && (
+            <>
+              <Text style={{ color: '#D1D5DB', fontSize: 10 }}>•</Text>
+              <Text style={{ fontSize: 11, color: '#6B7280' }}>
+                {planned.marketplaceData.unit}
+              </Text>
+            </>
+          )}
+        </View>
+      )}
+    </View>
+  </View>
+  
+  <View style={styles.plannedItemActions}>
+    <TouchableOpacity
+      onPress={() => handleCommitPlanned(planned)}
+      style={[styles.plannedActionBtn, { backgroundColor: '#DCFCE7' }]}
+    >
+      <Ionicons name="checkmark" size={16} color="#16A34A" />
+    </TouchableOpacity>
+    <TouchableOpacity
+      onPress={() => handleDeletePlanned(planned.id)}
+      style={[styles.plannedActionBtn, { backgroundColor: '#FEE2E2' }]}
+    >
+      <Ionicons name="trash-outline" size={16} color="#DC2626" />
+    </TouchableOpacity>
+  </View>
+</View>
+        ))
+      )}
+      
+      <TouchableOpacity
+        style={styles.addPlannedBtn}
+        onPress={() => setShowPlannedModal(true)}
+      >
+        <Ionicons name="add-circle-outline" size={20} color="#2563EB" />
+        <Text style={styles.addPlannedBtnText}>Add Planned Expense</Text>
+      </TouchableOpacity>
+    </View>
+  )}
+</View>
+
         {/* History Button */}
         <HistoryRangeButton
           onPress={openHistoryModal}
@@ -2795,14 +3143,17 @@ const HistorySection = (
         style={styles.input}
       />
       
-      <TouchableOpacity
-        style={[styles.input, { justifyContent: 'flex-start' }]}
-        onPress={() => setCategoryModalVisible(true)}
-      >
-        <Text style={{ color: expenseCategory === 'Select Category' ? '#64748B' : '#1E293B' }}>
-          {expenseCategory}
-        </Text>
-      </TouchableOpacity>
+     <TouchableOpacity
+  style={[styles.input, { justifyContent: 'flex-start' }]}
+  onPress={() => {
+    setCategoryCallerModal('add'); // ✅ Mark that add expense modal called it
+    setCategoryModalVisible(true);
+  }}
+>
+  <Text style={{ color: expenseCategory === 'Select Category' ? '#64748B' : '#1E293B' }}>
+    {expenseCategory}
+  </Text>
+</TouchableOpacity>
       
       <TextInput
         placeholder="Notes (optional)"
@@ -3264,83 +3615,103 @@ const HistorySection = (
 </Modal>
 
 
-          {/* Category Picker Modal */}
+     {/* Category Picker Modal */}
 <Modal
   visible={categoryModalVisible}
   transparent
   animationType="fade"
-  onRequestClose={() => setCategoryModalVisible(false)}
+  onRequestClose={() => {
+    setCategoryModalVisible(false);
+    // ✅ Re-show planned modal if it was the caller
+    if (categoryCallerModal === 'planned') {
+      setTimeout(() => {
+        setShowPlannedModal(true);
+      }, 100);
+    }
+    setCategoryCallerModal(null);
+  }}
 >
-  <Pressable style={styles.modalOverlay} onPress={() => setCategoryModalVisible(false)}>
-    <View style={[styles.modalContainer, { gap: 0, maxHeight: '70%' }]}>
-      {/* Header */}
-      <View style={{
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: '#1E293B' }}>
-          Select Category
-        </Text>
-        <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
-          <Ionicons name="close" size={24} color="#64748B" />
-        </TouchableOpacity>
-      </View>
+  <Pressable 
+    style={styles.modalOverlay}
+    onPress={() => {
+      setCategoryModalVisible(false);
+      // ✅ Re-show planned modal if it was the caller
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      setCategoryCallerModal(null);
+    }}
+  >
+    <View style={[styles.modalContainer, { gap: 0, maxHeight: '70%', zIndex: 10002 }]}>
+      {/* ... header ... */}
 
       <ScrollView style={{ maxHeight: 400 }}>
-        {/* Main Categories */}
-        {['Food', 'Transport', 'Bills', 'School', 'Shopping'].map((cat, idx) => (
-          <TouchableOpacity
-            key={cat}
-            onPress={() => {
-              setExpenseCategory(cat);
-              setCategoryModalVisible(false);
-            }}
-            style={{
-              padding: 14,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: '#F1F5F9',
-              minWidth: 280,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: expenseCategory === cat ? '#F0F9FF' : 'transparent',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: getCategoryColor(cat),
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}>
-                <Ionicons 
-                  name={getCategoryIcon(cat)} 
-                  size={18} 
-                  color="#FFFFFF" 
-                />
-              </View>
-              <Text style={{ 
-                fontSize: 15, 
-                color: '#1E293B',
-                fontWeight: expenseCategory === cat ? '600' : '400'
-              }}>
-                {cat}
-              </Text>
-            </View>
-            {expenseCategory === cat && (
-              <Ionicons name="checkmark" size={20} color="#0EA5E9" />
-            )}
-          </TouchableOpacity>
-        ))}
+       {/* Main Categories */}
+{['Food', 'Transport', 'Bills', 'School', 'Shopping'].map((cat) => (
+  <TouchableOpacity
+    key={cat}
+    onPress={() => {
+      setExpenseCategory(cat);
+      
+      // ✅ Update the correct state based on which modal called us
+      if (categoryCallerModal === 'planned') {
+        setNewPlannedCategory(cat);
+      }
+      
+      setCategoryModalVisible(false);
+      
+      // ✅ Re-show planned modal after selection
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      
+      setCategoryCallerModal(null);
+    }}
+    style={{
+      padding: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F1F5F9',
+      minWidth: 280,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: expenseCategory === cat ? '#F0F9FF' : 'transparent',
+    }}
+  >
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: getCategoryColor(cat),
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+      }}>
+        <Ionicons 
+          name={getCategoryIcon(cat)} 
+          size={18} 
+          color="#FFFFFF" 
+        />
+      </View>
+      <Text style={{ 
+        fontSize: 15, 
+        color: '#1E293B',
+        fontWeight: expenseCategory === cat ? '600' : '400'
+      }}>
+        {cat}
+      </Text>
+    </View>
+    {expenseCategory === cat && (
+      <Ionicons name="checkmark" size={20} color="#0EA5E9" />
+    )}
+  </TouchableOpacity>
+))}
 
         {/* Others Section */}
         <TouchableOpacity
@@ -3413,69 +3784,95 @@ const HistorySection = (
               </Text>
             </TouchableOpacity>
 
-            {/* Custom Categories */}
-            {customCategories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => {
-                  setExpenseCategory(cat);
-                  setCategoryModalVisible(false);
-                }}
-                style={{
-                  padding: 12,
-                  paddingLeft: 64,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#F1F5F9",
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: expenseCategory === cat ? '#F0F9FF' : 'transparent',
-                }}
-              >
-                <Text style={{ 
-                  fontSize: 14, 
-                  color: '#475569',
-                  fontWeight: expenseCategory === cat ? '600' : '400'
-                }}>
-                  {cat}
-                </Text>
-                {expenseCategory === cat && (
-                  <Ionicons name="checkmark" size={18} color="#0EA5E9" />
-                )}
-              </TouchableOpacity>
-            ))}
+{customCategories.map((cat) => (
+  <TouchableOpacity
+    key={cat}
+    onPress={() => {
+      setExpenseCategory(cat);
+      
+      if (categoryCallerModal === 'planned') {
+        setNewPlannedCategory(cat);
+      }
+      
+      setCategoryModalVisible(false);
+      
+      // ✅ Re-show planned modal
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      
+      setCategoryCallerModal(null);
+    }}
+    style={{
+      padding: 12,
+      paddingLeft: 64,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F1F5F9",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: expenseCategory === cat ? '#F0F9FF' : 'transparent',
+    }}
+  >
+    <Text style={{ 
+      fontSize: 14, 
+      color: '#475569',
+      fontWeight: expenseCategory === cat ? '600' : '400'
+    }}>
+      {cat}
+    </Text>
+    {expenseCategory === cat && (
+      <Ionicons name="checkmark" size={18} color="#0EA5E9" />
+    )}
+  </TouchableOpacity>
+))}
 
-            {/* Other Subcategories */}
-            {otherSubcategories.map((sub) => (
-              <TouchableOpacity
-                key={sub}
-                onPress={() => {
-                  setExpenseCategory(sub);
-                  setCategoryModalVisible(false);
-                }}
-                style={{
-                  padding: 12,
-                  paddingLeft: 64,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#F1F5F9",
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: expenseCategory === sub ? '#F0F9FF' : 'transparent',
-                }}
-              >
-                <Text style={{ 
-                  fontSize: 14, 
-                  color: '#475569',
-                  fontWeight: expenseCategory === sub ? '600' : '400'
-                }}>
-                  {sub}
-                </Text>
-                {expenseCategory === sub && (
-                  <Ionicons name="checkmark" size={18} color="#0EA5E9" />
-                )}
-              </TouchableOpacity>
-            ))}
+        {otherSubcategories.map((sub) => (
+  <TouchableOpacity
+    key={sub}
+    onPress={() => {
+      setExpenseCategory(sub);
+      
+      if (categoryCallerModal === 'planned') {
+        setNewPlannedCategory(sub);
+      }
+      
+      setCategoryModalVisible(false);
+      
+      // ✅ Re-show planned modal
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      
+      setCategoryCallerModal(null);
+    }}
+    style={{
+      padding: 12,
+      paddingLeft: 64,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F1F5F9",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: expenseCategory === sub ? '#F0F9FF' : 'transparent',
+    }}
+  >
+    <Text style={{ 
+      fontSize: 14, 
+      color: '#475569',
+      fontWeight: expenseCategory === sub ? '600' : '400'
+    }}>
+      {sub}
+    </Text>
+    {expenseCategory === sub && (
+      <Ionicons name="checkmark" size={18} color="#0EA5E9" />
+    )}
+  </TouchableOpacity>
+))}
           </View>
         )}
       </ScrollView>
@@ -4000,51 +4397,7 @@ const HistorySection = (
   />
 </TouchableOpacity>
 
-<TouchableOpacity
-  onPress={async () => {
-    if (isListening) {
-      // ⏹️ Stop listening
-      setIsListening(false);
-      console.log("🛑 Stopping voice recognition manually...");
-      if (window.stopRecognition) window.stopRecognition();
-      return;
-    }
 
-    // ✅ Start recording directly
-    try {
-      setVoiceTranscript("");
-      setShowVoiceTip(false);
-      await startVoiceRecognition();
-    } catch (err) {
-      console.error("🎙️ Mic start failed:", err);
-      Alert.alert("Error", "Microphone couldn't start. Try again.");
-    }
-  }}
-  activeOpacity={0.8}
-  style={{
-    position: "absolute",
-    bottom: isMobile ? 60 : 10,
-    right: 16,
-    backgroundColor: isListening ? "#EF4444" : "#1f4b81",
-    borderRadius: 50,
-    width: isMobile ? 35 : 45,
-    height: isMobile ? 35 : 45,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 200,
-  }}
->
-  <Ionicons 
-    name={isListening ? "stop" : "mic"} 
-    size={28} 
-    color="#fff" 
-  />
-</TouchableOpacity>
 
 {/* 🎤 Voice Command Format Modal */}
 <Modal
@@ -4676,6 +5029,441 @@ const HistorySection = (
   </Pressable>
 </Modal>
 
+{/* View All Deals Modal - Android Optimized */}
+<Modal
+  visible={showDealsModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowDealsModal(false)}
+>
+  <View style={{
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 16,
+  }}>
+    <View style={{
+      backgroundColor: '#fff',
+      borderRadius: 20,
+      width: '100%',
+      maxWidth: isMobile ? 360 : 480,
+      maxHeight: '80%',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <View style={{ 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        backgroundColor: '#fff',
+      }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ 
+            fontWeight: 'bold', 
+            fontSize: 16,
+            color: '#1E293B',
+          }}>
+            Available Deals
+          </Text>
+          <Text style={{ 
+            fontSize: 11,
+            color: '#64748B', 
+            marginTop: 2 
+          }}>
+            {selectedPlannedDeals?.length || 0} options • Tap to select
+          </Text>
+        </View>
+        <TouchableOpacity 
+          onPress={() => setShowDealsModal(false)}
+          style={{
+            padding: 4,
+          }}
+        >
+          <Ionicons name="close" size={24} color="#64748B" />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Deals List */}
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{ 
+          padding: 16,
+          paddingBottom: 8,
+        }}
+        showsVerticalScrollIndicator={true}
+      >
+        {selectedPlannedDeals && selectedPlannedDeals.length > 0 ? (
+          selectedPlannedDeals
+            .sort((a, b) => (a.price || 0) - (b.price || 0))
+            .map((deal, idx) => {
+              if (!deal) return null;
+              
+              const isCurrentSelection = selectedPlannedItem?.marketplaceData?.dealId === deal._id;
+              const isLowest = idx === 0;
+              
+              return (
+                <TouchableOpacity
+                  key={deal._id || `deal-${idx}`}
+                  onPress={() => {
+                    if (selectedPlannedItem) {
+                      const updated = plannedExpenses.map(p => {
+                        if (p.id === selectedPlannedItem.id) {
+                          return {
+                            ...p,
+                            actualAmount: deal.price,
+                            marketplaceData: {
+                              dealId: deal._id,
+                              itemName: deal.itemName,
+                              storeName: deal.storeName,
+                              price: deal.price,
+                              stock: deal.stock,
+                              unit: deal.unit,
+                              category: deal.category,
+                              distance: deal.distance,
+                              allDeals: selectedPlannedDeals,
+                            },
+                          };
+                        }
+                        return p;
+                      });
+                      
+                      savePlannedExpenses(updated);
+                      setShowDealsModal(false);
+                      
+                      Alert.alert(
+                        "✅ Deal Updated",
+                        `Now using ${deal.storeName} at ₱${deal.price?.toFixed(2) || '0.00'}`
+                      );
+                    }
+                  }}
+                  style={{
+                    backgroundColor: isCurrentSelection ? '#EFF6FF' : (isLowest ? '#F0FDF4' : '#fff'),
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 8,
+                    borderWidth: isCurrentSelection ? 2 : 1,
+                    borderColor: isCurrentSelection ? '#2563EB' : (isLowest ? '#16A34A' : '#E5E7EB'),
+                    elevation: 2,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
+                  }}
+                  activeOpacity={0.7}
+                >
+                  {/* Top Row: Badges */}
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'flex-start',
+                    marginBottom: 8,
+                  }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ 
+                        fontSize: 14, 
+                        fontWeight: '600', 
+                        color: '#1E293B',
+                        marginBottom: 4,
+                      }}>
+                        {deal.itemName || 'Unknown Item'}
+                      </Text>
+                      <View style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center',
+                        marginBottom: 2,
+                      }}>
+                        <Ionicons name="storefront-outline" size={12} color="#6B7280" />
+                        <Text style={{ 
+                          fontSize: 12, 
+                          color: '#6B7280', 
+                          marginLeft: 4,
+                        }}>
+                          {deal.storeName || 'Unknown Store'}
+                        </Text>
+                      </View>
+                      {deal.distance && (
+                        <View style={{ 
+                          flexDirection: 'row', 
+                          alignItems: 'center',
+                          marginTop: 2,
+                        }}>
+                          <Ionicons name="location-outline" size={11} color="#9CA3AF" />
+                          <Text style={{ fontSize: 11, color: '#6B7280', marginLeft: 2 }}>
+                            {(deal.distance / 1000).toFixed(2)} km away
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    {/* Price & Badges */}
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ 
+                        fontSize: 16, 
+                        fontWeight: '700', 
+                        color: isCurrentSelection ? '#2563EB' : (isLowest ? '#16A34A' : '#1E293B'),
+                        marginBottom: 4,
+                      }}>
+                        ₱{deal.price?.toFixed(2) || '0.00'}
+                      </Text>
+                      
+                      {/* Lowest Badge */}
+                      {isLowest && !isCurrentSelection && (
+                        <View style={{
+                          backgroundColor: '#16A34A',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          marginBottom: 2,
+                        }}>
+                          <Ionicons name="star" size={9} color="#fff" />
+                          <Text style={{ 
+                            color: '#fff', 
+                            fontSize: 9, 
+                            fontWeight: '700',
+                            marginLeft: 2,
+                          }}>
+                            Lowest
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {/* Selected Badge */}
+                      {isCurrentSelection && (
+                        <View style={{
+                          backgroundColor: '#2563EB',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          marginBottom: 2,
+                        }}>
+                          <Ionicons name="checkmark-circle" size={10} color="#fff" />
+                          <Text style={{ 
+                            color: '#fff', 
+                            fontSize: 9, 
+                            fontWeight: '700',
+                            marginLeft: 2,
+                          }}>
+                            Selected
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {/* Stock Badge */}
+                      <View style={{
+                        backgroundColor: deal.stock ? '#DCFCE7' : '#FEE2E2',
+                        borderWidth: 1,
+                        borderColor: deal.stock ? '#BBF7D0' : '#FECACA',
+                        borderRadius: 6,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}>
+                        <Ionicons 
+                          name={deal.stock ? "checkmark-circle" : "close-circle"} 
+                          size={9} 
+                          color={deal.stock ? "#16A34A" : "#DC2626"} 
+                        />
+                        <Text style={{
+                          fontSize: 9,
+                          fontWeight: '600',
+                          color: deal.stock ? '#16A34A' : '#DC2626',
+                          marginLeft: 2,
+                        }}>
+                          {deal.stock ? 'In Stock' : 'Out of Stock'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  {/* Unit */}
+                  {deal.unit && (
+                    <Text style={{ 
+                      fontSize: 11, 
+                      color: '#9CA3AF',
+                      marginTop: 4,
+                    }}>
+                      Unit: {deal.unit}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+        ) : (
+          <View style={{ 
+            padding: 40, 
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Ionicons name="cart-outline" size={48} color="#CBD5E1" />
+            <Text style={{ 
+              color: '#64748B', 
+              fontSize: 14,
+              marginTop: 12,
+              textAlign: 'center',
+            }}>
+              No deals available
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+      
+      {/* Close Button */}
+      <View style={{ 
+        padding: 16, 
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+      }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#94A3B8',
+            borderRadius: 12,
+            paddingVertical: 12,
+            alignItems: 'center',
+          }}
+          onPress={() => setShowDealsModal(false)}
+        >
+          <Text style={{ 
+            color: '#fff', 
+            fontWeight: '600',
+            fontSize: 14,
+          }}>
+            Close
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+
+<Modal
+  visible={showPlannedModal && !categoryModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowPlannedModal(false)}
+>
+  <Pressable 
+    style={styles.modalOverlay}
+    onPress={() => setShowPlannedModal(false)}
+  >
+    <Pressable 
+      style={[
+        styles.modalContainer, 
+        { 
+          maxWidth: isMobile ? '90%' : 420,
+          padding: isMobile ? 16 : 26,
+          maxHeight: isMobile ? '75%' : '85%',  
+        }
+      ]} 
+      onPress={() => {}}
+    >
+      <Text style={{ 
+        fontWeight: 'bold', 
+        fontSize: isMobile ? 16 : 18,  
+        marginBottom: isMobile ? 10 : 12  
+      }}>
+        Add Planned Expense
+      </Text>
+      
+      <TextInput
+        placeholder="Item name (e.g., Rent, Pancit Canton)"
+        value={newPlannedName}
+        onChangeText={setNewPlannedName}
+        style={[styles.input, { marginBottom: isMobile ? 10 : 14 }]} 
+      />
+      
+      <TextInput
+        placeholder="Estimated amount"
+        value={newPlannedAmount}
+        onChangeText={setNewPlannedAmount}
+        keyboardType="numeric"
+        style={[styles.input, { marginBottom: isMobile ? 10 : 14 }]}  
+      />
+      
+    <TouchableOpacity
+  style={[styles.input, { justifyContent: 'center', marginBottom: isMobile ? 10 : 14 }]} 
+  onPress={() => {
+    setExpenseCategory(newPlannedCategory);
+    setCategoryCallerModal('planned');
+    setCategoryModalVisible(true);
+  }}
+>
+  <Text style={{ 
+    color: newPlannedCategory === 'Select Category' ? '#64748B' : '#1E293B',
+    fontSize: isMobile ? 14 : 16,  
+  }}>
+    {newPlannedCategory}
+  </Text>
+</TouchableOpacity>
+      
+      <TouchableOpacity
+        style={styles.recurringToggle}
+        onPress={() => setNewPlannedRecurring(!newPlannedRecurring)}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons 
+            name="repeat" 
+            size={isMobile ? 16 : 18}  
+            style={{ marginRight: 8 }} 
+          />
+          <Text style={{ fontSize: isMobile ? 13 : 14, color: '#1E293B' }}>  
+            Recurring (Monthly)
+          </Text>
+        </View>
+        <View style={[
+          styles.checkbox, 
+          newPlannedRecurring && styles.checkboxActive,
+          isMobile && { width: 20, height: 20 } 
+        ]}>
+          {newPlannedRecurring && <Ionicons name="checkmark" size={isMobile ? 14 : 16} color="#fff" />}  
+        </View>
+      </TouchableOpacity>
+      
+     
+      
+     <TouchableOpacity
+        style={[
+          styles.submitButton, 
+          { 
+            backgroundColor: '#2563EB', 
+            marginBottom: isMobile ? 6 : 8, 
+            paddingVertical: isMobile ? 12 : 14,  
+          }
+        ]}
+        onPress={handleAddPlannedExpense}
+        disabled={searchingMarketplace}
+      >
+        <Text style={[styles.submitText, { fontSize: isMobile ? 13 : 14 }]}>  
+          {searchingMarketplace ? 'Searching Marketplace...' : 'Add Planned Expense'}
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={[
+          styles.submitButton, 
+          { 
+            backgroundColor: '#94A3B8',
+            paddingVertical: isMobile ? 12 : 14,  
+          }
+        ]}
+        onPress={() => setShowPlannedModal(false)}
+      >
+        <Text style={[styles.submitText, { fontSize: isMobile ? 13 : 14 }]}>Cancel</Text>  
+      </TouchableOpacity>
+    </Pressable>
+  </Pressable>
+</Modal>
+
   </View>
   );
   
@@ -5117,7 +5905,187 @@ voiceHintText: {
 },
 scrollContent: {
   paddingBottom: 25,   
-}
+},
+plannedCard: {
+  backgroundColor: '#F0F9FF',
+  borderRadius: 16,
+  marginHorizontal: 16,
+  marginBottom: 16,
+  borderWidth: 1,
+  borderColor: '#BFDBFE',
+  overflow: 'hidden',
+},
+plannedHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: 14,
+},
+plannedHeaderLeft: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+},
+plannedTitle: {
+  fontSize: 15,
+  fontWeight: '700',
+  color: '#1E293B',
+},
+plannedSubtitle: {
+  fontSize: 12,
+  color: '#64748B',
+  marginTop: 2,
+},
+plannedContent: {
+  padding: 14,
+  paddingTop: 0,
+  gap: 10,
+},
+plannedItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#fff',
+  padding: 12,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+},
+plannedItemLeft: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+  gap: 10,
+},
+plannedItemName: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#1E293B',
+  marginBottom: 4,
+},
+plannedItemAmount: {
+  fontSize: 13,
+  color: '#2563EB',
+  fontWeight: '600',
+},
+plannedItemActions: {
+  flexDirection: 'row',
+  gap: 8,
+},
+plannedActionBtn: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+},
+marketplaceBadge: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#DCFCE7',
+  borderWidth: 1,
+  borderColor: '#BBF7D0',
+  borderRadius: 6,
+  paddingHorizontal: 6,
+  paddingVertical: 2,
+  gap: 3,
+},
+marketplaceBadgeText: {
+  fontSize: 9,
+  fontWeight: '600',
+  color: '#16A34A',
+},
+addPlannedBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#fff',
+  borderWidth: 1.5,
+  borderColor: '#2563EB',
+  borderStyle: 'dashed',
+  borderRadius: 12,
+  padding: 12,
+  gap: 8,
+},
+addPlannedBtnText: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#2563EB',
+},
+emptyPlannedText: {
+  textAlign: 'center',
+  color: '#94A3B8',
+  fontSize: 13,
+  fontStyle: 'italic',
+  paddingVertical: 12,
+},
+recurringToggle: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#F8FAFC',
+  borderRadius: 10,
+  padding: 12,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+},
+checkbox: {
+  width: 24,
+  height: 24,
+  borderRadius: 6,
+  borderWidth: 2,
+  borderColor: '#CBD5E1',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+checkboxActive: {
+  backgroundColor: '#2563EB',
+  borderColor: '#2563EB',
+},
 
+ // 👇 ADD THESE NEW STYLES HERE
+  dealCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dealInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  storeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  storeName: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  priceSection: {
+    alignItems: 'flex-end',
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
 
 });
