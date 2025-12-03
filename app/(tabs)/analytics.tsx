@@ -495,12 +495,13 @@ const fetchHistoricalData = async () => {
   const spendingHealth = getSpendingHealth();
 
   const showSpendingHealthInfo = () => {
-    Alert.alert(
-      `${spendingHealth.status} Status`,
-      spendingHealth.message,
-      [{ text: 'Got it', style: 'default' }]
-    );
-  };
+  if (Platform.OS === "web") {
+    window.alert(`${spendingHealth.status}\n\n${spendingHealth.message}`);
+  } else {
+    Alert.alert(spendingHealth.status, spendingHealth.message);
+  }
+};
+
 
   const dailyBurnRate = daysRemaining > 0 ? remainingBudget / daysRemaining : 0;
 
@@ -633,7 +634,7 @@ const fetchHistoricalData = async () => {
           >
             <View style={styles.historicalHeaderLeft}>
               <LinearGradient
-                colors={['#6366f1', '#8b5cf6']}
+                colors={['#6366f1', '#3B82F6']}
                 style={styles.historicalIcon}
               >
                 <Ionicons name="time-outline" size={20} color="#FFFFFF" />
@@ -648,7 +649,7 @@ const fetchHistoricalData = async () => {
             <Ionicons
               name={historyExpanded ? "chevron-up" : "chevron-down"}
               size={24}
-              color="#6366f1"
+              color="#3B82F6"
             />
           </TouchableOpacity>
 
@@ -784,7 +785,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#6366f1', '#8b5cf6']}
+              colors={['#6366f1', '#3B82F6']}
               style={styles.analyzeBtnGradient}
             >
               {loadingHistory ? (
@@ -1682,7 +1683,7 @@ borderColor: '#C7D2FE',
 quickRangeBtnText: {
 fontSize: 13,
 fontWeight: '600',
-color: '#6366f1',
+color: '#3B82F6',
 },
 dateSelectionContainer: {
 flexDirection: isMobile ? 'column' : 'row',
@@ -1717,7 +1718,7 @@ analyzeBtn: {
 marginBottom: 20,
 borderRadius: 14,
 overflow: 'hidden',
-shadowColor: '#6366f1',
+shadowColor: '#3B82F6',
 shadowOffset: { width: 0, height: 4 },
 shadowOpacity: 0.3,
 shadowRadius: 8,
