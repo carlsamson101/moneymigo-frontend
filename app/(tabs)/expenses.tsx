@@ -2080,6 +2080,7 @@ useEffect(() => {
 }, []);
 
   const handleAddExpense = async () => {
+  console.log("🚀 handleAddExpense pressed");
   const user = await getToken();
   if (!user || !user.id) {
     Alert.alert("⚠️ Not Logged In", "Please log in before adding an expense.");
