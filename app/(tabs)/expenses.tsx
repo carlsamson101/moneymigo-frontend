@@ -5031,6 +5031,7 @@ const HistorySection = (
 </Modal>
 
 {/* View All Deals Modal - Android Optimized */}
+{/* View All Deals Modal - Complete with Proper Closing */}
 <Modal
   visible={showDealsModal}
   transparent
@@ -5165,7 +5166,7 @@ const HistorySection = (
                   }}
                   activeOpacity={0.7}
                 >
-                  {/* Top Row: Badges */}
+                  {/* Top Row: Item Info & Price */}
                   <View style={{ 
                     flexDirection: 'row', 
                     justifyContent: 'space-between', 
@@ -5351,124 +5352,6 @@ const HistorySection = (
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
-  </View>
-</Modal>
-
-<Modal
-  visible={showPlannedModal && !categoryModalVisible}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setShowPlannedModal(false)}
->
-  <Pressable 
-    style={styles.modalOverlay}
-    onPress={() => setShowPlannedModal(false)}
-  >
-    <Pressable 
-      style={[
-        styles.modalContainer, 
-        { 
-          maxWidth: isMobile ? '90%' : 420,
-          padding: isMobile ? 16 : 26,
-          maxHeight: isMobile ? '75%' : '85%',  
-        }
-      ]} 
-      onPress={() => {}}
-    >
-      <Text style={{ 
-        fontWeight: 'bold', 
-        fontSize: isMobile ? 16 : 18,  
-        marginBottom: isMobile ? 10 : 12  
-      }}>
-        Add Planned Expense
-      </Text>
-      
-      <TextInput
-        placeholder="Item name (e.g., Rent, Pancit Canton)"
-        value={newPlannedName}
-        onChangeText={setNewPlannedName}
-        style={[styles.input, { marginBottom: isMobile ? 10 : 14 }]} 
-      />
-      
-      <TextInput
-        placeholder="Estimated amount"
-        value={newPlannedAmount}
-        onChangeText={setNewPlannedAmount}
-        keyboardType="numeric"
-        style={[styles.input, { marginBottom: isMobile ? 10 : 14 }]}  
-      />
-      
-    <TouchableOpacity
-  style={[styles.input, { justifyContent: 'center', marginBottom: isMobile ? 10 : 14 }]} 
-  onPress={() => {
-    setExpenseCategory(newPlannedCategory);
-    setCategoryCallerModal('planned');
-    setCategoryModalVisible(true);
-  }}
->
-  <Text style={{ 
-    color: newPlannedCategory === 'Select Category' ? '#64748B' : '#1E293B',
-    fontSize: isMobile ? 14 : 16,  
-  }}>
-    {newPlannedCategory}
-  </Text>
-</TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.recurringToggle}
-        onPress={() => setNewPlannedRecurring(!newPlannedRecurring)}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons 
-            name="repeat" 
-            size={isMobile ? 16 : 18}  
-            style={{ marginRight: 8 }} 
-          />
-          <Text style={{ fontSize: isMobile ? 13 : 14, color: '#1E293B' }}>  
-            Recurring (Monthly)
-          </Text>
-        </View>
-        <View style={[
-          styles.checkbox, 
-          newPlannedRecurring && styles.checkboxActive,
-          isMobile && { width: 20, height: 20 } 
-        ]}>
-          {newPlannedRecurring && <Ionicons name="checkmark" size={isMobile ? 14 : 16} color="#fff" />}  
-        </View>
-      </TouchableOpacity>
-      
-     
-      
-     <TouchableOpacity
-        style={[
-          styles.submitButton, 
-          { 
-            backgroundColor: '#2563EB', 
-            marginBottom: isMobile ? 6 : 8, 
-            paddingVertical: isMobile ? 12 : 14,  
-          }
-        ]}
-        onPress={handleAddPlannedExpense}
-        disabled={searchingMarketplace}
-      >
-        <Text style={[styles.submitText, { fontSize: isMobile ? 13 : 14 }]}>  
-          {searchingMarketplace ? 'Searching Marketplace...' : 'Add Planned Expense'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[
-          styles.submitButton, 
-          { 
-            backgroundColor: '#94A3B8',
-            paddingVertical: isMobile ? 12 : 14,  
-          }
-        ]}
-        onPress={() => setShowPlannedModal(false)}
-      >
-        <Text style={[styles.submitText, { fontSize: isMobile ? 13 : 14 }]}>Cancel</Text>  
-      </TouchableOpacity>
     </Pressable>
   </Pressable>
 </Modal>
