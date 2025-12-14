@@ -5030,56 +5030,52 @@ const HistorySection = (
   </Pressable>
 </Modal>
 
-{/* View All Deals Modal - Android Optimized */}
-{/* View All Deals Modal - Complete with Proper Closing */}
+{/* View All Deals Modal - Fixed for Mobile */}
 <Modal
   visible={showDealsModal}
   transparent
   animationType="slide"
   onRequestClose={() => setShowDealsModal(false)}
 >
-  <Pressable
-    style={{
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      padding: 16,
-    }}
-    onPress={() => setShowDealsModal(false)}
-  >
-    <Pressable
-      onPress={(e) => e.stopPropagation()}
-      style={{
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        width: '100%',
-        maxWidth: isMobile ? 360 : 480,
-        maxHeight: '80%',
-        overflow: 'hidden',
-      }}
+  <View style={{
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  }}>
+    <TouchableOpacity 
+      style={{ flex: 1 }} 
+      activeOpacity={1} 
+      onPress={() => setShowDealsModal(false)}
     >
+      {/* Empty touchable for backdrop - closes modal */}
+    </TouchableOpacity>
+    
+    <View style={{
+      backgroundColor: '#fff',
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      maxHeight: '80%',
+      paddingBottom: Platform.OS === 'ios' ? 34 : 0,
+    }}>
       {/* Header */}
       <View style={{ 
         flexDirection: 'row', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
-        backgroundColor: '#fff',
       }}>
         <View style={{ flex: 1 }}>
           <Text style={{ 
-            fontWeight: 'bold', 
-            fontSize: 16,
+            fontWeight: '700', 
+            fontSize: 18,
             color: '#1E293B',
           }}>
             Available Deals
           </Text>
           <Text style={{ 
-            fontSize: 11,
+            fontSize: 12,
             color: '#64748B', 
             marginTop: 2 
           }}>
@@ -5089,11 +5085,13 @@ const HistorySection = (
         <TouchableOpacity 
           onPress={() => setShowDealsModal(false)}
           style={{
-            padding: 4,
+            padding: 8,
+            backgroundColor: '#F1F5F9',
+            borderRadius: 20,
           }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="close" size={24} color="#64748B" />
+          <Ionicons name="close" size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
       
@@ -5102,7 +5100,7 @@ const HistorySection = (
         style={{ flex: 1 }}
         contentContainerStyle={{ 
           padding: 16,
-          paddingBottom: 8,
+          paddingBottom: 20,
         }}
         showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
@@ -5120,6 +5118,8 @@ const HistorySection = (
                 <TouchableOpacity
                   key={deal._id || `deal-${idx}`}
                   onPress={() => {
+                    console.log('Deal tapped:', deal.storeName, deal.price);
+                    
                     if (selectedPlannedItem) {
                       const updated = plannedExpenses.map(p => {
                         if (p.id === selectedPlannedItem.id) {
@@ -5145,180 +5145,183 @@ const HistorySection = (
                       savePlannedExpenses(updated);
                       setShowDealsModal(false);
                       
-                      Alert.alert(
-                        "✅ Deal Updated",
-                        `Now using ${deal.storeName} at ₱${deal.price?.toFixed(2) || '0.00'}`
-                      );
+                      // Use setTimeout to ensure modal closes first
+                      setTimeout(() => {
+                        Alert.alert(
+                          "✅ Deal Updated",
+                          `Now using ${deal.storeName} at ₱${deal.price?.toFixed(2) || '0.00'}`
+                        );
+                      }, 300);
                     }
                   }}
                   style={{
                     backgroundColor: isCurrentSelection ? '#EFF6FF' : (isLowest ? '#F0FDF4' : '#fff'),
-                    borderRadius: 12,
-                    padding: 12,
-                    marginBottom: 8,
+                    borderRadius: 16,
+                    padding: 14,
+                    marginBottom: 12,
                     borderWidth: isCurrentSelection ? 2 : 1,
                     borderColor: isCurrentSelection ? '#2563EB' : (isLowest ? '#16A34A' : '#E5E7EB'),
-                    elevation: 2,
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
+                    shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.1,
-                    shadowRadius: 2,
+                    shadowRadius: 4,
+                    elevation: 3,
                   }}
                   activeOpacity={0.7}
                 >
-                  {/* Top Row: Item Info & Price */}
+                  {/* Deal Content */}
                   <View style={{ 
                     flexDirection: 'row', 
                     justifyContent: 'space-between', 
                     alignItems: 'flex-start',
-                    marginBottom: 8,
                   }}>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
                       <Text style={{ 
-                        fontSize: 14, 
+                        fontSize: 15, 
                         fontWeight: '600', 
                         color: '#1E293B',
-                        marginBottom: 4,
+                        marginBottom: 6,
                       }}>
                         {deal.itemName || 'Unknown Item'}
                       </Text>
+                      
                       <View style={{ 
                         flexDirection: 'row', 
                         alignItems: 'center',
-                        marginBottom: 2,
+                        marginBottom: 4,
                       }}>
-                        <Ionicons name="storefront-outline" size={12} color="#6B7280" />
+                        <Ionicons name="storefront-outline" size={14} color="#6B7280" />
                         <Text style={{ 
-                          fontSize: 12, 
+                          fontSize: 13, 
                           color: '#6B7280', 
-                          marginLeft: 4,
+                          marginLeft: 6,
                         }}>
                           {deal.storeName || 'Unknown Store'}
                         </Text>
                       </View>
+                      
                       {deal.distance && (
                         <View style={{ 
                           flexDirection: 'row', 
                           alignItems: 'center',
-                          marginTop: 2,
                         }}>
-                          <Ionicons name="location-outline" size={11} color="#9CA3AF" />
-                          <Text style={{ fontSize: 11, color: '#6B7280', marginLeft: 2 }}>
+                          <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                          <Text style={{ fontSize: 12, color: '#6B7280', marginLeft: 4 }}>
                             {(deal.distance / 1000).toFixed(2)} km away
                           </Text>
                         </View>
+                      )}
+                      
+                      {deal.unit && (
+                        <Text style={{ 
+                          fontSize: 11, 
+                          color: '#9CA3AF',
+                          marginTop: 4,
+                        }}>
+                          Unit: {deal.unit}
+                        </Text>
                       )}
                     </View>
                     
                     {/* Price & Badges */}
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={{ 
-                        fontSize: 16, 
+                        fontSize: 18, 
                         fontWeight: '700', 
                         color: isCurrentSelection ? '#2563EB' : (isLowest ? '#16A34A' : '#1E293B'),
-                        marginBottom: 4,
+                        marginBottom: 8,
                       }}>
                         ₱{deal.price?.toFixed(2) || '0.00'}
                       </Text>
                       
-                      {/* Lowest Badge */}
-                      {isLowest && !isCurrentSelection && (
+                      {/* Badges Container */}
+                      <View style={{ gap: 4, alignItems: 'flex-end' }}>
+                        {/* Lowest Badge */}
+                        {isLowest && !isCurrentSelection && (
+                          <View style={{
+                            backgroundColor: '#16A34A',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}>
+                            <Ionicons name="star" size={10} color="#fff" />
+                            <Text style={{ 
+                              color: '#fff', 
+                              fontSize: 10, 
+                              fontWeight: '700',
+                              marginLeft: 3,
+                            }}>
+                              Lowest
+                            </Text>
+                          </View>
+                        )}
+                        
+                        {/* Selected Badge */}
+                        {isCurrentSelection && (
+                          <View style={{
+                            backgroundColor: '#2563EB',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}>
+                            <Ionicons name="checkmark-circle" size={10} color="#fff" />
+                            <Text style={{ 
+                              color: '#fff', 
+                              fontSize: 10, 
+                              fontWeight: '700',
+                              marginLeft: 3,
+                            }}>
+                              Selected
+                            </Text>
+                          </View>
+                        )}
+                        
+                        {/* Stock Badge */}
                         <View style={{
-                          backgroundColor: '#16A34A',
+                          backgroundColor: deal.stock ? '#DCFCE7' : '#FEE2E2',
+                          borderWidth: 1,
+                          borderColor: deal.stock ? '#BBF7D0' : '#FECACA',
+                          borderRadius: 6,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
                           flexDirection: 'row',
                           alignItems: 'center',
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          borderRadius: 6,
-                          marginBottom: 2,
                         }}>
-                          <Ionicons name="star" size={9} color="#fff" />
-                          <Text style={{ 
-                            color: '#fff', 
-                            fontSize: 9, 
-                            fontWeight: '700',
-                            marginLeft: 2,
+                          <Ionicons 
+                            name={deal.stock ? "checkmark-circle" : "close-circle"} 
+                            size={10} 
+                            color={deal.stock ? "#16A34A" : "#DC2626"} 
+                          />
+                          <Text style={{
+                            fontSize: 10,
+                            fontWeight: '600',
+                            color: deal.stock ? '#16A34A' : '#DC2626',
+                            marginLeft: 3,
                           }}>
-                            Lowest
+                            {deal.stock ? 'In Stock' : 'Out of Stock'}
                           </Text>
                         </View>
-                      )}
-                      
-                      {/* Selected Badge */}
-                      {isCurrentSelection && (
-                        <View style={{
-                          backgroundColor: '#2563EB',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          borderRadius: 6,
-                          marginBottom: 2,
-                        }}>
-                          <Ionicons name="checkmark-circle" size={10} color="#fff" />
-                          <Text style={{ 
-                            color: '#fff', 
-                            fontSize: 9, 
-                            fontWeight: '700',
-                            marginLeft: 2,
-                          }}>
-                            Selected
-                          </Text>
-                        </View>
-                      )}
-                      
-                      {/* Stock Badge */}
-                      <View style={{
-                        backgroundColor: deal.stock ? '#DCFCE7' : '#FEE2E2',
-                        borderWidth: 1,
-                        borderColor: deal.stock ? '#BBF7D0' : '#FECACA',
-                        borderRadius: 6,
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                      }}>
-                        <Ionicons 
-                          name={deal.stock ? "checkmark-circle" : "close-circle"} 
-                          size={9} 
-                          color={deal.stock ? "#16A34A" : "#DC2626"} 
-                        />
-                        <Text style={{
-                          fontSize: 9,
-                          fontWeight: '600',
-                          color: deal.stock ? '#16A34A' : '#DC2626',
-                          marginLeft: 2,
-                        }}>
-                          {deal.stock ? 'In Stock' : 'Out of Stock'}
-                        </Text>
                       </View>
                     </View>
                   </View>
-                  
-                  {/* Unit */}
-                  {deal.unit && (
-                    <Text style={{ 
-                      fontSize: 11, 
-                      color: '#9CA3AF',
-                      marginTop: 4,
-                    }}>
-                      Unit: {deal.unit}
-                    </Text>
-                  )}
                 </TouchableOpacity>
               );
             })
         ) : (
           <View style={{ 
-            padding: 40, 
+            padding: 60, 
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            <Ionicons name="cart-outline" size={48} color="#CBD5E1" />
+            <Ionicons name="cart-outline" size={56} color="#CBD5E1" />
             <Text style={{ 
               color: '#64748B', 
-              fontSize: 14,
-              marginTop: 12,
+              fontSize: 15,
+              marginTop: 16,
               textAlign: 'center',
             }}>
               No deals available
@@ -5326,32 +5329,124 @@ const HistorySection = (
           </View>
         )}
       </ScrollView>
-      
-      {/* Close Button */}
-      <View style={{ 
-        padding: 16, 
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
+    </View>
+  </View>
+</Modal>
+
+<Modal
+  visible={showPlannedModal && !categoryModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowPlannedModal(false)}
+>
+  <Pressable 
+    style={styles.modalOverlay}
+    onPress={() => setShowPlannedModal(false)}
+  >
+    <Pressable 
+      style={[
+        styles.modalContainer, 
+        { 
+          maxWidth: isMobile ? '90%' : 420,
+          padding: isMobile ? 16 : 26,
+          maxHeight: isMobile ? '75%' : '85%',  
+        }
+      ]} 
+      onPress={() => {}}
+    >
+      <Text style={{ 
+        fontWeight: 'bold', 
+        fontSize: isMobile ? 16 : 18,  
+        marginBottom: isMobile ? 10 : 12  
       }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#94A3B8',
-            borderRadius: 12,
-            paddingVertical: 12,
-            alignItems: 'center',
-          }}
-          onPress={() => setShowDealsModal(false)}
-        >
-          <Text style={{ 
-            color: '#fff', 
-            fontWeight: '600',
-            fontSize: 14,
-          }}>
-            Close
+        Add Planned Expense
+      </Text>
+      
+      <TextInput
+        placeholder="Item name (e.g., Rent, Pancit Canton)"
+        value={newPlannedName}
+        onChangeText={setNewPlannedName}
+        style={[styles.input, { marginBottom: isMobile ? 10 : 14 }]} 
+      />
+      
+      <TextInput
+        placeholder="Estimated amount"
+        value={newPlannedAmount}
+        onChangeText={setNewPlannedAmount}
+        keyboardType="numeric"
+        style={[styles.input, { marginBottom: isMobile ? 10 : 14 }]}  
+      />
+      
+    <TouchableOpacity
+  style={[styles.input, { justifyContent: 'center', marginBottom: isMobile ? 10 : 14 }]} 
+  onPress={() => {
+    setExpenseCategory(newPlannedCategory);
+    setCategoryCallerModal('planned');
+    setCategoryModalVisible(true);
+  }}
+>
+  <Text style={{ 
+    color: newPlannedCategory === 'Select Category' ? '#64748B' : '#1E293B',
+    fontSize: isMobile ? 14 : 16,  
+  }}>
+    {newPlannedCategory}
+  </Text>
+</TouchableOpacity>
+      
+      <TouchableOpacity
+        style={styles.recurringToggle}
+        onPress={() => setNewPlannedRecurring(!newPlannedRecurring)}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons 
+            name="repeat" 
+            size={isMobile ? 16 : 18}  
+            style={{ marginRight: 8 }} 
+          />
+          <Text style={{ fontSize: isMobile ? 13 : 14, color: '#1E293B' }}>  
+            Recurring (Monthly)
           </Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+        <View style={[
+          styles.checkbox, 
+          newPlannedRecurring && styles.checkboxActive,
+          isMobile && { width: 20, height: 20 } 
+        ]}>
+          {newPlannedRecurring && <Ionicons name="checkmark" size={isMobile ? 14 : 16} color="#fff" />}  
+        </View>
+      </TouchableOpacity>
+      
+     
+      
+     <TouchableOpacity
+        style={[
+          styles.submitButton, 
+          { 
+            backgroundColor: '#2563EB', 
+            marginBottom: isMobile ? 6 : 8, 
+            paddingVertical: isMobile ? 12 : 14,  
+          }
+        ]}
+        onPress={handleAddPlannedExpense}
+        disabled={searchingMarketplace}
+      >
+        <Text style={[styles.submitText, { fontSize: isMobile ? 13 : 14 }]}>  
+          {searchingMarketplace ? 'Searching Marketplace...' : 'Add Planned Expense'}
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={[
+          styles.submitButton, 
+          { 
+            backgroundColor: '#94A3B8',
+            paddingVertical: isMobile ? 12 : 14,  
+          }
+        ]}
+        onPress={() => setShowPlannedModal(false)}
+      >
+        <Text style={[styles.submitText, { fontSize: isMobile ? 13 : 14 }]}>Cancel</Text>  
+      </TouchableOpacity>
     </Pressable>
   </Pressable>
 </Modal>
