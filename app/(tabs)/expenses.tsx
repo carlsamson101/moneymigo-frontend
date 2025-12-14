@@ -5037,21 +5037,27 @@ const HistorySection = (
   animationType="slide"
   onRequestClose={() => setShowDealsModal(false)}
 >
-  <View style={{
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 16,
-  }}>
-    <View style={{
-      backgroundColor: '#fff',
-      borderRadius: 20,
-      width: '100%',
-      maxWidth: isMobile ? 360 : 480,
-      maxHeight: '80%',
-      overflow: 'hidden',
-    }}>
+  <Pressable
+    style={{
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: 16,
+    }}
+    onPress={() => setShowDealsModal(false)}
+  >
+    <Pressable
+      onPress={(e) => e.stopPropagation()}
+      style={{
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        width: '100%',
+        maxWidth: isMobile ? 360 : 480,
+        maxHeight: '80%',
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
       <View style={{ 
         flexDirection: 'row', 
@@ -5084,6 +5090,7 @@ const HistorySection = (
           style={{
             padding: 4,
           }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="close" size={24} color="#64748B" />
         </TouchableOpacity>
@@ -5097,6 +5104,7 @@ const HistorySection = (
           paddingBottom: 8,
         }}
         showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
       >
         {selectedPlannedDeals && selectedPlannedDeals.length > 0 ? (
           selectedPlannedDeals
