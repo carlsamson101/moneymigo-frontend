@@ -75,7 +75,6 @@ type StoreData = {
   storeName: string;
   itemCount: number;
   items: Item[];
-  location?: string;
 };
 
 export default function AdminDealsPage() {
@@ -107,6 +106,7 @@ const pathname = usePathname();
   const [availableStores, setAvailableStores] = useState<string[]>([]);
 const [newCategory, setNewCategory] = useState("other");
 const [editStock, setEditStock] = useState(true);
+const [allStoresCount, setAllStoresCount] = useState(0); // ✅ ADD THIS LINE
 
 useEffect(() => {
   checkAdminAuth();
@@ -115,11 +115,17 @@ useEffect(() => {
 const fetchItems = async () => {
   setLoading(true);
   try {
-    const res = await api.get("/storeItems");
-    setItems(res.data);
+    // ✅ Fetch both items and stores
+    const [itemsRes, storesRes] = await Promise.all([
+      api.get("/storeItems"),
+      api.get("/admin/stores")
+    ]);
     
-    // ✅ Extract unique store names
-    const uniqueStores = [...new Set(res.data.map((item: Item) => item.storeName))];
+    setItems(itemsRes.data);
+    setAllStoresCount(storesRes.data.length); // ✅ Set total store count
+    
+    // Extract unique store names for dropdown
+    const uniqueStores = [...new Set(itemsRes.data.map((item: Item) => item.storeName))];
     setAvailableStores(uniqueStores);
   } catch (err) {
     console.error("❌ Fetch error:", err);
@@ -179,32 +185,32 @@ stock: editStock,
 
 // Group ALL items by store first (for accurate stats)
   const allStoreGroups: StoreData[] = Object.values(
-    items.reduce((acc: any, item) => {
-      if (!acc[item.storeName]) {
-        acc[item.storeName] = {
-          storeName: item.storeName,
-          itemCount: 0,
-          items: [],
-          location: "Downtown", // You can add actual location data from API
-        };
-      }
-      acc[item.storeName].items.push(item);
-      acc[item.storeName].itemCount = acc[item.storeName].items.length;
-      return acc;
-    }, {})
-  );
+  items.reduce((acc: any, item) => {
+    if (!acc[item.storeName]) {
+      acc[item.storeName] = {
+        storeName: item.storeName,
+        itemCount: 0,
+        items: [],
+        location: "Downtown",
+      };
+    }
+    acc[item.storeName].items.push(item);
+    acc[item.storeName].itemCount = acc[item.storeName].items.length;
+    return acc;
+  }, {})
+);
 
   // Then filter for display if search query exists
   const searchQuery = query.toLowerCase();
-  const storeGroups = query.trim() 
-    ? allStoreGroups.filter(store => 
-        store.storeName.toLowerCase().includes(searchQuery) ||
-        store.items.some(item => item.itemName.toLowerCase().includes(searchQuery))
-      )
-    : allStoreGroups;
+const storeGroups = query.trim() 
+  ? allStoreGroups.filter(store => 
+      store.storeName.toLowerCase().includes(searchQuery) ||
+      store.items.some(item => item.itemName.toLowerCase().includes(searchQuery))
+    )
+  : allStoreGroups;
 
-  const totalStores = allStoreGroups.length; // Use unfiltered count
-  const totalItems = items.length;
+const totalStores = allStoresCount; // ✅ Use actual store count from API
+const totalItems = items.length;
 
  const addItem = async () => {
   if (!newStoreName || !newItemName || !newPrice || !newUnit || !newCategory) {
@@ -479,9 +485,6 @@ stock: editStock,
                       </View>
                       <View style={styles.storeInfo}>
                         <Text style={styles.storeName}>{store.storeName}</Text>
-                        <View style={styles.locationRow}>
-                          <Ionicons name="location" size={14} color="#64748B" />
-                          <Text style={styles.storeLocation}>{store.location}</Text>
                         </View>
                       </View>
                     </View>
@@ -1256,11 +1259,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: -0.5,
   },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  
   storeLocation: {
     fontSize: 14,
     color: "#64748B",
