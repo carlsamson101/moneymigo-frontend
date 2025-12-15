@@ -17,7 +17,7 @@ import {
   Dimensions,
   StatusBar,
   KeyboardAvoidingView,
-  Modal,
+   Modal, 
   Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -791,7 +791,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const renderEditForm = () => {
+ const renderEditForm = () => {
   if (!editing) return null;
 
   return (
@@ -801,132 +801,135 @@ export default function ProfileScreen() {
       transparent={true}
       onRequestClose={handleCancelEdit}
     >
-      <View style={styles.modalBackdrop}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalKeyboardView}
-        >
-          <View style={styles.formOverlay}>
-            <View style={styles.formContent}>
-              <View style={styles.formHeader}>
-                <View style={styles.formTitleContainer}>
-                  <View style={styles.formIconContainer}>
-                    <LinearGradient
-                      colors={['#1f4b81ff', '#7fb1d6ff']}
-                      style={styles.formIconGradient}
-                    >
-                      <Ionicons name="person-outline" size={20} color="#fff" />
-                    </LinearGradient>
-                  </View>
-                  <Text style={styles.formTitle}>Edit Profile</Text>
-                </View>
-                <TouchableOpacity onPress={handleCancelEdit} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#64748b" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>
-                    First Name <Text style={styles.required}>*</Text>
-                  </Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="person-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.firstName}
-                      onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
-                      placeholder="Enter your first name"
-                      placeholderTextColor="#9ca3af"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Last Name</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="person-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.lastName}
-                      onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
-                      placeholder="Enter your last name"
-                      placeholderTextColor="#9ca3af"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Username</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="at" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.username}
-                      onChangeText={(text) => setFormData(prev => ({ ...prev, username: text }))}
-                      placeholder="Choose a username"
-                      placeholderTextColor="#9ca3af"
-                      autoCapitalize="none"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Avatar URL</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="image-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.avatarUrl}
-                      onChangeText={(text) => setFormData(prev => ({ ...prev, avatarUrl: text }))}
-                      placeholder="https://example.com/avatar.jpg"
-                      placeholderTextColor="#9ca3af"
-                      autoCapitalize="none"
-                      keyboardType="url"
-                    />
-                  </View>
-                </View>
-              </ScrollView>
-
-              <View style={styles.formActions}>
-                <TouchableOpacity 
-                  style={[styles.formButton, styles.cancelButton]} 
-                  onPress={handleCancelEdit}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.formButton, styles.saveButton]} 
-                  onPress={handleSaveProfile}
-                  disabled={saving}
-                  activeOpacity={0.8}
-                >
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.modalFormContainer}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={handleCancelEdit}
+          />
+          
+          <View style={styles.modalFormContent}>
+            <View style={styles.formHeader}>
+              <View style={styles.formTitleContainer}>
+                <View style={styles.formIconContainer}>
                   <LinearGradient
-                    colors={saving ? ['#9ca3af', '#9ca3af'] : ['#1f4b81ff', '#7fb1d6ff']}
-                    style={styles.saveButtonGradient}
+                    colors={['#1f4b81ff', '#7fb1d6ff']}
+                    style={styles.formIconGradient}
                   >
-                    {saving ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="checkmark" size={18} color="#fff" />
-                        <Text style={styles.saveButtonText}>Save Changes</Text>
-                      </>
-                    )}
+                    <Ionicons name="person-outline" size={20} color="#fff" />
                   </LinearGradient>
-                </TouchableOpacity>
+                </View>
+                <Text style={styles.formTitle}>Edit Profile</Text>
               </View>
+              <TouchableOpacity onPress={handleCancelEdit} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>
+                  First Name <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={formData.firstName}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
+                    placeholder="Enter your first name"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Last Name</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={formData.lastName}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
+                    placeholder="Enter your last name"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Username</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="at" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={formData.username}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, username: text }))}
+                    placeholder="Choose a username"
+                    placeholderTextColor="#9ca3af"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Avatar URL</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="image-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={formData.avatarUrl}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, avatarUrl: text }))}
+                    placeholder="https://example.com/avatar.jpg"
+                    placeholderTextColor="#9ca3af"
+                    autoCapitalize="none"
+                    keyboardType="url"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.formActions}>
+              <TouchableOpacity 
+                style={[styles.formButton, styles.cancelButton]} 
+                onPress={handleCancelEdit}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.formButton, styles.saveButton]} 
+                onPress={handleSaveProfile}
+                disabled={saving}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={saving ? ['#9ca3af', '#9ca3af'] : ['#1f4b81ff', '#7fb1d6ff']}
+                  style={styles.saveButtonGradient}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveButtonText}>Save Changes</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
- // WITH THIS:
-const renderPinForm = () => {
+ const renderPinForm = () => {
   if (!changingPin) return null;
 
   return (
@@ -936,116 +939,120 @@ const renderPinForm = () => {
       transparent={true}
       onRequestClose={handleCancelPinChange}
     >
-      <View style={styles.modalBackdrop}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalKeyboardView}
-        >
-          <View style={styles.formOverlay}>
-            <View style={styles.formContent}>
-              <View style={styles.formHeader}>
-                <View style={styles.formTitleContainer}>
-                  <View style={styles.formIconContainer}>
-                    <LinearGradient
-                      colors={['#f59e0b', '#d97706']}
-                      style={styles.formIconGradient}
-                    >
-                      <Ionicons name="key-outline" size={20} color="#fff" />
-                    </LinearGradient>
-                  </View>
-                  <Text style={styles.formTitle}>Change PIN</Text>
-                </View>
-                <TouchableOpacity onPress={handleCancelPinChange} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#64748b" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Current PIN</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="lock-closed-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={pinData.oldPin}
-                      onChangeText={(text) => setPinData(prev => ({ ...prev, oldPin: text }))}
-                      placeholder="Enter current PIN"
-                      placeholderTextColor="#9ca3af"
-                      secureTextEntry
-                      keyboardType="numeric"
-                      maxLength={6}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>New PIN</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="key-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={pinData.newPin}
-                      onChangeText={(text) => setPinData(prev => ({ ...prev, newPin: text }))}
-                      placeholder="Enter new 6-digit PIN"
-                      placeholderTextColor="#9ca3af"
-                      secureTextEntry
-                      keyboardType="numeric"
-                      maxLength={6}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Confirm New PIN</Text>
-                  <View style={styles.inputWrapper}>
-                    <Ionicons name="checkmark-circle-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={pinData.confirmPin}
-                      onChangeText={(text) => setPinData(prev => ({ ...prev, confirmPin: text }))}
-                      placeholder="Confirm new PIN"
-                      placeholderTextColor="#9ca3af"
-                      secureTextEntry
-                      keyboardType="numeric"
-                      maxLength={6}
-                    />
-                  </View>
-                </View>
-              </ScrollView>
-
-              <View style={styles.formActions}>
-                <TouchableOpacity 
-                  style={[styles.formButton, styles.cancelButton]} 
-                  onPress={handleCancelPinChange}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.formButton, styles.saveButton]} 
-                  onPress={handleChangePin}
-                  disabled={saving}
-                  activeOpacity={0.8}
-                >
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.modalFormContainer}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={handleCancelPinChange}
+          />
+          
+          <View style={styles.modalFormContent}>
+            <View style={styles.formHeader}>
+              <View style={styles.formTitleContainer}>
+                <View style={styles.formIconContainer}>
                   <LinearGradient
-                    colors={saving ? ['#9ca3af', '#9ca3af'] : ['#f59e0b', '#d97706']}
-                    style={styles.saveButtonGradient}
+                    colors={['#f59e0b', '#d97706']}
+                    style={styles.formIconGradient}
                   >
-                    {saving ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="shield-checkmark" size={18} color="#fff" />
-                        <Text style={styles.saveButtonText}>Update PIN</Text>
-                      </>
-                    )}
+                    <Ionicons name="key-outline" size={20} color="#fff" />
                   </LinearGradient>
-                </TouchableOpacity>
+                </View>
+                <Text style={styles.formTitle}>Change PIN</Text>
               </View>
+              <TouchableOpacity onPress={handleCancelPinChange} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Current PIN</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="lock-closed-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={pinData.oldPin}
+                    onChangeText={(text) => setPinData(prev => ({ ...prev, oldPin: text }))}
+                    placeholder="Enter current PIN"
+                    placeholderTextColor="#9ca3af"
+                    secureTextEntry
+                    keyboardType="numeric"
+                    maxLength={6}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>New PIN</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="key-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={pinData.newPin}
+                    onChangeText={(text) => setPinData(prev => ({ ...prev, newPin: text }))}
+                    placeholder="Enter new 6-digit PIN"
+                    placeholderTextColor="#9ca3af"
+                    secureTextEntry
+                    keyboardType="numeric"
+                    maxLength={6}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Confirm New PIN</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="checkmark-circle-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={pinData.confirmPin}
+                    onChangeText={(text) => setPinData(prev => ({ ...prev, confirmPin: text }))}
+                    placeholder="Confirm new PIN"
+                    placeholderTextColor="#9ca3af"
+                    secureTextEntry
+                    keyboardType="numeric"
+                    maxLength={6}
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.formActions}>
+              <TouchableOpacity 
+                style={[styles.formButton, styles.cancelButton]} 
+                onPress={handleCancelPinChange}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.formButton, styles.saveButton]} 
+                onPress={handleChangePin}
+                disabled={saving}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={saving ? ['#9ca3af', '#9ca3af'] : ['#f59e0b', '#d97706']}
+                  style={styles.saveButtonGradient}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveButtonText}>Update PIN</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+           </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -1415,14 +1422,16 @@ const styles = StyleSheet.create({
     color: "#64748b",
     fontWeight: "500",
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+  formContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
-  },
-  modalKeyboardView: {
-    flex: 1,
-    justifyContent: "flex-end",
+    alignItems: "center",
+    zIndex: 9999,
   },
   formOverlay: {
     width: "100%",
@@ -1720,19 +1729,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  modalFormContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  paddingHorizontal: 20,
+},
+modalBackdrop: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+},
+modalFormContent: {
+  width: '100%',
+  maxWidth: 500,
+  backgroundColor: '#fff',
+  borderRadius: 24,
+  maxHeight: '80%',
+  overflow: 'hidden',
+  elevation: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 12,
+},
 });
 
-if (Platform.OS === "ios" || Platform.OS === "android") {
-  Object.assign(styles, {
-    formContainer: {
-      ...styles.formContainer,
-      justifyContent: "flex-end",
-    },
-    formOverlay: {
-      ...styles.formOverlay,
-      maxHeight: "65%",
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-    },
-  });
-}

@@ -177,15 +177,14 @@ stock: editStock,
     d.itemName.toLowerCase().includes(q) || d.storeName.toLowerCase().includes(q)
   );
 
-  // Group items by store
-  const storeGroups: StoreData[] = Object.values(
-    filtered.reduce((acc: any, item) => {
+// Group ALL items by store first (for accurate stats)
+  const allStoreGroups: StoreData[] = Object.values(
+    items.reduce((acc: any, item) => {
       if (!acc[item.storeName]) {
         acc[item.storeName] = {
           storeName: item.storeName,
           itemCount: 0,
           items: [],
-          location: "Downtown", // You can add actual location data from API
         };
       }
       acc[item.storeName].items.push(item);
@@ -194,7 +193,16 @@ stock: editStock,
     }, {})
   );
 
-  const totalStores = storeGroups.length;
+  // Then filter for display if search query exists
+  const q = query.toLowerCase();
+  const storeGroups = query.trim() 
+    ? allStoreGroups.filter(store => 
+        store.storeName.toLowerCase().includes(q) ||
+        store.items.some(item => item.itemName.toLowerCase().includes(q))
+      )
+    : allStoreGroups;
+
+  const totalStores = allStoreGroups.length; // Use unfiltered count
   const totalItems = items.length;
 
  const addItem = async () => {

@@ -5031,6 +5031,7 @@ const HistorySection = (
 </Modal>
 
 {/* View All Deals Modal - Fixed for Mobile */}
+{/* View All Deals Modal - Fixed Height for Mobile */}
 <Modal
   visible={showDealsModal}
   transparent
@@ -5039,22 +5040,30 @@ const HistorySection = (
 >
   <View style={{
     flex: 1,
+    justifyContent: 'flex-end', // ✅ Push to bottom
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   }}>
+    {/* Backdrop - tap to close */}
     <TouchableOpacity 
-      style={{ flex: 1 }} 
+      style={{ 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }} 
       activeOpacity={1} 
       onPress={() => setShowDealsModal(false)}
-    >
-      {/* Empty touchable for backdrop - closes modal */}
-    </TouchableOpacity>
+    />
     
+    {/* Modal Content */}
     <View style={{
       backgroundColor: '#fff',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
-      maxHeight: '80%',
-      paddingBottom: Platform.OS === 'ios' ? 34 : 0,
+      height: '75%', // ✅ Fixed height
+      maxHeight: 600, // ✅ Max height for larger screens
+      paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     }}>
       {/* Header */}
       <View style={{ 
@@ -5062,7 +5071,8 @@ const HistorySection = (
         justifyContent: 'space-between', 
         alignItems: 'center', 
         paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingTop: 20,
+        paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
       }}>
@@ -5118,7 +5128,7 @@ const HistorySection = (
                 <TouchableOpacity
                   key={deal._id || `deal-${idx}`}
                   onPress={() => {
-                    console.log('Deal tapped:', deal.storeName, deal.price);
+                    console.log('✅ Deal tapped:', deal.storeName, deal.price);
                     
                     if (selectedPlannedItem) {
                       const updated = plannedExpenses.map(p => {
@@ -5145,7 +5155,6 @@ const HistorySection = (
                       savePlannedExpenses(updated);
                       setShowDealsModal(false);
                       
-                      // Use setTimeout to ensure modal closes first
                       setTimeout(() => {
                         Alert.alert(
                           "✅ Deal Updated",
@@ -5175,6 +5184,7 @@ const HistorySection = (
                     justifyContent: 'space-between', 
                     alignItems: 'flex-start',
                   }}>
+                    {/* Left side - Store info */}
                     <View style={{ flex: 1, marginRight: 12 }}>
                       <Text style={{ 
                         fontSize: 15, 
@@ -5195,7 +5205,8 @@ const HistorySection = (
                           fontSize: 13, 
                           color: '#6B7280', 
                           marginLeft: 6,
-                        }}>
+                          flex: 1,
+                        }} numberOfLines={1}>
                           {deal.storeName || 'Unknown Store'}
                         </Text>
                       </View>
@@ -5204,10 +5215,11 @@ const HistorySection = (
                         <View style={{ 
                           flexDirection: 'row', 
                           alignItems: 'center',
+                          marginBottom: 2,
                         }}>
                           <Ionicons name="location-outline" size={12} color="#9CA3AF" />
                           <Text style={{ fontSize: 12, color: '#6B7280', marginLeft: 4 }}>
-                            {(deal.distance / 1000).toFixed(2)} km away
+                            {(deal.distance / 1000).toFixed(2)} km
                           </Text>
                         </View>
                       )}
@@ -5216,15 +5228,15 @@ const HistorySection = (
                         <Text style={{ 
                           fontSize: 11, 
                           color: '#9CA3AF',
-                          marginTop: 4,
+                          marginTop: 2,
                         }}>
-                          Unit: {deal.unit}
+                          {deal.unit}
                         </Text>
                       )}
                     </View>
                     
-                    {/* Price & Badges */}
-                    <View style={{ alignItems: 'flex-end' }}>
+                    {/* Right side - Price & Badges */}
+                    <View style={{ alignItems: 'flex-end', minWidth: 90 }}>
                       <Text style={{ 
                         fontSize: 18, 
                         fontWeight: '700', 
@@ -5234,9 +5246,9 @@ const HistorySection = (
                         ₱{deal.price?.toFixed(2) || '0.00'}
                       </Text>
                       
-                      {/* Badges Container */}
-                      <View style={{ gap: 4, alignItems: 'flex-end' }}>
-                        {/* Lowest Badge */}
+                      {/* Badges */}
+                      <View style={{ gap: 4, alignItems: 'flex-end', width: '100%' }}>
+                        {/* Lowest Price Badge */}
                         {isLowest && !isCurrentSelection && (
                           <View style={{
                             backgroundColor: '#16A34A',
@@ -5253,12 +5265,12 @@ const HistorySection = (
                               fontWeight: '700',
                               marginLeft: 3,
                             }}>
-                              Lowest
+                              Best Price
                             </Text>
                           </View>
                         )}
                         
-                        {/* Selected Badge */}
+                        {/* Currently Selected Badge */}
                         {isCurrentSelection && (
                           <View style={{
                             backgroundColor: '#2563EB',
@@ -5280,7 +5292,7 @@ const HistorySection = (
                           </View>
                         )}
                         
-                        {/* Stock Badge */}
+                        {/* Stock Status Badge */}
                         <View style={{
                           backgroundColor: deal.stock ? '#DCFCE7' : '#FEE2E2',
                           borderWidth: 1,
@@ -5302,7 +5314,7 @@ const HistorySection = (
                             color: deal.stock ? '#16A34A' : '#DC2626',
                             marginLeft: 3,
                           }}>
-                            {deal.stock ? 'In Stock' : 'Out of Stock'}
+                            {deal.stock ? 'In Stock' : 'Out'}
                           </Text>
                         </View>
                       </View>
