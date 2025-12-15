@@ -185,6 +185,7 @@ stock: editStock,
           storeName: item.storeName,
           itemCount: 0,
           items: [],
+          location: "Downtown", // You can add actual location data from API
         };
       }
       acc[item.storeName].items.push(item);
@@ -194,11 +195,11 @@ stock: editStock,
   );
 
   // Then filter for display if search query exists
-  const q = query.toLowerCase();
+  const searchQuery = query.toLowerCase();
   const storeGroups = query.trim() 
     ? allStoreGroups.filter(store => 
-        store.storeName.toLowerCase().includes(q) ||
-        store.items.some(item => item.itemName.toLowerCase().includes(q))
+        store.storeName.toLowerCase().includes(searchQuery) ||
+        store.items.some(item => item.itemName.toLowerCase().includes(searchQuery))
       )
     : allStoreGroups;
 
