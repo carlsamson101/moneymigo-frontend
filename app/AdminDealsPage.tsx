@@ -485,7 +485,7 @@ const totalItems = items.length;
                       </View>
                       <View style={styles.storeInfo}>
                         <Text style={styles.storeName}>{store.storeName}</Text>
-                        </View>
+                      
                       </View>
                     </View>
 
