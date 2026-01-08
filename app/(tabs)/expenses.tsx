@@ -3502,7 +3502,7 @@ const HistorySection = (
             }}
           />
         </View>
-
+</View>
 
       {/* Action Buttons */}
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
