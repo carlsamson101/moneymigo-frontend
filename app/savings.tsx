@@ -69,22 +69,30 @@ const showAlert = (title: string, message: string) => {
 
 // 🎨 Blue-compatible gradient palette - Harmonious with blue theme
 const gradients = [
-  ["#5b7fc9", "#3d5a9f"], // Royal Blue
-  ["#6b8dc7", "#4a6ba3"], // Azure Blue
-  ["#5a9bb5", "#3d7a94"], // Cerulean
-  ["#6b9dae", "#4d7d8e"], // Steel Blue-Gray
-  ["#7b93b8", "#5a7396"], // Slate Blue
-  ["#8fa3c4", "#6d82a1"], // Periwinkle Blue
+    ["#6B1C23", "#4A1217"], // Maroon
+  ["#F4B942", "#C9962F"], // Gold
+  ["#2C5F2D", "#1F4420"], // Forest Green
+  ["#1F4788", "#163363"], // Navy Blue
+  ["#8B4513", "#5F2F0D"], // Saddle Brown
+  ["#4A7C59", "#355A41"], // Sage Green
+  ["#5C4033", "#3E2B22"], // Coffee Brown
+  ["#6A5ACD", "#4A3FA1"], // Slate Blue
+  ["#CD853F", "#9F642F"], // Peru / Tan
+  ["#556B2F", "#3E4F22"], // Olive Green
 ];
 
 // 🎨 Blue-toned accent colors for circles and elements
 const accentColors = [
-  "#5b7fc9", // Royal Blue
-  "#6b8dc7", // Azure Blue
-  "#5a9bb5", // Cerulean
-  "#6b9dae", // Steel Blue-Gray
-  "#7b93b8", // Slate Blue
-  "#8fa3c4", // Periwinkle Blue
+  '#6B1C23', // Maroon (primary)
+  '#F4B942', // Gold (primary)
+  '#2C5F2D', // Forest green
+  '#1F4788', // Navy blue
+  '#8B4513', // Saddle brown
+  '#4A7C59', // Sage green
+  '#5C4033', // Coffee brown
+  '#6A5ACD', // Slate blue
+  '#CD853F', // Peru/tan
+  '#556B2F', // Olive green
 ];
 
 
@@ -563,21 +571,22 @@ const getCumulativeHistory = (goal) => {
       {/* Header */}
 {/* 🌊 Enhanced Header Section */}
 <LinearGradient
-  colors={['#1f4b81ff', '#7fb1d6ff']}
+   colors={['#6B1C23', '#8B2635']}
   start={{ x: 0, y: 0 }}
   end={{ x: 1, y: 1 }}
   style={styles.headerContainer}
 >
   {/* Navigation Row */}
   <View style={[styles.headerRow, Platform.OS === 'web' && styles.headerRowWeb]}>
-=      <TouchableOpacity
+    {Platform.OS == 'web' && (
+      <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
-        <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        <Ionicons name="arrow-back" size={24} color="#F4B942" />
       </TouchableOpacity>
-    
+    )}
     <Text style={styles.mainHeading}>Savings Goals</Text>
   </View>
 
@@ -1534,20 +1543,19 @@ const getCumulativeHistory = (goal) => {
         />
       )}
 
-      {/* Enhanced Floating Action Button */}
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <TouchableOpacity style={styles.fab} onPress={() => setShowAddGoalModal(true)}>
-  <LinearGradient
-    colors={['#1f4b81ff', '#7fb1d6ff']}  // 💙 Updated gradient
-    style={styles.fabGradient}
-  >
-    <Ionicons name="add" size={28} color="#fff" />
-  </LinearGradient>
-</TouchableOpacity>
+     {/* Enhanced Floating Action Button */}
+<Animated.View style={{ opacity: fadeAnim }}>
+  <TouchableOpacity style={styles.fab} onPress={() => setShowAddGoalModal(true)}>
+    <LinearGradient
+      colors={['#6B1C23', '#8B2A32']}  // 🎨 Maroon gradient
+      style={styles.fabGradient}
+    >
+      <Ionicons name="add" size={28} color="#F4B942" />
+    </LinearGradient>
+  </TouchableOpacity>
+</Animated.View>
 
-      </Animated.View>
-
-     {/* Add Goal Modal */}
+{/* Add Goal Modal */}
 <Modal visible={showAddGoalModal} transparent animationType="slide">
   <View style={styles.modalOverlay}>
     <Animated.View
@@ -1560,7 +1568,7 @@ const getCumulativeHistory = (goal) => {
       ]}
     >
       <LinearGradient
-        colors={["#6366f1", "#8b5cf6"]}
+        colors={["#6B1C23", "#8B2A32"]}
         style={styles.modalHeader}
       >
         <Text style={styles.modalHeaderText}>✨ Create New Goal</Text>
@@ -1609,51 +1617,50 @@ const getCumulativeHistory = (goal) => {
             }}
             style={[
               styles.input,
-              !lockAddEndDate && { color: "#f59e0b", fontWeight: "600" },
+              !lockAddEndDate && { color: "#6B1C23", fontWeight: "600" },
             ]}
             placeholderTextColor="#94a3b8"
           />
 
           {/* ✅ Singular/Plural toggle */}
-          {/* ✅ Singular/Plural toggle */}
-<View style={styles.unitRow}>
-  {[
-    { value: "days", singular: "day" },
-    { value: "weeks", singular: "week" },
-    { value: "months", singular: "month" }
-  ].map((unit) => {
-    const label = duration === "1" ? unit.singular : unit.value;
-    return (
-      <TouchableOpacity
-        key={unit.value}
-        style={[
-          styles.unitBtn,
-          durationUnit === unit.value && styles.unitBtnActive,
-        ]}
-        onPress={() => {
-          setDurationUnit(unit.value as any);
-          if (addStartDate && duration && lockAddEndDate) {
-            const start = new Date(addStartDate);
-            const newEnd = calculateEndDate(start, Number(duration), unit.value as any);
-            setAddEndDate(newEnd.toISOString().split("T")[0]);
-          }
-        }}
-      >
-       <Text
-  style={[
-    styles.unitText,
-    durationUnit === unit.value && styles.unitTextActive,
-  ]}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  minimumFontScale={0.8}
->
-  {label}
-</Text>
-      </TouchableOpacity>
-    );
-  })}
-</View>
+          <View style={styles.unitRow}>
+            {[
+              { value: "days", singular: "day" },
+              { value: "weeks", singular: "week" },
+              { value: "months", singular: "month" }
+            ].map((unit) => {
+              const label = duration === "1" ? unit.singular : unit.value;
+              return (
+                <TouchableOpacity
+                  key={unit.value}
+                  style={[
+                    styles.unitBtn,
+                    durationUnit === unit.value && styles.unitBtnActive,
+                  ]}
+                  onPress={() => {
+                    setDurationUnit(unit.value as any);
+                    if (addStartDate && duration && lockAddEndDate) {
+                      const start = new Date(addStartDate);
+                      const newEnd = calculateEndDate(start, Number(duration), unit.value as any);
+                      setAddEndDate(newEnd.toISOString().split("T")[0]);
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.unitText,
+                      durationUnit === unit.value && styles.unitTextActive,
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           {/* 📝 Notes */}
           <Text style={styles.label}>Notes (Optional)</Text>
@@ -1704,61 +1711,60 @@ const getCumulativeHistory = (goal) => {
           </View>
 
           {Platform.OS === "web" ? (
-  <input
-    type="date"
-    value={addEndDate}
-    readOnly={lockAddEndDate}
-    onChange={(e) => {
-      if (!lockAddEndDate) {
-        setAddEndDate(e.target.value);
-        const daysDiff = Math.ceil(
-          (new Date(e.target.value).getTime() - new Date(addStartDate).getTime()) /
-            (1000 * 60 * 60 * 24)
-        );
-        setDuration(daysDiff.toString());
-      }
-    }}
-    style={{
-      ...styles.webInput,
-      opacity: lockAddEndDate ? 0.6 : 1,
-    }}
-  />
-) : (
-  <>
-    <TouchableOpacity
-      onPress={() => {
-        if (!lockAddEndDate) setShowDatePicker(true);
-      }}
-      activeOpacity={0.7}
-      style={[
-        styles.input,
-        { backgroundColor: "#f3f4f6", justifyContent: "center" },
-      ]}
-    >
-      <Text style={{ color: "#374151" }}>
-        {addEndDate ? addEndDate : "Select End Date"}
-      </Text>
-    </TouchableOpacity>
+            <input
+              type="date"
+              value={addEndDate}
+              readOnly={lockAddEndDate}
+              onChange={(e) => {
+                if (!lockAddEndDate) {
+                  setAddEndDate(e.target.value);
+                  const daysDiff = Math.ceil(
+                    (new Date(e.target.value).getTime() - new Date(addStartDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  );
+                  setDuration(daysDiff.toString());
+                }
+              }}
+              style={{
+                ...styles.webInput,
+                opacity: lockAddEndDate ? 0.6 : 1,
+              }}
+            />
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!lockAddEndDate) setShowDatePicker(true);
+                }}
+                activeOpacity={0.7}
+                style={[
+                  styles.input,
+                  { backgroundColor: "#f3f4f6", justifyContent: "center" },
+                ]}
+              >
+                <Text style={{ color: "#374151" }}>
+                  {addEndDate ? addEndDate : "Select End Date"}
+                </Text>
+              </TouchableOpacity>
 
-    {showDatePicker && (
-      <DateTimePicker
-        value={addEndDate ? new Date(addEndDate) : new Date()}
-        mode="date"
-        display="default"
-        onChange={(e, date) => {
-          setShowDatePicker(false); // 👈 hide picker after choosing
-          if (!date || lockAddEndDate) return;
-          setAddEndDate(date.toISOString().split("T")[0]);
-          const daysDiff = Math.ceil(
-            (date.getTime() - new Date(addStartDate).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          setDuration(daysDiff.toString());
-        }}
-      />
-    )}
-  </>
-)}
-
+              {showDatePicker && (
+                <DateTimePicker
+                  value={addEndDate ? new Date(addEndDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(e, date) => {
+                    setShowDatePicker(false);
+                    if (!date || lockAddEndDate) return;
+                    setAddEndDate(date.toISOString().split("T")[0]);
+                    const daysDiff = Math.ceil(
+                      (date.getTime() - new Date(addStartDate).getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    setDuration(daysDiff.toString());
+                  }}
+                />
+              )}
+            </>
+          )}
 
           {/* 🧭 Action Buttons */}
           <View style={[styles.buttonRow, { marginTop: 20 }]}>
@@ -1771,7 +1777,7 @@ const getCumulativeHistory = (goal) => {
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleCreateGoal}>
               <LinearGradient
-                colors={["#6366f1", "#8b5cf6"]}
+                colors={["#6B1C23", "#8B2A32"]}
                 style={styles.saveBtnGradient}
               >
                 <Text style={styles.saveBtnText}>Create Goal</Text>
@@ -1784,83 +1790,183 @@ const getCumulativeHistory = (goal) => {
   </View>
 </Modal>
 
+{/* Add Savings Modal */}
+<Modal visible={showAddSavingsModal} transparent animationType="slide">
+  <View style={styles.addSavingsModalOverlay}>
+    <Animated.View
+      style={[
+        styles.addSavingsModalBox,
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: fadeAnim }],
+        }
+      ]}
+    >
+      <LinearGradient
+        colors={["#6B1C23", "#8B2A32"]}
+        style={styles.addSavingsModalHeader}
+      >
+        <Text style={styles.addSavingsModalHeaderText}>💰 Add Savings</Text>
+        <TouchableOpacity
+          onPress={() => {
+            setShowAddSavingsModal(false);
+            setSavingsAmount('');
+          }}
+          style={styles.addSavingsCloseButton}
+        >
+          <Text style={styles.addSavingsCloseButtonText}>✕</Text>
+        </TouchableOpacity>
+      </LinearGradient>
 
-      {/* Add Savings Modal */}
-      <Modal visible={showAddSavingsModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <Animated.View
-            style={[
-              styles.modalBox,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: fadeAnim }],
-              }
-            ]}
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Enhanced Goal Info Card */}
+        <View style={styles.addSavingsGoalCard}>
+          <View style={styles.addSavingsGoalHeader}>
+            <View style={styles.addSavingsGoalNameContainer}>
+              <Text style={styles.addSavingsGoalLabel}>SAVING FOR</Text>
+              <Text style={styles.addSavingsGoalName}>{selectedGoal?.name}</Text>
+            </View>
+            <View style={styles.addSavingsGoalBadge}>
+              <Text style={styles.addSavingsGoalBadgeText}>
+                {Math.min(
+                  Math.round(((selectedGoal?.savedAmount || 0) / (selectedGoal?.targetAmount || 1)) * 100),
+                  100
+                )}%
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.addSavingsAmountContainer}>
+            <View style={styles.addSavingsAmountRow}>
+              <Text style={styles.addSavingsLabel}>SAVED</Text>
+              <Text style={styles.addSavingsCurrentAmount}>
+                ₱{selectedGoal?.savedAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.addSavingsDivider} />
+            <View style={styles.addSavingsAmountRow}>
+              <Text style={styles.addSavingsLabel}>GOAL</Text>
+              <Text style={styles.addSavingsTargetAmount}>
+                ₱{selectedGoal?.targetAmount.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.addSavingsProgressBarContainer}>
+            <View style={styles.addSavingsProgressBarBackground}>
+              <LinearGradient
+                colors={["#F59E0B", "#F4B942"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[
+                  styles.addSavingsProgressBarFill,
+                  {
+                    width: `${Math.min(
+                      ((selectedGoal?.savedAmount || 0) / (selectedGoal?.targetAmount || 1)) * 100,
+                      100
+                    )}%`,
+                  }
+                ]}
+              />
+            </View>
+            <View style={styles.addSavingsRemainingContainer}>
+              <Text style={styles.addSavingsRemainingLabel}>Remaining</Text>
+              <Text style={styles.addSavingsRemainingAmount}>
+                ₱{((selectedGoal?.targetAmount || 0) - (selectedGoal?.savedAmount || 0)).toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Amount Input Section */}
+        <View style={styles.addSavingsInputSection}>
+          <Text style={styles.addSavingsInputLabel}>How much are you adding?</Text>
+          <View style={styles.addSavingsAmountInputWrapper}>
+            <Text style={styles.addSavingsCurrencySymbol}>₱</Text>
+            <TextInput
+              placeholder="0.00"
+              keyboardType="numeric"
+              value={savingsAmount}
+              onChangeText={setSavingsAmount}
+              style={styles.addSavingsAmountInput}
+              placeholderTextColor="#D1D5DB"
+              autoFocus
+            />
+          </View>
+
+          {/* Quick Amount Buttons */}
+          <View style={styles.addSavingsQuickAmountContainer}>
+            {[100, 500, 1000, 5000].map((amount) => (
+              <TouchableOpacity
+                key={amount}
+                style={styles.addSavingsQuickAmountBtn}
+                onPress={() => setSavingsAmount(amount.toString())}
+              >
+                <Text style={styles.addSavingsQuickAmountText}>+₱{amount}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {savingsAmount && Number(savingsAmount) > 0 && (
+            <Animated.View style={styles.addSavingsNewTotalPreview}>
+              <View style={styles.addSavingsPreviewLeft}>
+                <Text style={styles.addSavingsPreviewLabelSmall}>NEW TOTAL</Text>
+                <Text style={styles.addSavingsPreviewAmount}>
+                  ₱{((selectedGoal?.savedAmount || 0) + Number(savingsAmount)).toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.addSavingsPreviewRight}>
+                <View style={styles.addSavingsPreviewProgress}>
+                  <Text style={styles.addSavingsPreviewProgressText}>
+                    {Math.min(
+                      Math.round((((selectedGoal?.savedAmount || 0) + Number(savingsAmount)) / (selectedGoal?.targetAmount || 1)) * 100),
+                      100
+                    )}%
+                  </Text>
+                </View>
+                {((selectedGoal?.savedAmount || 0) + Number(savingsAmount)) >= (selectedGoal?.targetAmount || 1) && (
+                  <Text style={styles.addSavingsGoalCompleteText}>🎉 Goal Complete!</Text>
+                )}
+              </View>
+            </Animated.View>
+          )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.addSavingsButtonRow}>
+          <TouchableOpacity
+            style={styles.addSavingsCancelBtn}
+            onPress={() => {
+              setShowAddSavingsModal(false);
+              setSavingsAmount('');
+            }}
+          >
+            <Text style={styles.addSavingsCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.addSavingsSaveBtn, (!savingsAmount || Number(savingsAmount) <= 0) && styles.addSavingsSaveBtnDisabled]} 
+            onPress={handleAddSavings}
+            disabled={!savingsAmount || Number(savingsAmount) <= 0}
+            activeOpacity={0.8}
           >
             <LinearGradient
-              colors={["#059669", "#10b981"]}
-              style={styles.modalHeader}
+              colors={(!savingsAmount || Number(savingsAmount) <= 0) ? ["#9CA3AF", "#6B7280"] : ["#6B1C23", "#8B2A32"]}
+              style={styles.addSavingsSaveBtnGradient}
             >
-              <Text style={styles.modalHeaderText}>💰 Add Savings</Text>
+              <Text style={styles.addSavingsSaveBtnText}>Add to Savings</Text>
             </LinearGradient>
-
-            <View style={styles.modalContent}>
-              <View style={styles.goalInfoCard}>
-                <Text style={styles.goalInfoTitle}>{selectedGoal?.name}</Text>
-                <Text style={styles.goalInfoAmount}>
-                  ₱{selectedGoal?.savedAmount.toLocaleString()} / ₱{selectedGoal?.targetAmount.toLocaleString()}
-                </Text>
-                <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBarBackground}>
-                    <View
-                      style={[
-                        styles.progressBarFill,
-                        {
-                          width: `${Math.min(
-                            ((selectedGoal?.savedAmount || 0) / (selectedGoal?.targetAmount || 1)) * 100,
-                            100
-                          )}%`,
-                          backgroundColor: "#059669",
-                        }
-                      ]}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <Text style={styles.label}>Amount to Add</Text>
-              <TextInput
-                placeholder="₱0"
-                keyboardType="numeric"
-                value={savingsAmount}
-                onChangeText={setSavingsAmount}
-                style={styles.input}
-                placeholderTextColor="#94a3b8"
-              />
-
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowAddSavingsModal(false)}
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.saveBtn} onPress={handleAddSavings}>
-                  <LinearGradient
-                    colors={["#059669", "#10b981"]}
-                    style={styles.saveBtnGradient}
-                  >
-                    <Text style={styles.saveBtnText}>Add Savings</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </ScrollView>
+    </Animated.View>
+  </View>
+</Modal>
 
-     {/* Edit Goal Modal */}
+{/* Edit Goal Modal */}
 <Modal visible={showEditModal} transparent animationType="slide">
   <View style={styles.modalOverlay}>
     <Animated.View
@@ -1873,12 +1979,11 @@ const getCumulativeHistory = (goal) => {
       ]}
     >
       <LinearGradient
-        colors={["#f59e0b", "#f97316"]}
+        colors={["#F4B942", "#D4A02F"]}
         style={styles.modalHeader}
       >
-        <Text style={styles.modalHeaderText}>✏️ Edit Goal</Text>
+        <Text style={[styles.modalHeaderText, { color: "#6B1C23" }]}>✏️ Edit Goal</Text>
       </LinearGradient>
-
       {/* ✅ Added ScrollView wrapper */}
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
@@ -1893,7 +1998,6 @@ const getCumulativeHistory = (goal) => {
             style={styles.input}
             placeholderTextColor="#94a3b8"
           />
-
           <Text style={styles.label}>Target Amount</Text>
           <TextInput
             placeholder="₱0"
@@ -1903,7 +2007,6 @@ const getCumulativeHistory = (goal) => {
             style={styles.input}
             placeholderTextColor="#94a3b8"
           />
-
           <Text style={styles.label}>Duration</Text>
           <TextInput
             placeholder="e.g. 30"
@@ -1920,11 +2023,10 @@ const getCumulativeHistory = (goal) => {
             }}
             style={[
               styles.input,
-              !lockEndDate && { color: "#f59e0b", fontWeight: "600" },
+              !lockEndDate && { color: "#6B1C23", fontWeight: "600" },
             ]}
             placeholderTextColor="#94a3b8"
           />
-
           <View style={styles.unitRow}>
             {[
               { value: "days", singular: "day" },
@@ -1960,7 +2062,6 @@ const getCumulativeHistory = (goal) => {
               );
             })}
           </View>
-
           <Text style={styles.label}>Notes</Text>
           <TextInput
             placeholder="Optional notes..."
@@ -1971,7 +2072,6 @@ const getCumulativeHistory = (goal) => {
             numberOfLines={3}
             placeholderTextColor="#94a3b8"
           />
-
           {/* Start Date (Read-only) */}
           <Text style={styles.label}>Start Date</Text>
           {Platform.OS === "web" ? (
@@ -1992,7 +2092,6 @@ const getCumulativeHistory = (goal) => {
               style={[styles.input, { backgroundColor: "#f3f4f6", color: "#6b7280" }]}
             />
           )}
-
           {/* End Date */}
           <View style={styles.rowBetween}>
             <Text style={styles.label}>End Date</Text>
@@ -2007,64 +2106,60 @@ const getCumulativeHistory = (goal) => {
               </Text>
             </TouchableOpacity>
           </View>
-
           {Platform.OS === "web" ? (
-  <input
-    type="date"
-    value={editEndDate}
-    disabled={lockEndDate}
-    onChange={(e) => {
-      if (!lockEndDate) {
-        setEditEndDate(e.target.value);
-        const daysDiff = Math.ceil(
-          (new Date(e.target.value).getTime() - new Date(editStartDate).getTime()) /
-            (1000 * 60 * 60 * 24)
-        );
-        setDuration(daysDiff.toString());
-      }
-    }}
-    style={{
-      ...styles.webInput,
-      opacity: lockEndDate ? 0.6 : 1,
-    }}
-  />
-) : (
-  <>
-    <TouchableOpacity
-      onPress={() => {
-        if (!lockEndDate) setShowEditEndPicker(true);
-      }}
-      activeOpacity={0.7}
-      style={[
-        styles.input,
-        { backgroundColor: "#f3f4f6", justifyContent: "center" },
-      ]}
-    >
-      <Text style={{ color: "#374151" }}>
-        {editEndDate ? editEndDate : "Select End Date"}
-      </Text>
-    </TouchableOpacity>
-
-    {showEditEndPicker && (
-      <DateTimePicker
-        value={editEndDate ? new Date(editEndDate) : new Date()}
-        mode="date"
-        display="default"
-        onChange={(e, date) => {
-          setShowEditEndPicker(false);
-          if (!date || lockEndDate) return;
-          setEditEndDate(date.toISOString().split("T")[0]);
-          const daysDiff = Math.ceil(
-            (date.getTime() - new Date(editStartDate).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          setDuration(daysDiff.toString());
-        }}
-      />
-    )}
-  </>
-)}
-
-
+            <input
+              type="date"
+              value={editEndDate}
+              disabled={lockEndDate}
+              onChange={(e) => {
+                if (!lockEndDate) {
+                  setEditEndDate(e.target.value);
+                  const daysDiff = Math.ceil(
+                    (new Date(e.target.value).getTime() - new Date(editStartDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  );
+                  setDuration(daysDiff.toString());
+                }
+              }}
+              style={{
+                ...styles.webInput,
+                opacity: lockEndDate ? 0.6 : 1,
+              }}
+            />
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!lockEndDate) setShowEditEndPicker(true);
+                }}
+                activeOpacity={0.7}
+                style={[
+                  styles.input,
+                  { backgroundColor: "#f3f4f6", justifyContent: "center" },
+                ]}
+              >
+                <Text style={{ color: "#374151" }}>
+                  {editEndDate ? editEndDate : "Select End Date"}
+                </Text>
+              </TouchableOpacity>
+              {showEditEndPicker && (
+                <DateTimePicker
+                  value={editEndDate ? new Date(editEndDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(e, date) => {
+                    setShowEditEndPicker(false);
+                    if (!date || lockEndDate) return;
+                    setEditEndDate(date.toISOString().split("T")[0]);
+                    const daysDiff = Math.ceil(
+                      (date.getTime() - new Date(editStartDate).getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    setDuration(daysDiff.toString());
+                  }}
+                />
+              )}
+            </>
+          )}
           <View style={[styles.buttonRow, { marginTop: 20 }]}>
             <TouchableOpacity
               style={styles.cancelBtn}
@@ -2075,10 +2170,10 @@ const getCumulativeHistory = (goal) => {
             
             <TouchableOpacity style={styles.saveBtn} onPress={handleEditGoal}>
               <LinearGradient
-                colors={["#f59e0b", "#f97316"]}
+                colors={["#F4B942", "#D4A02F"]}
                 style={styles.saveBtnGradient}
               >
-                <Text style={styles.saveBtnText}>Update Goal</Text>
+                <Text style={[styles.saveBtnText, { color: "#6B1C23" }]}>Update Goal</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -2087,6 +2182,8 @@ const getCumulativeHistory = (goal) => {
     </Animated.View>
   </View>
 </Modal>
+
+
     </LinearGradient>
   );
 }
@@ -2096,8 +2193,23 @@ const styles = StyleSheet.create({
     flex: 1,
     // paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
+ closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
- header: {
+  closeButtonText: {
+    fontSize: 20,
+    color: "#F4B942",
+    fontWeight: "600",
+  },
+
+ 
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -2107,91 +2219,89 @@ const styles = StyleSheet.create({
   },
 
   headerContainer: {
-  paddingTop: Platform.OS === 'ios' ? 40 : 25,
-  paddingBottom: isSmallScreen ? 8 : 35, // Reduced from 15 to 8
-  paddingHorizontal: isSmallScreen ? 12 : 24,
-  borderBottomLeftRadius: 25,
-  borderBottomRightRadius: 25,
-},
+    paddingTop: Platform.OS === 'ios' ? 40 : 25,
+    paddingBottom: isSmallScreen ? 8 : 35,
+    paddingHorizontal: isSmallScreen ? 12 : 24,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+  },
 
-headerRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingHorizontal: isSmallScreen ? 16 : 24,
-  marginTop: Platform.OS === 'ios' ? (isSmallScreen ? 5 : 20) : (isSmallScreen ? 15 : 60), // Reduced mobile margins
-  marginBottom: isSmallScreen ? 4 : 10, // Reduced from 6 to 4
-},
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: isSmallScreen ? 16 : 24,
+    marginTop: Platform.OS === 'ios' ? (isSmallScreen ? 5 : 20) : (isSmallScreen ? 15 : 60),
+    marginBottom: isSmallScreen ? 4 : 10,
+  },
 
-mainHeading: {
-  fontSize: isSmallScreen ? 24 : 30, // Reduced from 22 to 20
-  fontWeight: '800',
-  color: '#ffffff',
-  textAlign: 'center',
-  letterSpacing: -0.5,
-},
+  mainHeading: {
+    fontSize: isSmallScreen ? 24 : 30,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
 
-subHeading: {
-  fontSize: isSmallScreen ? 12 : 16, // Reduced from 13 to 12
-  color: 'rgba(255, 255, 255, 0.85)',
-  textAlign: 'center',
-  marginBottom: isSmallScreen ? 2 : 15, // Reduced from 10 to 8
-  marginTop: isSmallScreen ? 10 : 15,
-  lineHeight: isSmallScreen ? 14 : 20, // Reduced from 16 to 14
-  paddingHorizontal: isSmallScreen ? 10 : 20,
-},
+  subHeading: {
+    fontSize: isSmallScreen ? 12 : 16,
+    color: 'rgba(255, 255, 255, 0.85)',
+    textAlign: 'center',
+    marginBottom: isSmallScreen ? 2 : 15,
+    marginTop: isSmallScreen ? 10 : 15,
+    lineHeight: isSmallScreen ? 14 : 20,
+    paddingHorizontal: isSmallScreen ? 10 : 20,
+  },
 
-totalSavedContainer: {
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginVertical: 5,
-  marginBottom: isSmallScreen ? 8 : 16, // Reduced from 10 to 8
-  
-},
+  totalSavedContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 5,
+    marginBottom: isSmallScreen ? 8 : 16,
+  },
 
-totalSavedLabel: {
-  fontSize: 16,
-  color: '#ffffffff',
-  fontWeight: '800',
-},
+  totalSavedLabel: {
+    fontSize: 16,
+    color: '#ffffffff',
+    fontWeight: '800',
+  },
 
-totalSavedValue: {
-  fontSize: 16,
-  color: '#ffffffff',
-  fontWeight: '600',
-},
+  totalSavedValue: {
+    fontSize: 16,
+    color: '#ffffffff',
+    fontWeight: '600',
+  },
 
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    paddingVertical: isSmallScreen ? 8 : 16,
+    paddingHorizontal: isSmallScreen ? 12 : 24,
+    alignSelf: 'center',
+  },
 
-statsRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  borderRadius: 20,
-  paddingVertical: isSmallScreen ? 8 : 16, // Reduced from 10 to 8
-  paddingHorizontal: isSmallScreen ? 12 : 24, // Reduced from 16 to 12
-  alignSelf: 'center',
-},
+  statNumber: {
+    fontSize: isSmallScreen ? 16 : 24,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: isSmallScreen ? 2 : 4,
+  },
 
-statNumber: {
-  fontSize: isSmallScreen ? 16 : 24, // Reduced from 18 to 16
-  fontWeight: '800',
-  color: '#ffffff',
-  marginBottom: isSmallScreen ? 2 : 4, // Reduced from 4 to 2
-},
+  statLabel: {
+    fontSize: isSmallScreen ? 9 : 12,
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
 
-statLabel: {
-  fontSize: isSmallScreen ? 9 : 12, // Reduced from 10 to 9
-  color: 'rgba(255, 255, 255, 0.75)',
-  fontWeight: '500',
-  textAlign: 'center',
-},
-
-statDivider: {
-  width: 1,
-  height: isSmallScreen ? 24 : 40, // Reduced from 30 to 24
-  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  marginHorizontal: isSmallScreen ? 4 : 10, // Reduced from 6 to 4
-},
+  statDivider: {
+    width: 1,
+    height: isSmallScreen ? 24 : 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: isSmallScreen ? 4 : 10,
+  },
 
   waveContainer: {
     position: 'absolute',
@@ -2217,7 +2327,7 @@ statDivider: {
   headerTitle: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#1e293b",
+    color: "#6B1C23",
     letterSpacing: -0.5,
   },
 
@@ -2241,34 +2351,37 @@ statDivider: {
     alignItems: "center",
     justifyContent: "center",
   },
-summaryCard: {
-  marginHorizontal: isWeb ? 20 : 16,  // 20px for web, 16px for mobile
-  borderRadius: 20,
-  padding: 0,
-  shadowColor: "#000",
-  shadowOpacity: 0.1,
-  shadowRadius: 10,
-  elevation: 8,
-  marginBottom: isWeb ? 24 : 20,  // 24px for web, 20px for mobile
-},
-summaryContent: {
-  padding: isWeb ? 24 : 20,  // 24px for web, 20px for mobile
-  alignItems: "center",
-},
 
-summaryAmount: {
-  fontSize: isWeb ? 42 : 36,  // 42px for web, 36px for mobile
-  fontWeight: "800",
-  color: "#ffffff",
-  marginBottom: isWeb ? 20 : 16,  // 20px for web, 16px for mobile
-  letterSpacing: -1,
-},
+  summaryCard: {
+    marginHorizontal: isWeb ? 20 : 16,
+    borderRadius: 20,
+    padding: 0,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+    marginBottom: isWeb ? 24 : 20,
+  },
+
+  summaryContent: {
+    padding: isWeb ? 24 : 20,
+    alignItems: "center",
+  },
+
+  summaryAmount: {
+    fontSize: isWeb ? 42 : 36,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: isWeb ? 20 : 16,
+    letterSpacing: -1,
+  },
 
   summaryLabel: {
     fontSize: 16,
-    color: "#cbd5e1",
+    color: "#ffffff",
     marginBottom: 8,
     fontWeight: "500",
+    opacity: 0.9,
   },
 
   summaryStats: {
@@ -2287,18 +2400,6 @@ summaryAmount: {
     color: "#ffffff",
   },
 
-  statLabel: {
-    fontSize: 14,
-    color: "#cbd5e1",
-    marginTop: 4,
-  },
-
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: "#475569",
-  },
-
   scrollView: {
     flex: 1,
   },
@@ -2306,7 +2407,7 @@ summaryAmount: {
   sectionTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#6B1C23",
     marginHorizontal: 20,
     marginBottom: 16,
     marginTop: 8,
@@ -2340,17 +2441,17 @@ summaryAmount: {
   },
 
   cardContent: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  padding: 10,
-},
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 10,
+  },
 
   cardLeft: {
-  flex: 1,
-  marginRight: 16,
-  maxWidth: "68%",
-},
+    flex: 1,
+    marginRight: 16,
+    maxWidth: "68%",
+  },
 
   menuButton: {
     position: "absolute",
@@ -2395,7 +2496,7 @@ summaryAmount: {
     marginLeft: 8,
     fontSize: 15,
     fontWeight: "500",
-    color: "#374151",
+    color: "#6B1C23",
   },
 
   menuOverlay: {
@@ -2408,106 +2509,104 @@ summaryAmount: {
     zIndex: 15,
   },
 
- goalName: {
-  fontSize: 25,
-  fontWeight: "800",
-  color: "#ffffff",
-  marginBottom: 8,
-  flexWrap: "wrap",
-  lineHeight: 24,
-  textShadowColor: "rgba(0,0,0,0.15)",
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 3,
-},
+  goalName: {
+    fontSize: 25,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 8,
+    flexWrap: "wrap",
+    lineHeight: 24,
+    textShadowColor: "rgba(0,0,0,0.15)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
 
-dateContainer: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: 12,
-  backgroundColor: "rgba(255,255,255,0.2)",
-  paddingHorizontal: 8,
-  paddingVertical: 4,
-  borderRadius: 8,
-  alignSelf: "flex-start",
-},
-
+  dateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
 
   goalDuration: {
-  fontSize: 14,
-  color: "#ffffff",
-  marginLeft: 4,
-  fontWeight: "500",
-},
+    fontSize: 14,
+    color: "#ffffff",
+    marginLeft: 4,
+    fontWeight: "500",
+  },
 
-goalSaved: {
-  fontSize: 26,
-  fontWeight: "800",
-  color: "#ffffff",
-  marginBottom: 2,
-  textShadowColor: "rgba(0,0,0,0.2)",
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 3,
-},
+  goalSaved: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 2,
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
 
- goalTarget: {
-  fontSize: 16,
-  color: "#ffffffe6",
-  marginBottom: 14,
-  fontWeight: "500",
-},
+  goalTarget: {
+    fontSize: 16,
+    color: "#ffffffe6",
+    marginBottom: 14,
+    fontWeight: "500",
+  },
 
-progressBarContainer: {
-  marginBottom: 14,
-},
+  progressBarContainer: {
+    marginBottom: 14,
+  },
 
-progressBarBackground: {
-  height: 6,
-  backgroundColor: "rgba(255,255,255,0.3)",
-  borderRadius: 3,
-  overflow: "hidden",
-  marginBottom: 6,
-},
-
+  progressBarBackground: {
+    height: 6,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 6,
+  },
 
   progressBarFill: {
     height: "100%",
     borderRadius: 4,
   },
 
- progressText: {
-  fontSize: 14,
-  fontWeight: "700",
-  color: "#ffffff",
-  textAlign: "right",
-  textShadowColor: "rgba(0,0,0,0.2)",
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 2,
-},
+  progressText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#ffffff",
+    textAlign: "right",
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 
-insightBox: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 6,
-},
+  insightBox: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
 
-insightItem: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "rgba(255,255,255,0.25)",
-  paddingHorizontal: 8,
-  paddingVertical: 6,
-  borderRadius: 10,
-},
+  insightItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
 
   insightText: {
-  fontSize: 14,
-  color: "#ffffff",
-  fontWeight: "700",
-  marginLeft: 4,
-  textShadowColor: "rgba(0,0,0,0.15)",
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 2,
-},
+    fontSize: 14,
+    color: "#ffffff",
+    fontWeight: "700",
+    marginLeft: 4,
+    textShadowColor: "rgba(0,0,0,0.15)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 
   progressContainer: {
     alignItems: "center",
@@ -2557,7 +2656,7 @@ insightItem: {
   chartTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#6B1C23",
     marginBottom: 16,
     textAlign: "center",
   },
@@ -2567,17 +2666,15 @@ insightItem: {
     borderRadius: 12,
   },
 
-fab: {
-  position: "absolute",
-  bottom: 30,
-  left: "50%",             // center horizontally
-  transform: [{ translateX: -35 }], // half of the button width (adjust if needed)
-  borderRadius: 20,
-  padding: 10,
-  zIndex: 100,
-},
-
-
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    left: "50%",
+    transform: [{ translateX: -35 }],
+    borderRadius: 20,
+    padding: 10,
+    zIndex: 100,
+  },
 
   fabGradient: {
     width: 64,
@@ -2588,57 +2685,62 @@ fab: {
   },
 
   modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-  padding: 20,
-},
-modalBox: {
-  width: "100%",
-  maxWidth: 480,
-  maxHeight: "85%", // ✅ smaller modal height
-  backgroundColor: "#fff",
-  borderRadius: 20,
-  overflow: "hidden",
-  elevation: 10,
-},
-modalContent: {
-  flexGrow: 1,
-},
-
-  modalHeader: {
-    paddingVertical: 20,
+    flex: 1,
+    backgroundColor: "rgba(107, 28, 35, 0.5)",
+    justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
 
-  modalHeaderText: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 20,
-    letterSpacing: 0.5,
+  modalBox: {
+    width: "100%",
+    maxWidth: 480,
+    maxHeight: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    overflow: "hidden",
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: "#F4B942",
   },
 
   modalContent: {
-    padding: 24,
+    flexGrow: 1,
+       
+  },
+
+   modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+
+  modalHeaderText: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
 
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#374151",
+    color: "#6B1C23",
     marginBottom: 8,
     marginTop: 8,
   },
 
   input: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FFFBF0",
     borderWidth: 2,
-    borderColor: "#e2e8f0",
+    borderColor: "#F4B942",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: "#1e293b",
+    color: "#6B1C23",
     marginBottom: 16,
   },
 
@@ -2654,54 +2756,56 @@ modalContent: {
   },
 
   unitBtn: {
-  flex: 1,
-  paddingVertical: 12,
-  paddingHorizontal: 8, // ✅ Reduced from 16 to 8
-  borderWidth: 2,
-  borderColor: "#e2e8f0",
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center", // ✅ Added
-  minHeight: 44, // ✅ Added for consistent height
-},
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 2,
+    borderColor: "#F4B942",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    backgroundColor: "#FFFBF0",
+  },
 
-unitBtnActive: {
-  backgroundColor: "#6366f1",
-  borderColor: "#6366f1",
-},
+  unitBtnActive: {
+    backgroundColor: "#F4B942",
+    borderColor: "#F4B942",
+  },
 
-unitText: {
-  fontSize: 14,
-  fontWeight: "600",
-  color: "#64748b",
-  textAlign: "center", // ✅ Added
-  numberOfLines: 1, // ✅ Won't work in style, see below
-},
+  unitText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B1C23",
+    textAlign: "center",
+    numberOfLines: 1,
+  },
 
-unitTextActive: {
-  color: "#ffffff",
-},
+  unitTextActive: {
+    color: "#6B1C23",
+    fontWeight: "800",
+  },
 
   goalInfoCard: {
-    backgroundColor: "#f0fdf4",
+    backgroundColor: "#FEF3C7",
     padding: 20,
     borderRadius: 16,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
+    borderWidth: 2,
+    borderColor: "#F4B942",
   },
 
   goalInfoTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#6B1C23",
     marginBottom: 8,
   },
 
   goalInfoAmount: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#059669",
+    color: "#6B1C23",
     marginBottom: 12,
   },
 
@@ -2721,6 +2825,7 @@ unitTextActive: {
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#6B1C23",
   },
 
   saveBtnText: {
@@ -2731,17 +2836,17 @@ unitTextActive: {
 
   cancelBtn: {
     flex: 1,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#FFFBF0",
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderWidth: 2,
+    borderColor: "#F4B942",
   },
 
   cancelBtnText: {
-    color: "#64748b",
+    color: "#6B1C23",
     fontWeight: "600",
     fontSize: 16,
   },
@@ -2756,30 +2861,32 @@ unitTextActive: {
   toggleText: {
     fontWeight: "600",
     fontSize: 14,
+    color: "#6B1C23",
   },
-
 
   webInput: {
     width: "100%",
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#e2e8f0",
+    borderColor: "#F4B942",
     marginBottom: 16,
     fontSize: 16,
     fontFamily: "inherit",
     boxSizing: "border-box",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FFFBF0",
+    color: "#6B1C23",
   },
+
   autoText: {
-    color: "#6366f1",
+    color: "#F4B942",
   },
 
   customText: {
-    color: "#f59e0b",
+    color: "#6B1C23",
   },
 
-   backButton: {
+  backButton: {
     position: 'absolute',
     left: 24,
     width: 40,
@@ -2789,12 +2896,475 @@ unitTextActive: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-chartWrapper: {
-  marginTop: 10,
-  borderRadius: 20,
-  overflow: "hidden",
-},
 
+  chartWrapper: {
+    marginTop: 10,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+
+ 
+
+  previewLeft: {
+    flex: 1,
+  },
+
+  previewLabelSmall: {
+    fontSize: 10,
+    color: "#FDE68A",
+    fontWeight: "700",
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+
+  previewAmount: {
+    fontSize: 26,
+    color: "#FFFFFF",
+    fontWeight: "800",
+  },
+
+  previewRight: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+
+  previewProgress: {
+    backgroundColor: "#F4B942",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 70,
+    alignItems: "center",
+  },
+
+  previewProgressText: {
+    fontSize: 18,
+    color: "#6B1C23",
+    fontWeight: "800",
+  },
+
+  goalCompleteText: {
+    fontSize: 11,
+    color: "#FDE68A",
+    fontWeight: "700",
+  },
+
+  // Buttons
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  cancelBtnNew: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#6B1C23",
+  },
+
+  cancelBtnTextNew: {
+    color: "#6B1C23",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  saveBtnNew: {
+    flex: 2,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#6B1C23",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  saveBtnDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0.1,
+  },
+
+  saveBtnGradient: {
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  saveBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+
+  addSavingsModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(107, 28, 35, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  addSavingsModalBox: {
+    width: "100%",
+    maxWidth: 480,
+    maxHeight: "90%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    overflow: "hidden",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+  },
+
+  addSavingsModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+  },
+
+  addSavingsModalHeaderText: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#F4B942",
+  },
+
+  addSavingsCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(244, 185, 66, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  addSavingsCloseButtonText: {
+    fontSize: 20,
+    color: "#F4B942",
+    fontWeight: "700",
+  },
+
+  // Goal Info Card
+  addSavingsGoalCard: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: "#F4B942",
+    shadowColor: "#F4B942",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+
+  addSavingsGoalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 12,
+  },
+
+  addSavingsGoalNameContainer: {
+    flex: 1,
+  },
+
+  addSavingsGoalLabel: {
+    fontSize: 10,
+    color: "#92400E",
+    fontWeight: "700",
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+
+  addSavingsGoalName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#6B1C23",
+    lineHeight: 26,
+  },
+
+  addSavingsGoalBadge: {
+    backgroundColor: "#6B1C23",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    minWidth: 60,
+    alignItems: "center",
+  },
+
+  addSavingsGoalBadgeText: {
+    color: "#F4B942",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  addSavingsAmountContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingVertical: 12,
+    backgroundColor: "rgba(254, 243, 199, 0.6)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+
+  addSavingsAmountRow: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  addSavingsLabel: {
+    fontSize: 10,
+    color: "#92400E",
+    fontWeight: "700",
+    marginBottom: 6,
+    letterSpacing: 1,
+  },
+
+  addSavingsCurrentAmount: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#059669",
+  },
+
+  addSavingsDivider: {
+    width: 2,
+    height: 36,
+    backgroundColor: "#F59E0B",
+    marginHorizontal: 16,
+    borderRadius: 1,
+  },
+
+  addSavingsTargetAmount: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#6B1C23",
+  },
+
+  addSavingsProgressBarContainer: {
+    gap: 8,
+  },
+
+  addSavingsProgressBarBackground: {
+    height: 10,
+    backgroundColor: "#FDE68A",
+    borderRadius: 5,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+
+  addSavingsProgressBarFill: {
+    height: "100%",
+    borderRadius: 5,
+  },
+
+  addSavingsRemainingContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 2,
+  },
+
+  addSavingsRemainingLabel: {
+    fontSize: 11,
+    color: "#92400E",
+    fontWeight: "600",
+  },
+
+  addSavingsRemainingAmount: {
+    fontSize: 13,
+    color: "#6B1C23",
+    fontWeight: "800",
+  },
+
+  // Input Section
+  addSavingsInputSection: {
+    marginBottom: 20,
+  },
+
+  addSavingsInputLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#6B1C23",
+    marginBottom: 12,
+  },
+
+  addSavingsAmountInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#6B1C23",
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    shadowColor: "#6B1C23",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  addSavingsCurrencySymbol: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#6B1C23",
+    marginRight: 8,
+  },
+
+  addSavingsAmountInput: {
+    flex: 1,
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#6B1C23",
+    padding: 0,
+  },
+
+  addSavingsQuickAmountContainer: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  addSavingsQuickAmountBtn: {
+    flex: 1,
+    backgroundColor: "#FFFBEB",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#F4B942",
+  },
+
+  addSavingsQuickAmountText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6B1C23",
+  },
+
+  // Preview Section
+  addSavingsNewTotalPreview: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#6B1C23",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  addSavingsPreviewLeft: {
+    flex: 1,
+  },
+
+  addSavingsPreviewLabelSmall: {
+    fontSize: 10,
+    color: "#FDE68A",
+    fontWeight: "700",
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+
+  addSavingsPreviewAmount: {
+    fontSize: 26,
+    color: "#FFFFFF",
+    fontWeight: "800",
+  },
+
+  addSavingsPreviewRight: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+
+  addSavingsPreviewProgress: {
+    backgroundColor: "#F4B942",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 70,
+    alignItems: "center",
+  },
+
+  addSavingsPreviewProgressText: {
+    fontSize: 18,
+    color: "#6B1C23",
+    fontWeight: "800",
+  },
+
+  addSavingsGoalCompleteText: {
+    fontSize: 11,
+    color: "#FDE68A",
+    fontWeight: "700",
+  },
+
+  // Action Buttons
+  addSavingsButtonRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  addSavingsCancelBtn: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#6B1C23",
+  },
+
+  addSavingsCancelBtnText: {
+    color: "#6B1C23",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  addSavingsSaveBtn: {
+    flex: 2,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#6B1C23",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  addSavingsSaveBtnDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0.1,
+  },
+
+  addSavingsSaveBtnGradient: {
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  addSavingsSaveBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 16,
+  },
 });
 if (isMobile) {
   Object.assign(styles, {
@@ -2899,3 +3469,5 @@ if (isMobile) {
 
 
 }
+
+

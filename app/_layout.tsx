@@ -18,15 +18,15 @@ if (typeof window !== "undefined") {
   }, 0);
 }
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { LogBox, Alert } from "react-native";
 LogBox.ignoreLogs([
   "setLayoutAnimationEnabledExperimental is currently a no-op",
   "expo-notifications: Android Push notifications",
-   "Unexpected text node",                     // 🧘 hides RN-Web text node spam
-  "Warning: Text strings must be rendered",   // companion message
+   "Unexpected text node",
+  "Warning: Text strings must be rendered",
 ]);
+
 
 import React, { useState, useEffect, useRef } from "react";
 import NetInfo from "@react-native-community/netinfo";
@@ -37,77 +37,29 @@ import { initOfflineSyncListener, syncOfflineChanges } from "../lib/offlineCache
 import SplashScreen from "./SplashScreen";
 import { RecentlyViewedProvider } from "./RecentlyViewedContext";
 import { useIdleLogout } from "./hooks/useIdleLogout";
+import { getToken } from "../lib/auth"; // ✅ Import getToken
+
 
 /* ✅ Global one-time flags that persist even after hot reload (Expo Web or Native) */
 if (typeof globalThis.__offlineInit === "undefined") globalThis.__offlineInit = false;
 if (typeof globalThis.__notificationsInit === "undefined") globalThis.__notificationsInit = false;
 
+
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
-
+  const [isAuthChecked, setIsAuthChecked] = useState(false); // ✅ Track auth check
   const router = useRouter();
   const mountedRef = useRef(true);
 
+
   if (Platform.OS === "web") {
-  console.log("📵 Notifications disabled on web.");
-} else {
-  // initialize expo notifications here
-}
+    console.log("📵 Notifications disabled on web.");
+  } else {
+    // initialize expo notifications here
+  }
+
 
   useIdleLogout();
-
-// Replace your checkAuth useEffect with this debug version:
-useEffect(() => {
-  const checkAuth = async () => {
-    // ✅ OPTIMIZATION 1: Check public routes FIRST (synchronous, instant)
-    if (Platform.OS === "web") {
-      const current = window.location.pathname;
-      
-      const publicRoutes = [
-        "/login",
-        "/register",
-        "/verify-code",
-        "/reset-pin",
-        "/storeAuth",
-        "/AdminLoginPage",
-      ];
-
-      const isPublic = publicRoutes.some(
-        (route) => current === route || current.startsWith(route + "/")
-      );
-
-      if (isPublic) {
-        // ✅ Skip token checks entirely for public routes
-        setAuthChecked(true);
-        return;
-      }
-    }
-
-    // ✅ OPTIMIZATION 2: Read all tokens in parallel (not sequential)
-    const [adminToken, storeToken, userToken] = await Promise.all([
-      AsyncStorage.getItem("adminToken"),
-      AsyncStorage.getItem("storeToken"),
-      AsyncStorage.getItem("token"),
-    ]);
-
-        // NEW PRIORITY: storeToken > adminToken > userToken
-      if (storeToken) {
-        router.replace("/StoreDashboard");
-      } else if (adminToken) {
-        router.replace("/AdminHomePage");
-      } else if (userToken) {
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/login");
-      }
-
-    setAuthChecked(true);
-  };
-
-  checkAuth();
-}, []);
-
 
 
   // 🕒 Hide splash after 2.8 seconds
@@ -118,16 +70,71 @@ useEffect(() => {
     return () => clearTimeout(timeout);
   }, []);
 
+
+  // ✅ CHECK AUTH STATUS AFTER SPLASH (prevents logout on refresh)
+  useEffect(() => {
+    if (!showSplash && !isAuthChecked) {
+      checkAuthStatus();
+    }
+  }, [showSplash, isAuthChecked]);
+
+
+  const checkAuthStatus = async () => {
+    try {
+      const user = await getToken();
+     
+      if (user) {
+        // ✅ User is logged in
+        console.log('✅ User authenticated:', user.firstName);
+       
+        // Check current path to avoid unnecessary navigation
+        const currentPath = window.location?.pathname || '';
+       
+        // Only redirect if on login/register/root pages
+        if (!currentPath ||
+            currentPath === '/' ||
+            currentPath === '/login' ||
+            currentPath === '/register') {
+          console.log('🔄 Redirecting authenticated user to main app');
+          router.replace('/(tabs)');
+        } else {
+          // User is on a valid page, stay there (handles refresh)
+          console.log('✅ User on valid page, staying at:', currentPath);
+        }
+      } else {
+        // ❌ User is not logged in
+        console.log('❌ No auth token found');
+       
+        const currentPath = window.location?.pathname || '';
+       
+        // Only redirect to login if not already on public routes
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          console.log('🔄 Redirecting to login');
+          router.replace('/login');
+        }
+      }
+    } catch (error) {
+      console.error('⚠️ Auth check error:', error);
+      router.replace('/login');
+    } finally {
+      setIsAuthChecked(true);
+    }
+  };
+
+
   // 🌐 Initialize offline sync once globally
   useEffect(() => {
     if (globalThis.__offlineInit) return;
     globalThis.__offlineInit = true;
 
+
     console.log("✅ RootLayout: initializing offline listener once...");
+
 
     const setupOffline = async () => {
       try {
         initOfflineSyncListener();
+
 
         const net = await NetInfo.fetch();
         if (net.isConnected) {
@@ -139,16 +146,20 @@ useEffect(() => {
       }
     };
 
+
     setupOffline();
   }, []);
+
 
   // 🔔 Setup notifications only once
   useEffect(() => {
     if (globalThis.__notificationsInit) return;
     globalThis.__notificationsInit = true;
 
+
     console.log("🔔 RootLayout: initializing notifications once...");
     let subscription: any = null;
+
 
     (async () => {
       try {
@@ -158,12 +169,14 @@ useEffect(() => {
           status = newStatus;
         }
 
+
         if (status !== "granted") {
           Alert.alert(
             "Notifications Disabled",
             "Please enable notifications in your device settings to receive updates."
           );
         }
+
 
         // ✅ Unified notification handler (modern Expo SDK 54+)
         Notifications.setNotificationHandler({
@@ -176,6 +189,7 @@ useEffect(() => {
           }),
         });
 
+
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
           const data = response.notification.request.content.data;
           if (data?.goalId) router.push(`/goals/${data.goalId}`);
@@ -185,10 +199,12 @@ useEffect(() => {
       }
     })();
 
+
     return () => {
       if (subscription) subscription.remove();
     };
   }, [router]);
+
 
   // 🧹 Cleanup ref
   useEffect(() => {
@@ -197,9 +213,10 @@ useEffect(() => {
     };
   }, []);
 
+
   // 💫 Splashscreen render
-if ((showSplash || !authChecked) && !globalThis.__splashNavigated)
-  return <SplashScreen />;
+  if (showSplash && !globalThis.__splashNavigated) return <SplashScreen />;
+
 
   return (
     <RecentlyViewedProvider>
@@ -207,3 +224,4 @@ if ((showSplash || !authChecked) && !globalThis.__splashNavigated)
     </RecentlyViewedProvider>
   );
 }
+

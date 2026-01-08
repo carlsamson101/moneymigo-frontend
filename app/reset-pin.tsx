@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 
+
 export default function ResetPinScreen() {
   const router = useRouter();
   const [step, setStep] = useState('email'); // 'email' | 'otp' | 'done'
@@ -20,7 +21,9 @@ export default function ResetPinScreen() {
   const [loading, setLoading] = useState(false);
   const shakeAnimation = useRef(new Animated.Value(0)).current;
 
+
   const isValidEmail = email.includes('@') && email.includes('.');
+
 
   // Step 1: Send OTP code to email
   const handleSendCode = async () => {
@@ -45,6 +48,7 @@ export default function ResetPinScreen() {
     setLoading(false);
   };
 
+
   // Step 2: Validate OTP code and open PIN modal
   const handleCheckCode = () => {
     setError('');
@@ -54,6 +58,7 @@ export default function ResetPinScreen() {
     }
     setModalVisible(true);
   };
+
 
   // Step 3: Set new PIN
   const handleResetPin = async () => {
@@ -80,6 +85,7 @@ export default function ResetPinScreen() {
     setLoading(false);
   };
 
+
   return (
     <KeyboardAvoidingView
       style={styles.wrapper}
@@ -89,7 +95,8 @@ export default function ResetPinScreen() {
       <View style={styles.backgroundCircle1} />
       <View style={styles.backgroundCircle2} />
 
-      <ScrollView 
+
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -98,11 +105,12 @@ export default function ResetPinScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Ionicons name="wallet" size={28} color="#2563EB" />
+              <Ionicons name="wallet" size={28} color="#F4B942" />
             </View>
             <Text style={styles.brand}>MoneyMigo</Text>
             <Text style={styles.subtitle}>Reset Your PIN</Text>
           </View>
+
 
           {/* Progress Indicator */}
           <View style={styles.progressContainer}>
@@ -119,7 +127,7 @@ export default function ResetPinScreen() {
             <View style={[styles.progressLine, step === 'done' && styles.progressLineComplete]} />
             <View style={styles.progressStep}>
               <View style={[
-                styles.progressDot, 
+                styles.progressDot,
                 step === 'done' && styles.progressDotComplete,
                 step === 'otp' && styles.progressDotActive
               ]}>
@@ -133,9 +141,10 @@ export default function ResetPinScreen() {
             </View>
           </View>
 
+
           {/* Step 1: Email */}
           {step === 'email' && (
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.card,
                 { transform: [{ translateX: shakeAnimation }] }
@@ -143,11 +152,12 @@ export default function ResetPinScreen() {
             >
               <View style={styles.cardHeader}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="mail-outline" size={32} color="#2563EB" />
+                  <Ionicons name="mail-outline" size={32} color="#F4B942" />
                 </View>
                 <Text style={styles.cardTitle}>Enter Your Email</Text>
                 <Text style={styles.cardSubtitle}>We'll send you a verification code</Text>
               </View>
+
 
               <View style={styles.inputWrapper}>
                 <Text style={styles.inputLabel}>Email Address</Text>
@@ -164,13 +174,14 @@ export default function ResetPinScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoFocus
-                    placeholderTextColor="#CBD5E1"
+                    placeholderTextColor="#94A3B8"
                   />
                   {email && isValidEmail && (
-                    <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                    <Ionicons name="checkmark-circle" size={20} color="#F4B942" />
                   )}
                 </View>
               </View>
+
 
               {error && (
                 <View style={styles.errorContainer}>
@@ -178,6 +189,7 @@ export default function ResetPinScreen() {
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
+
 
               <TouchableOpacity
                 style={[styles.button, (!isValidEmail || loading) && styles.buttonDisabled]}
@@ -187,38 +199,41 @@ export default function ResetPinScreen() {
               >
                 {loading ? (
                   <View style={styles.buttonContent}>
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color="#6B1C23" size="small" />
                     <Text style={styles.buttonText}>Sending...</Text>
                   </View>
                 ) : (
                   <View style={styles.buttonContent}>
-                    <Ionicons name="send" size={18} color="#fff" />
+                    <Ionicons name="send" size={18} color="#6B1C23" />
                     <Text style={styles.buttonText}>Send Verification Code</Text>
                   </View>
                 )}
               </TouchableOpacity>
 
+
               <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={16} color="#64748B" />
+                <Ionicons name="arrow-back" size={16} color="#6B1C23" />
                 <Text style={styles.backButtonText}>Back to Login</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
+
 
           {/* Step 2: OTP code input */}
           {step === 'otp' && (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="shield-checkmark-outline" size={32} color="#2563EB" />
+                  <Ionicons name="shield-checkmark-outline" size={32} color="#F4B942" />
                 </View>
                 <Text style={styles.cardTitle}>Verify Code</Text>
                 <Text style={styles.cardSubtitle}>Enter the code sent to</Text>
                 <View style={styles.emailBadge}>
-                  <Ionicons name="mail" size={14} color="#2563EB" />
+                  <Ionicons name="mail" size={14} color="#6B1C23" />
                   <Text style={styles.emailBadgeText}>{email}</Text>
                 </View>
               </View>
+
 
               <View style={styles.codeInputWrapper}>
                 <Text style={styles.inputLabel}>Verification Code</Text>
@@ -237,17 +252,19 @@ export default function ResetPinScreen() {
                 />
                 {code.length === 6 && !error && (
                   <View style={styles.codeCheckmark}>
-                    <Ionicons name="checkmark-circle" size={24} color="#16A34A" />
+                    <Ionicons name="checkmark-circle" size={24} color="#F4B942" />
                   </View>
                 )}
               </View>
 
+
               {message && !error && (
                 <View style={styles.messageContainer}>
-                  <Ionicons name="information-circle" size={18} color="#2563EB" />
+                  <Ionicons name="information-circle" size={18} color="#F4B942" />
                   <Text style={styles.messageText}>{message}</Text>
                 </View>
               )}
+
 
               {error && (
                 <View style={styles.errorContainer}>
@@ -256,6 +273,7 @@ export default function ResetPinScreen() {
                 </View>
               )}
 
+
               <TouchableOpacity
                 style={[styles.button, (code.length !== 6 || loading) && styles.buttonDisabled]}
                 onPress={handleCheckCode}
@@ -263,37 +281,40 @@ export default function ResetPinScreen() {
                 activeOpacity={0.8}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color="#6B1C23" />
                 ) : (
                   <View style={styles.buttonContent}>
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                    <Ionicons name="checkmark-circle" size={18} color="#6B1C23" />
                     <Text style={styles.buttonText}>Verify Code</Text>
                   </View>
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.secondaryButton}
                 onPress={handleSendCode}
               >
-                <Ionicons name="refresh" size={16} color="#2563EB" />
+                <Ionicons name="refresh" size={16} color="#6B1C23" />
                 <Text style={styles.secondaryButtonText}>Resend Code</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.backButton}
-                onPress={() => { 
-                  setStep('email'); 
-                  setMessage(''); 
-                  setError(''); 
+                onPress={() => {
+                  setStep('email');
+                  setMessage('');
+                  setError('');
                   setCode('');
                 }}
               >
-                <Ionicons name="arrow-back" size={16} color="#64748B" />
+                <Ionicons name="arrow-back" size={16} color="#6B1C23" />
                 <Text style={styles.backButtonText}>Change Email</Text>
               </TouchableOpacity>
             </View>
           )}
+
 
           {/* Modal for PIN reset */}
           <Modal
@@ -306,11 +327,12 @@ export default function ResetPinScreen() {
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
                   <View style={styles.modalIconContainer}>
-                    <Ionicons name="lock-closed" size={32} color="#2563EB" />
+                    <Ionicons name="lock-closed" size={32} color="#F4B942" />
                   </View>
                   <Text style={styles.modalTitle}>Create New PIN</Text>
                   <Text style={styles.modalSubtitle}>Choose a secure 6-digit PIN</Text>
                 </View>
+
 
                 <View style={styles.pinInputWrapper}>
                   <Text style={styles.inputLabel}>New PIN</Text>
@@ -331,10 +353,11 @@ export default function ResetPinScreen() {
                       placeholderTextColor="#CBD5E1"
                     />
                     {newPin.length === 6 && (
-                      <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                      <Ionicons name="checkmark-circle" size={20} color="#F4B942" />
                     )}
                   </View>
                 </View>
+
 
                 <View style={styles.pinInputWrapper}>
                   <Text style={styles.inputLabel}>Confirm PIN</Text>
@@ -354,10 +377,11 @@ export default function ResetPinScreen() {
                       placeholderTextColor="#CBD5E1"
                     />
                     {confirmPin.length === 6 && confirmPin === newPin && (
-                      <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                      <Ionicons name="checkmark-circle" size={20} color="#F4B942" />
                     )}
                   </View>
                 </View>
+
 
                 {error && (
                   <View style={styles.errorContainer}>
@@ -366,30 +390,33 @@ export default function ResetPinScreen() {
                   </View>
                 )}
 
+
                 <View style={styles.pinStrengthInfo}>
-                  <Ionicons name="information-circle" size={16} color="#64748B" />
+                  <Ionicons name="information-circle" size={16} color="#6B1C23" />
                   <Text style={styles.pinStrengthText}>
                     Choose a PIN that's easy to remember but hard to guess
                   </Text>
                 </View>
 
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[styles.button, (newPin.length !== 6 || confirmPin.length !== 6 || loading) && styles.buttonDisabled]}
-                  onPress={handleResetPin} 
+                  onPress={handleResetPin}
                   disabled={loading || newPin.length !== 6 || confirmPin.length !== 6}
                   activeOpacity={0.8}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color="#6B1C23" />
                   ) : (
                     <View style={styles.buttonContent}>
-                      <Ionicons name="checkmark-done" size={18} color="#fff" />
+                      <Ionicons name="checkmark-done" size={18} color="#6B1C23" />
                       <Text style={styles.buttonText}>Reset PIN</Text>
                     </View>
                   )}
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={styles.modalCancelButton}
                   onPress={() => setModalVisible(false)}
                 >
@@ -399,11 +426,12 @@ export default function ResetPinScreen() {
             </View>
           </Modal>
 
+
           {/* Success State */}
           {step === 'done' && (
             <View style={styles.successCard}>
               <View style={styles.successIconContainer}>
-                <Ionicons name="checkmark-circle" size={80} color="#16A34A" />
+                <Ionicons name="checkmark-circle" size={80} color="#F4B942" />
               </View>
               <Text style={styles.successTitle}>PIN Reset Successful!</Text>
               <Text style={styles.successMessage}>{message}</Text>
@@ -420,10 +448,11 @@ export default function ResetPinScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
-  wrapper: { 
-    flex: 1, 
-    backgroundColor: '#F8FAFC',
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#6B1C23',
   },
   backgroundCircle1: {
     position: 'absolute',
@@ -432,7 +461,7 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(244, 185, 66, 0.2)',
     opacity: 0.5,
   },
   backgroundCircle2: {
@@ -442,7 +471,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     opacity: 0.3,
   },
   scrollContent: {
@@ -450,7 +479,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  container: { 
+  container: {
     alignItems: 'center',
   },
   header: {
@@ -461,23 +490,23 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3E8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#DBEAFE',
+    borderColor: '#F4B942',
   },
   brand: {
     fontSize: 26,
-    color: '#2563EB',
+    color: '#F4B942',
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
   },
   progressContainer: {
@@ -499,10 +528,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressDotActive: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F4B942',
   },
   progressDotComplete: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#F4B942',
   },
   progressNumber: {
     color: '#64748B',
@@ -511,7 +540,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '600',
   },
   progressLine: {
@@ -522,7 +551,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   progressLineComplete: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#F4B942',
   },
   card: {
     width: '100%',
@@ -533,9 +562,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 8,
+    borderWidth: 2,
+    borderColor: '#F4B942',
   },
   cardHeader: {
     alignItems: 'center',
@@ -545,17 +576,17 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3E8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#DBEAFE',
+    borderColor: '#F4B942',
   },
   cardTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#6B1C23',
     marginBottom: 6,
     letterSpacing: -0.5,
   },
@@ -569,14 +600,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3E8',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#F4B942',
   },
   emailBadgeText: {
-    color: '#2563EB',
+    color: '#6B1C23',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -587,7 +620,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#6B1C23',
     marginBottom: 8,
     marginLeft: 2,
   },
@@ -595,7 +628,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: '#6B1C23',
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 14,
@@ -611,7 +644,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#1E293B',
+    color: '#6B1C23',
     paddingVertical: 12,
   },
   codeInputWrapper: {
@@ -622,7 +655,7 @@ const styles = StyleSheet.create({
   codeInput: {
     width: '100%',
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: '#6B1C23',
     backgroundColor: '#F8FAFC',
     borderRadius: 14,
     fontSize: 32,
@@ -631,7 +664,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     textAlign: 'center',
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#6B1C23',
   },
   inputError: {
     borderColor: '#FCA5A5',
@@ -646,15 +679,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3E8',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
     marginBottom: 16,
     width: '100%',
+    borderWidth: 1,
+    borderColor: '#F4B942',
   },
   messageText: {
-    color: '#2563EB',
+    color: '#6B1C23',
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
@@ -679,20 +714,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   button: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F4B942',
     borderRadius: 12,
     paddingVertical: 15,
     width: '100%',
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#2563EB',
+    shadowColor: '#F4B942',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 2,
+    borderColor: '#6B1C23',
   },
   buttonDisabled: {
     backgroundColor: '#94A3B8',
+    borderColor: '#94A3B8',
     shadowOpacity: 0,
   },
   buttonContent: {
@@ -701,7 +739,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#6B1C23',
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -713,11 +751,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3E8',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F4B942',
   },
   secondaryButtonText: {
-    color: '#2563EB',
+    color: '#6B1C23',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -728,13 +768,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButtonText: {
-    color: '#64748B',
+    color: '#6B1C23',
     fontSize: 13,
     fontWeight: '500',
   },
-  modalOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(107, 28, 35, 0.7)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -743,6 +783,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     padding: 24,
     maxHeight: '90%',
+    borderTopWidth: 3,
+    borderTopColor: '#F4B942',
   },
   modalHeader: {
     alignItems: 'center',
@@ -752,17 +794,17 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3E8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#DBEAFE',
+    borderColor: '#F4B942',
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#6B1C23',
     marginBottom: 6,
   },
   modalSubtitle: {
@@ -778,7 +820,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: '#6B1C23',
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 14,
@@ -788,7 +830,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     letterSpacing: 6,
-    color: '#1E293B',
+    color: '#6B1C23',
     paddingVertical: 12,
     fontWeight: '700',
   },
@@ -796,15 +838,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FEF3E8',
     padding: 10,
     borderRadius: 8,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F4B942',
   },
   pinStrengthText: {
     flex: 1,
     fontSize: 11,
-    color: '#64748B',
+    color: '#6B1C23',
     lineHeight: 16,
   },
   modalCancelButton: {
@@ -812,7 +856,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCancelText: {
-    color: '#64748B',
+    color: '#6B1C23',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -823,11 +867,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 8,
     maxWidth: 380,
     width: '100%',
+    borderWidth: 2,
+    borderColor: '#F4B942',
   },
   successIconContainer: {
     marginBottom: 24,
@@ -835,7 +881,7 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#16A34A',
+    color: '#F4B942',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -854,6 +900,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F4B942',
   },
 });
+

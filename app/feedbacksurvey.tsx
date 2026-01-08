@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, P
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+
 export default function FeedbackSurvey() {
   const router = useRouter();
+
 
   const handleOpenLink = async (linkType: string) => {
     // Replace these URLs with your actual Google Form/Sheet links
@@ -15,7 +17,9 @@ export default function FeedbackSurvey() {
       recommendation: 'https://forms.gle/HXGo3njWKm5HHA1L8'
     };
 
+
     const url = links[linkType];
+
 
     try {
       if (Platform.OS === 'web') {
@@ -33,20 +37,23 @@ export default function FeedbackSurvey() {
     }
   };
 
+
   const handleBackPress = () => {
     router.push('/(tabs)');
   };
 
+
   return (
     <ScrollView style={styles.container}>
       {/* Back Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.backButton}
         onPress={handleBackPress}
         activeOpacity={0.7}
       >
-        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <Ionicons name="arrow-back" size={24} color="#F4B942" />
       </TouchableOpacity>
+
 
       {/* Header with Gradient */}
       <View style={styles.header}>
@@ -54,6 +61,7 @@ export default function FeedbackSurvey() {
         <Text style={styles.headerTitle}>Feedback & Survey</Text>
         <Text style={styles.headerSubtitle}>Help us improve your experience</Text>
       </View>
+
 
       <View style={styles.content}>
         {/* Survey Forms Section */}
@@ -63,12 +71,13 @@ export default function FeedbackSurvey() {
             Take a moment to fill out our surveys and help us understand your experience better.
           </Text>
 
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.surveyCard}
             onPress={() => handleOpenLink('functional')}
             activeOpacity={0.7}
           >
-            <View style={[styles.surveyIcon, { backgroundColor: '#1f4b81' }]}>
+            <View style={[styles.surveyIcon, { backgroundColor: '#F4B942' }]}>
               <Text style={styles.surveyIconText}>📊</Text>
             </View>
             <View style={styles.surveyInfo}>
@@ -77,15 +86,16 @@ export default function FeedbackSurvey() {
                 Evaluate the app's features and functionality
               </Text>
             </View>
-            <Text style={[styles.surveyArrow, { color: '#1f4b81' }]}>→</Text>
+            <Text style={[styles.surveyArrow, { color: '#F4B942' }]}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.surveyCard}
             onPress={() => handleOpenLink('pssuq')}
             activeOpacity={0.7}
           >
-            <View style={[styles.surveyIcon, { backgroundColor: '#2d5f9f' }]}>
+            <View style={[styles.surveyIcon, { backgroundColor: '#C49A3C' }]}>
               <Text style={styles.surveyIconText}>⭐</Text>
             </View>
             <View style={styles.surveyInfo}>
@@ -94,9 +104,10 @@ export default function FeedbackSurvey() {
                 Post-Study System Usability Questionnaire
               </Text>
             </View>
-            <Text style={[styles.surveyArrow, { color: '#2d5f9f' }]}>→</Text>
+            <Text style={[styles.surveyArrow, { color: '#C49A3C' }]}>→</Text>
           </TouchableOpacity>
         </View>
+
 
         {/* Bug Report & Recommendations Section */}
         <View style={styles.section}>
@@ -105,13 +116,14 @@ export default function FeedbackSurvey() {
             Found a bug or have a great idea? Share it with us!
           </Text>
 
+
           {/* Bug Report Card */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.feedbackCard}
             onPress={() => handleOpenLink('bugReport')}
             activeOpacity={0.7}
           >
-            <View style={[styles.surveyIcon, { backgroundColor: '#7fb1d6' }]}>
+            <View style={[styles.surveyIcon, { backgroundColor: '#DC8500' }]}>
               <Text style={styles.surveyIconText}>🐛</Text>
             </View>
             <View style={styles.surveyInfo}>
@@ -120,16 +132,17 @@ export default function FeedbackSurvey() {
                 Let us know about any issues you've encountered
               </Text>
             </View>
-            <Text style={[styles.surveyArrow, { color: '#7fb1d6' }]}>→</Text>
+            <Text style={[styles.surveyArrow, { color: '#DC8500' }]}>→</Text>
           </TouchableOpacity>
 
+
           {/* Recommendation Card */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.feedbackCard}
             onPress={() => handleOpenLink('recommendation')}
             activeOpacity={0.7}
           >
-            <View style={[styles.surveyIcon, { backgroundColor: '#1f4b81' }]}>
+            <View style={[styles.surveyIcon, { backgroundColor: '#F4B942' }]}>
               <Text style={styles.surveyIconText}>💡</Text>
             </View>
             <View style={styles.surveyInfo}>
@@ -138,13 +151,14 @@ export default function FeedbackSurvey() {
                 Suggest new features or improvements
               </Text>
             </View>
-            <Text style={[styles.surveyArrow, { color: '#1f4b81' }]}>→</Text>
+            <Text style={[styles.surveyArrow, { color: '#F4B942' }]}>→</Text>
           </TouchableOpacity>
         </View>
 
+
         {/* Thank You Note */}
         <View style={styles.thankYouCard}>
-          <Text style={styles.thankYouIcon}>💙</Text>
+          <Text style={styles.thankYouIcon}>💛</Text>
           <Text style={styles.thankYouText}>
             Your feedback is valuable to us and helps make this app better for everyone!
           </Text>
@@ -154,10 +168,11 @@ export default function FeedbackSurvey() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFF9F0',
   },
   backButton: {
     position: 'absolute',
@@ -167,7 +182,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(107, 28, 35, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -177,13 +192,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    backgroundColor: '#1f4b81',
+    backgroundColor: '#6B1C23',
     padding: 32,
     alignItems: 'center',
     paddingTop: Platform.OS === 'web' ? 60 : 80,
     paddingBottom: 40,
     ...(Platform.OS === 'web' && {
-      backgroundImage: 'linear-gradient(to bottom right, #1f4b81, #2d5f9f, #7fb1d6)',
+      backgroundImage: 'linear-gradient(to bottom right, #6B1C23, #8B3A3A)',
     }),
   },
   headerIcon: {
@@ -193,13 +208,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#F4B942',
     marginBottom: 8,
     textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#FFE4CC',
     textAlign: 'center',
   },
   content: {
@@ -212,12 +227,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1f4b81',
+    color: '#6B1C23',
     marginBottom: 8,
   },
   sectionDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#8B6B47',
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -228,13 +243,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#1f4b81',
+    shadowColor: '#6B1C23',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(31, 75, 129, 0.1)',
+    borderWidth: 2,
+    borderColor: '#F4B942',
   },
   feedbackCard: {
     flexDirection: 'row',
@@ -243,13 +258,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#1f4b81',
+    shadowColor: '#6B1C23',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(31, 75, 129, 0.1)',
+    borderWidth: 2,
+    borderColor: '#F4B942',
   },
   surveyIcon: {
     width: 56,
@@ -258,7 +273,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-    shadowColor: '#1f4b81',
+    shadowColor: '#F4B942',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -273,12 +288,12 @@ const styles = StyleSheet.create({
   surveyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#6B1C23',
     marginBottom: 4,
   },
   surveyDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#8B6B47',
     lineHeight: 18,
   },
   surveyArrow: {
@@ -286,14 +301,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   thankYouCard: {
-    backgroundColor: 'rgba(127, 177, 214, 0.15)',
+    backgroundColor: 'rgba(244, 185, 66, 0.15)',
     padding: 20,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#7fb1d6',
-    shadowColor: '#1f4b81',
+    borderColor: '#F4B942',
+    shadowColor: '#6B1C23',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -306,8 +321,9 @@ const styles = StyleSheet.create({
   thankYouText: {
     flex: 1,
     fontSize: 14,
-    color: '#1f4b81',
+    color: '#6B1C23',
     lineHeight: 20,
     fontWeight: '600',
   },
 });
+

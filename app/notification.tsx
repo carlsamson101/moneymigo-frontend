@@ -2,23 +2,21 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
-
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert 
+  Alert
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { getToken } from "../lib/auth";
 import api from "../lib/api";
 import { Platform, Dimensions } from "react-native";
-
 
 
 type Notification = {
@@ -27,7 +25,7 @@ type Notification = {
   message: string;
   read: boolean;
   createdAt: string;
-  type?: string; 
+  type?: string;
   budgetAmount?: number;
   spentAmount?: number;
   itemName?: string;
@@ -35,24 +33,26 @@ type Notification = {
   price?: number;
 };
 
+
 const { width, height } = Dimensions.get("window");
 const isMobile = Platform.OS === "ios" || Platform.OS === "android";
 
-const categories = ["All", "Goals", "Savings", "Transactions","Overspent","Deals"];
 
 export default function NotificationsScreen() {
 
+
   useEffect(() => {
-  if (Platform.OS !== "web") {
-    const subscription = Notifications.addPushTokenListener(token => {
-      console.log("🔔 Push token changed:", token);
-    });
-    return () => subscription.remove();
-  }
-}, []);
-  // ✅ FIXED: Move useRouter INSIDE the component
+    if (Platform.OS !== "web") {
+      const subscription = Notifications.addPushTokenListener(token => {
+        console.log("🔔 Push token changed:", token);
+      });
+      return () => subscription.remove();
+    }
+  }, []);
+
+
   const router = useRouter();
-  
+ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,17 +60,17 @@ export default function NotificationsScreen() {
 
 
   if (!notifications) {
-  return (
-    <View style={[styles.container, styles.centered]}>
-      <Text style={{ color: "#ef4444" }}>Something went wrong loading notifications.</Text>
-    </View>
-  );
-}
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={{ color: "#ef4444" }}>Something went wrong loading notifications.</Text>
+      </View>
+    );
+  }
 
 
   const fetchNotifications = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    
+   
     const token = await getToken();
     if (!token?.id) {
       setLoading(false);
@@ -78,48 +78,62 @@ export default function NotificationsScreen() {
       return;
     }
 
-    try {
-     const res = await api.get(`/notifications/${token.id}`);
-    if (!res?.data || !Array.isArray(res.data)) {
-      console.warn("⚠️ Unexpected notification data:", res?.data);
-      setNotifications([]);
-      return;
-    }
-    setNotifications(res.data);
 
+    try {
+      const res = await api.get(`/notifications/${token.id}`);
+      if (!res?.data || !Array.isArray(res.data)) {
+        console.warn("⚠️ Unexpected notification data:", res?.data);
+        setNotifications([]);
+        return;
+      }
+      setNotifications(res.data);
     } catch (err) {
       console.error("❌ Failed to fetch notifications:", err);
-    safeAlert("Error", "Failed to load notifications. Please try again.");
+      if (Platform.OS === "web") {
+        window.alert("Error\n\nFailed to load notifications. Please try again.");
+      } else {
+        Alert.alert("Error", "Failed to load notifications. Please try again.");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+
   const markAsRead = async (notificationId: string) => {
-    const token = await getToken();
-    if (!token?.accessToken) return;
-
     try {
-      await api.put(
-        `/notifications/${notificationId}/read`,
-        {}, 
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
-
       setNotifications(prev =>
         prev.map(notif =>
           notif._id === notificationId ? { ...notif, read: true } : notif
         )
       );
+
+
+      const token = await getToken();
+      if (!token?.id) {
+        console.error("❌ No user token found");
+        return;
+      }
+
+
+      await api.put(`/notifications/${notificationId}/read`);
+      console.log("✅ Marked notification as read:", notificationId);
     } catch (err) {
       console.error("❌ Failed to mark as read:", err);
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif._id === notificationId ? { ...notif, read: false } : notif
+        )
+      );
     }
   };
+
 
   const markAllAsRead = async () => {
     const token = await getToken();
     if (!token?.id) return;
+
 
     try {
       await api.patch(`/notifications/${token.id}/read-all`);
@@ -129,9 +143,11 @@ export default function NotificationsScreen() {
     }
   };
 
+
   useEffect(() => {
     fetchNotifications();
   }, []);
+
 
   const formatDate = (date: string) => {
     const d = new Date(date);
@@ -140,10 +156,11 @@ export default function NotificationsScreen() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
+
     if (diffHours < 1) return "Just now";
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    
+   
     return d.toLocaleString("en-US", {
       month: "short",
       day: "numeric",
@@ -152,57 +169,59 @@ export default function NotificationsScreen() {
     });
   };
 
+
   const getNotificationStyle = (item: Notification) => {
     let iconName = "notifications";
-    let iconColor = "#3B82F6";
-    let bgColor = "#3B82F6";
+    let iconColor = "#F4B942";
+    let bgColor = "#F4B942";
+
 
     if (item.type) {
       switch (item.type.toLowerCase()) {
         case "achievement":
           iconName = "emoji-events";
-          iconColor = "#10B981";
-          bgColor = "#10B981";
+          iconColor = "#F4B942";
+          bgColor = "#F4B942";
           break;
         case "warning":
           iconName = "warning";
-          iconColor = "#F59E0B";
-          bgColor = "#F59E0B";
+          iconColor = "#DC8500";
+          bgColor = "#DC8500";
           break;
         case "error":
           iconName = "error";
-          iconColor = "#EF4444";
-          bgColor = "#EF4444";
+          iconColor = "#6B1C23";
+          bgColor = "#6B1C23";
           break;
         case "update":
           iconName = "system-update";
-          iconColor = "#8B5CF6";
-          bgColor = "#8B5CF6";
+          iconColor = "#8B6B47";
+          bgColor = "#8B6B47";
           break;
         case "goal":
           iconName = "notifications-active";
-          iconColor = "#3B82F6";
-          bgColor = "#3B82F6";
+          iconColor = "#F4B942";
+          bgColor = "#F4B942";
           break;
         case "savings":
           iconName = "savings";
-          iconColor = "#059669";
-          bgColor = "#059669";
+          iconColor = "#C49A3C";
+          bgColor = "#C49A3C";
           break;
         case "transaction":
           iconName = "swap-horiz";
-          iconColor = "#2563EB";
-          bgColor = "#2563EB";
+          iconColor = "#8B4B47";
+          bgColor = "#8B4B47";
           break;
         case "overspent":
-          iconName = "warning";       
-          iconColor = "#d63031";      
-          bgColor = "#f8d7da";  
+          iconName = "warning";      
+          iconColor = "#6B1C23";      
+          bgColor = "#6B1C23";  
           break;
         case "deal":
           iconName = "local-offer";
-          iconColor = "#16a34a";
-          bgColor = "#bbf7d0";
+          iconColor = "#F4B942";
+          bgColor = "#F4B942";
           break;
         default:
           break;
@@ -210,25 +229,27 @@ export default function NotificationsScreen() {
     } else {
       if (item.title.includes("Deleted")) {
         iconName = "delete";
-        iconColor = "#EF4444";
-        bgColor = "#EF4444";
+        iconColor = "#6B1C23";
+        bgColor = "#6B1C23";
       } else if (item.title.includes("Achieved")) {
         iconName = "emoji-events";
-        iconColor = "#10B981";
-        bgColor = "#10B981";
+        iconColor = "#F4B942";
+        bgColor = "#F4B942";
       } else if (item.title.includes("Updated")) {
         iconName = "edit";
-        iconColor = "#F59E0B";
-        bgColor = "#F59E0B";
+        iconColor = "#DC8500";
+        bgColor = "#DC8500";
       } else if (item.title.includes("Created")) {
         iconName = "flag";
-        iconColor = "#3B82F6";
-        bgColor = "#3B82F6";
+        iconColor = "#F4B942";
+        bgColor = "#F4B942";
       }
     }
 
+
     return { iconName, iconColor, bgColor };
   };
+
 
   const filteredNotifications = notifications.filter((n) => {
     if (activeTab === "All") return true;
@@ -240,13 +261,15 @@ export default function NotificationsScreen() {
     return true;
   });
 
+
   const renderItem = ({ item }: { item: Notification }) => {
     const { iconName, iconColor, bgColor } = getNotificationStyle(item);
 
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
-          styles.card, 
+          styles.card,
           !item.read && styles.unreadCard,
           { shadowColor: !item.read ? bgColor : "#000" }
         ]}
@@ -254,62 +277,156 @@ export default function NotificationsScreen() {
         activeOpacity={0.7}
       >
         <View style={[
-          styles.iconWrapper, 
-          { backgroundColor: bgColor + "15" }
+          styles.iconWrapper,
+          { backgroundColor: bgColor + "20" }
         ]}>
           <MaterialIcons name={iconName as any} size={24} color={iconColor} />
         </View>
 
+
         <View style={styles.content}>
           <View style={styles.titleRow}>
             <Text style={[
-              styles.title, 
+              styles.title,
               !item.read && styles.unreadTitle
             ]} numberOfLines={2}>
               {item.title}
             </Text>
             {!item.read && <View style={[styles.unreadDot, { backgroundColor: bgColor }]} />}
           </View>
-          
+         
           <Text style={styles.message} numberOfLines={3}>
             {item.message}
           </Text>
 
+
           {item.type === "warning" && (
-  <View style={{ marginTop: 6 }}>
-    {typeof item.spentAmount === "number" && !isNaN(item.spentAmount) && (
-      <Text style={{ color: "#d63031", fontWeight: "600" }}>
-        Spent ₱{item.spentAmount.toLocaleString()}
-      </Text>
-    )}
-    {typeof item.budgetAmount === "number" && !isNaN(item.budgetAmount) && (
-      <Text style={{ color: "#6b7280", fontWeight: "600" }}>
-        Budget ₱{item.budgetAmount.toLocaleString()}
-      </Text>
-    )}
-  </View>
-)}
+            <View style={styles.warningDetailsCard}>
+              <View style={styles.warningDetailsContent}>
+                <View style={styles.warningDetailsHeader}>
+                  <MaterialIcons name="warning" size={18} color="#DC8500" />
+                  <Text style={styles.warningDetailsTitle}>Budget Status</Text>
+                </View>
 
 
-        {item.type === "deal" && (
-  <View style={{ marginTop: 6 }}>
-    {item.itemName && (
-      <Text style={{ color: "#16a34a", fontWeight: "600" }}>
-        Item: {item.itemName}
-      </Text>
-    )}
-    {item.storeName && (
-      <Text style={{ color: "#065f46", fontWeight: "600" }}>
-        Store: {item.storeName}
-      </Text>
-    )}
-    {typeof item.price === "number" && !isNaN(item.price) && (
-      <Text style={{ color: "#111827", fontWeight: "600" }}>
-        Price: ₱{item.price.toLocaleString()}
-      </Text>
-    )}
-  </View>
-)}
+                <View style={styles.statsRow}>
+                  {typeof item.spentAmount === "number" && !isNaN(item.spentAmount) && (
+                    <View style={styles.statCard}>
+                      <View style={styles.statCardContent}>
+                        <MaterialIcons name="trending-up" size={16} color="#DC8500" />
+                        <Text style={styles.statLabel}>Spent</Text>
+                        <Text style={styles.statValue}>₱{item.spentAmount.toLocaleString()}</Text>
+                      </View>
+                    </View>
+                  )}
+
+
+                  {typeof item.budgetAmount === "number" && !isNaN(item.budgetAmount) && (
+                    <View style={styles.statCard}>
+                      <View style={styles.statCardContent}>
+                        <MaterialIcons name="account-balance-wallet" size={16} color="#6B1C23" />
+                        <Text style={styles.statLabel}>Budget</Text>
+                        <Text style={styles.statValue}>₱{item.budgetAmount.toLocaleString()}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+
+                {typeof item.spentAmount === "number" && typeof item.budgetAmount === "number" && !isNaN(item.spentAmount) && !isNaN(item.budgetAmount) && (
+                  <View style={styles.enhancedProgressSection}>
+                    <View style={styles.progressHeader}>
+                      <Text style={styles.progressLabel}>Progress</Text>
+                      <View style={[
+                        styles.percentageBadge,
+                        { backgroundColor: item.spentAmount / item.budgetAmount > 1 ? '#6B1C23' : '#DC8500' }
+                      ]}>
+                        <Text style={styles.percentageText}>
+                          {Math.round((item.spentAmount / item.budgetAmount) * 100)}%
+                        </Text>
+                      </View>
+                    </View>
+                   
+                    <View style={styles.enhancedProgressBar}>
+                      <View
+                        style={[
+                          styles.enhancedProgressFill,
+                          {
+                            width: `${Math.min((item.spentAmount / item.budgetAmount) * 100, 100)}%`,
+                            backgroundColor: item.spentAmount / item.budgetAmount > 1 ? '#6B1C23' : '#DC8500'
+                          }
+                        ]}
+                      />
+                    </View>
+
+
+                    {item.spentAmount / item.budgetAmount > 1 && (
+                      <View style={styles.overbudgetAlert}>
+                        <MaterialIcons name="error-outline" size={12} color="#6B1C23" />
+                        <Text style={styles.overbudgetText}>
+                          ₱{(item.spentAmount - item.budgetAmount).toLocaleString()} over budget
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+
+          {item.type === "deal" && (
+            <View style={styles.dealDetailsCard}>
+              <View style={styles.dealDetailsContent}>
+                <View style={styles.dealDetailsHeader}>
+                  <MaterialIcons name="stars" size={18} color="#F4B942" />
+                  <Text style={styles.dealDetailsTitle}>Deal Details</Text>
+                </View>
+
+
+                <View style={styles.dealInfoContainer}>
+                  {item.itemName && (
+                    <View style={styles.dealInfoCard}>
+                      <View style={styles.dealInfoIconWrapper}>
+                        <MaterialIcons name="inventory-2" size={16} color="#DC8500" />
+                      </View>
+                      <View style={styles.dealInfoTextContainer}>
+                        <Text style={styles.dealInfoLabel}>Item</Text>
+                        <Text style={styles.dealInfoValue}>{item.itemName}</Text>
+                      </View>
+                    </View>
+                  )}
+
+
+                  {item.storeName && (
+                    <View style={styles.dealInfoCard}>
+                      <View style={styles.dealInfoIconWrapper}>
+                        <MaterialIcons name="store" size={16} color="#8B6B47" />
+                      </View>
+                      <View style={styles.dealInfoTextContainer}>
+                        <Text style={styles.dealInfoLabel}>Store</Text>
+                        <Text style={styles.dealInfoValue}>{item.storeName}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+
+                {typeof item.price === "number" && !isNaN(item.price) && (
+                  <View style={styles.enhancedPriceHighlight}>
+                    <View style={styles.priceContent}>
+                      <MaterialIcons name="local-offer" size={22} color="#F4B942" />
+                      <View style={styles.priceTextContainer}>
+                        <Text style={styles.priceLabel}>Deal Price</Text>
+                        <Text style={styles.enhancedPriceText}>₱{item.price.toLocaleString()}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
 
           <View style={styles.footer}>
             <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
@@ -326,11 +443,13 @@ export default function NotificationsScreen() {
     );
   };
 
+
   const unreadCount = notifications.filter(n => !n.read).length;
+
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <MaterialIcons name="notifications-none" size={64} color="#9CA3AF" />
+      <MaterialIcons name="notifications-none" size={64} color="#C49A3C" />
       <Text style={styles.emptyTitle}>No notifications yet</Text>
       <Text style={styles.emptyMessage}>
         When you receive notifications, they'll appear here
@@ -338,33 +457,34 @@ export default function NotificationsScreen() {
     </View>
   );
 
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#F4B942" />
         <Text style={styles.loadingText}>Loading notifications...</Text>
       </View>
     );
   }
 
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#1f4b81ff', '#7fb1d6ff']}
+        colors={['#6B1C23', '#8B3A3A']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}
       >
         <View style={[styles.headerRow, { alignItems: "center" }]}>
-          {isMobile && (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="arrow-back" size={26} color="#fff" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="arrow-back" size={26} color="#6B1C23" />
+          </TouchableOpacity>
+
 
           <View style={{ flex: 1 }}>
             <Text style={styles.heading}>Notifications</Text>
@@ -373,11 +493,12 @@ export default function NotificationsScreen() {
             )}
           </View>
 
+
           <TouchableOpacity onPress={markAllAsRead} style={{ position: "relative" }}>
             <MaterialIcons
               name={unreadCount > 0 ? "notifications-active" : "notifications-none"}
               size={28}
-              color="#fff"
+              color="#F4B942"
             />
             {unreadCount > 0 && (
               <View style={styles.badge}>
@@ -390,34 +511,36 @@ export default function NotificationsScreen() {
         </View>
       </LinearGradient>
 
-     <View style={styles.tabsContainer}>
-  <FlatList
-    horizontal
-    data={["All", "Goals", "Savings", "Transactions", "Overspent", "Deals"]}
-    keyExtractor={(item) => item}
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={{ paddingHorizontal: 4 }}
-    renderItem={({ item: tab }) => (
-      <TouchableOpacity
-        key={tab}
-        style={[
-          styles.tabButton,
-          activeTab === tab && styles.activeTabButton,
-        ]}
-        onPress={() => setActiveTab(tab)}
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === tab && styles.activeTabText,
-          ]}
-        >
-          {tab}
-        </Text>
-      </TouchableOpacity>
-    )}
-  />
-</View>
+
+      <View style={styles.tabsContainer}>
+        <FlatList
+          horizontal
+          data={["All", "Goals", "Savings", "Transactions", "Overspent", "Deals"]}
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 4 }}
+          renderItem={({ item: tab }) => (
+            <TouchableOpacity
+              key={tab}
+              style={[
+                styles.tabButton,
+                activeTab === tab && styles.activeTabButton,
+              ]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
 
       <FlatList
         data={filteredNotifications}
@@ -434,8 +557,8 @@ export default function NotificationsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => fetchNotifications(true)}
-            colors={["#3B82F6"]}
-            tintColor="#3B82F6"
+            colors={["#F4B942"]}
+            tintColor="#F4B942"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -444,10 +567,11 @@ export default function NotificationsScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#F8FAFC",
+  container: {
+    flex: 1,
+    backgroundColor: "#FFF9F0",
   },
   centered: {
     justifyContent: "center",
@@ -462,19 +586,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     alignItems: "flex-start",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowColor: "#6B1C23",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: "#F4B942",
+    marginHorizontal: 2,
   },
   unreadCard: {
-    backgroundColor: "#FEFEFF",
-    borderColor: "#DBEAFE",
-    shadowOpacity: 0.12,
-    transform: [{ scale: 1.02 }],
+    backgroundColor: "#FFFBF5",
+    borderColor: "#F4B942",
+    borderWidth: 2.5,
+    shadowOpacity: 0.2,
+    shadowColor: "#F4B942",
   },
   iconWrapper: {
     marginRight: 14,
@@ -492,32 +618,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  title: { 
-    fontWeight: "600", 
-    fontSize: 16, 
-    color: "#111827",
+  title: {
+    fontWeight: "600",
+    fontSize: 16,
+    color: "#6B1C23",
     flex: 1,
     lineHeight: 22,
   },
-  unreadTitle: { 
-    color: "#1D4ED8",
+  unreadTitle: {
+    color: "#6B1C23",
     fontWeight: "700",
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#2563EB",
+    backgroundColor: "#F4B942",
     marginLeft: 8,
     marginTop: 6,
-    shadowColor: "#2563EB",
+    shadowColor: "#F4B942",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 2,
   },
-  message: { 
-    fontSize: 14, 
-    color: "#4B5563", 
+  message: {
+    fontSize: 14,
+    color: "#6B4B47",
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -526,9 +652,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  date: { 
-    fontSize: 12, 
-    color: "#9CA3AF",
+  date: {
+    fontSize: 12,
+    color: "#8B6B47",
     fontWeight: "500",
   },
   typeBadge: {
@@ -541,13 +667,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  separator: { 
-    height: 12,
+  separator: {
+    height: 16,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#6B7280",
+    color: "#8B6B47",
   },
   emptyContainer: {
     flexGrow: 1,
@@ -562,67 +688,66 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#374151",
+    color: "#6B1C23",
     marginTop: 16,
     marginBottom: 8,
   },
   emptyMessage: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#8B6B47",
     textAlign: "center",
     lineHeight: 24,
   },
   tabsContainer: {
-  backgroundColor: "#F8FAFC",
-  paddingVertical: 8,
-  marginBottom: 12,
-  borderBottomWidth: 1,
-  borderBottomColor: "#E2E8F0",
-},
-tabButton: {
-  paddingHorizontal: isMobile ? 14 : 20,
-  paddingVertical: 10,
-  borderRadius: 20,
-  backgroundColor: "#FFFFFF",
-  alignItems: "center",
-  justifyContent: "center",
-  marginHorizontal: 4,
-  minHeight: 38,
-  borderWidth: 1,
-  borderColor: "#E2E8F0",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 2,
-  elevation: 2,
-},
-activeTabButton: {
-  backgroundColor: "#3B82F6",
-  borderColor: "#3B82F6",
-  shadowColor: "#3B82F6",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 4,
-  elevation: 4,
-},
-tabText: {
-  color: "#64748B",
-  fontWeight: "600",
-  fontSize: isMobile ? 13 : 14,
-  letterSpacing: 0.2,
-  textAlign: "center",
-  whiteSpace: "nowrap", // ✅ Prevents text wrapping
-},
-activeTabText: {
-  color: "#FFFFFF",
-  fontWeight: "700",
-  fontSize: isMobile ? 13 : 14,
-},
+    backgroundColor: "#FFF9F0",
+    paddingVertical: 8,
+    marginBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "#F4B942",
+  },
+  tabButton: {
+    paddingHorizontal: isMobile ? 14 : 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+    minHeight: 38,
+    borderWidth: 2,
+    borderColor: "#F4B942",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  activeTabButton: {
+    backgroundColor: "#F4B942",
+    borderColor: "#6B1C23",
+    shadowColor: "#F4B942",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  tabText: {
+    color: "#8B6B47",
+    fontWeight: "600",
+    fontSize: isMobile ? 13 : 14,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  activeTabText: {
+    color: "#6B1C23",
+    fontWeight: "700",
+    fontSize: isMobile ? 13 : 14,
+  },
   badge: {
     position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#F4B942",
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -630,10 +755,10 @@ activeTabText: {
     justifyContent: "center",
     paddingHorizontal: 3,
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "#6B1C23",
   },
   badgeText: {
-    color: "#fff",
+    color: "#6B1C23",
     fontSize: 11,
     fontWeight: "700",
   },
@@ -653,20 +778,233 @@ activeTabText: {
   heading: {
     fontSize: 28,
     fontWeight: "700",
-    color: "#fff",
+    color: "#F4B942",
     letterSpacing: -0.5,
   },
   unreadCount: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(244, 185, 66, 0.8)",
     marginTop: 2,
   },
   backButton: {
-    marginRight: 10,
-    padding: 6,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    marginRight: 12,
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "#F4B942",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#F4B942",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: "rgba(107, 28, 35, 0.2)",
+  },
+
+
+  // Warning Details Styles
+  warningDetailsCard: {
+    marginTop: 10,
+    marginBottom: 6,
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#DC8500",
+    backgroundColor: "rgba(220, 133, 0, 0.05)",
+  },
+  warningDetailsContent: {
+    padding: 14,
+  },
+  warningDetailsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  warningDetailsTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6B1C23",
+    letterSpacing: 0.3,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(139, 107, 71, 0.2)",
+    backgroundColor: "#FFFFFF",
+  },
+  statCardContent: {
+    padding: 10,
+    alignItems: "center",
+    gap: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: "#8B6B47",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#6B1C23",
+    marginTop: 2,
+  },
+  enhancedProgressSection: {
+    gap: 8,
+  },
+  progressHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  progressLabel: {
+    fontSize: 11,
+    color: "#8B6B47",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  percentageBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  percentageText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: "#FFFFFF",
+  },
+  enhancedProgressBar: {
+    height: 7,
+    backgroundColor: "rgba(139, 107, 71, 0.2)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  enhancedProgressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  overbudgetAlert: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(107, 28, 35, 0.1)",
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(107, 28, 35, 0.2)",
+  },
+  overbudgetText: {
+    fontSize: 11,
+    color: "#6B1C23",
+    fontWeight: "700",
+  },
+ 
+  // Deal Details Styles
+  dealDetailsCard: {
+    marginTop: 10,
+    marginBottom: 6,
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#F4B942",
+    backgroundColor: "rgba(244, 185, 66, 0.05)",
+  },
+  dealDetailsContent: {
+    padding: 14,
+  },
+  dealDetailsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  dealDetailsTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6B1C23",
+    letterSpacing: 0.3,
+  },
+  dealInfoContainer: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  dealInfoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(139, 107, 71, 0.2)",
+  },
+  dealInfoIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "rgba(244, 185, 66, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dealInfoTextContainer: {
+    flex: 1,
+  },
+  dealInfoLabel: {
+    fontSize: 10,
+    color: "#8B6B47",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  dealInfoValue: {
+    fontSize: 14,
+    color: "#6B1C23",
+    fontWeight: "700",
+  },
+  enhancedPriceHighlight: {
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#F4B942",
+    backgroundColor: "rgba(244, 185, 66, 0.1)",
+  },
+  priceContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+  },
+  priceTextContainer: {
+    flex: 1,
+  },
+  priceLabel: {
+    fontSize: 10,
+    color: "#8B6B47",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  enhancedPriceText: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#6B1C23",
+    letterSpacing: -0.5,
   },
 });
+
+
+

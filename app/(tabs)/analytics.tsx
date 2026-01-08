@@ -363,6 +363,20 @@ const fetchHistoricalData = async () => {
     );
   }
 
+   const colorPalette = [
+  '#6B1C23', // Maroon (primary)
+  '#F4B942', // Gold (primary)
+  '#2C5F2D', // Forest green
+  '#1F4788', // Navy blue
+  '#8B4513', // Saddle brown
+  '#4A7C59', // Sage green
+  '#5C4033', // Coffee brown
+  '#6A5ACD', // Slate blue
+  '#CD853F', // Peru/tan
+  '#556B2F', // Olive green
+];
+
+
   // --- Current period calculations ---
   const currentPeriodTotal = currentPeriodExpenses.reduce((sum, e) => sum + e.amount, 0);
   const averageExpense = currentPeriodExpenses.length > 0 
@@ -388,9 +402,17 @@ const fetchHistoricalData = async () => {
   });
 
   const modernColors = [
-    "#4F83CC", "#6EA47F", "#B7A0D6", "#66A182", "#C98C5C",
-    "#B76CA0", "#A982C4", "#D97777", "#7CA6C2",
+    "#4F83CC", // soft blue
+    "#6EA47F", // sage green
+    "#B7A0D6", // lavender gray
+    "#66A182", // muted green
+    "#C98C5C", // warm brown-orange
+    "#B76CA0", // muted magenta
+    "#A982C4", // soft violet
+    "#D97777", // gentle red
+    "#7CA6C2", // dusty teal
   ];
+
 
   const pieData = Object.entries(categoryTotals).map(([category, total], index) => ({
     name: category,
@@ -511,7 +533,7 @@ const fetchHistoricalData = async () => {
       
       {/* Enhanced Header */}
       <LinearGradient
-        colors={['#1f4b81ff', '#7fb1d6ff']}
+  colors={['#6B1C23', '#8B2635']} // ✅ Maroon gradient
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
@@ -544,8 +566,8 @@ const fetchHistoricalData = async () => {
           <LinearGradient
             colors={
               remainingBudget >= 0
-                ? ['#1f4b81', '#355d9c']
-                : ['#dc2626', '#ef4444']
+          ? ['#6B1C23', '#8B2635']       // ✅ Surplus – maroon
+          : ['#dc2626', '#ef4444']        // ❤️ Overspent – red (keep for alert)
             }
             style={styles.statusGradient}
           >
@@ -599,7 +621,7 @@ const fetchHistoricalData = async () => {
                   <Text style={styles.remainingLabel}>
                     {remainingBudget >= 0 ? 'Remaining' : 'Over Budget'}
                   </Text>
-                  <Text style={[styles.remainingAmount, { color: remainingBudget >= 0 ? '#FFF' : '#FEE2E2' }]}>
+            <Text style={[styles.remainingAmount, { color: remainingBudget >= 0 ? '#F4B942' : '#FEE2E2' }]}> {/* ✅ Gold when positive */}
                     ₱{Math.abs(remainingBudget).toLocaleString()}
                   </Text>
                 </View>
@@ -613,7 +635,7 @@ const fetchHistoricalData = async () => {
                         styles.progressFill, 
                         { 
                           width: `${Math.min(budgetUsedPercentage, 100)}%`,
-                          backgroundColor: budgetUsedPercentage > 100 ? '#FEE2E2' : 'rgba(255, 255, 255, 0.9)'
+                    backgroundColor: budgetUsedPercentage > 100 ? '#FEE2E2' : '#F4B942' // ✅ Gold progress bar
                         }
                       ]} 
                     />
@@ -942,11 +964,11 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
 
       <View style={styles.summaryCard}>
         <LinearGradient
-          colors={['#dbeafe', '#bfdbfe']}
+        colors={['#FFF8E7', '#FFF4D6']} // ✅ Light cream gradient
           style={styles.cardGradient}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.cardIconContainer, { backgroundColor: '#1e40af' }]}>
+          <View style={[styles.cardIconContainer, { backgroundColor: '#6B1C23' }]}> {/* ✅ Maroon */}
               <Ionicons name="receipt" size={20} color="#FFFFFF" />
             </View>
             <View style={styles.cardTextSection}>
@@ -962,13 +984,13 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
     {Object.keys(categoryTotals).length > 0 && (
       <View style={styles.insightCard}>
         <LinearGradient
-          colors={['rgba(59, 130, 246, 0.05)', 'rgba(30, 64, 175, 0.05)']}
+        colors={['rgba(107, 28, 35, 0.05)', 'rgba(139, 38, 53, 0.05)']} // ✅ Maroon gradient (light)
           style={styles.insightGradient}
         >
           <View style={styles.insightContent}>
             <View style={styles.insightIconContainer}>
               <LinearGradient
-                colors={['#3b82f6', '#1e40af']}
+              colors={['#F4B942', '#D4A017']} // ✅ Gold gradient
                 style={styles.insightIconGradient}
               >
                 <Ionicons name="analytics" size={20} color="#FFFFFF" />
@@ -999,7 +1021,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
         <View style={styles.chartCard}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIconContainer}>
-              <Ionicons name="bar-chart" size={18} color="#3b82f6" />
+            <Ionicons name="bar-chart" size={18} color="#F4B942" /> {/* ✅ Gold */}
             </View>
             <Text style={styles.sectionTitle}>Category Breakdown</Text>
           </View>
@@ -1032,22 +1054,32 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                       }}>
                         <Text style={{
                           fontSize: 13,
-                          color: "#334155",
+                          color: "#6B1C23", // ✅ Maroon
                           fontWeight: "600",
                         }}>
                           {item.name}
                         </Text>
-                        <Text style={{ fontSize: 13, color: "#64748b" }}>
+                        <Text
+                        style={{
+                          fontSize: 13,
+                          color: "#6B1C23", // ✅ Maroon
+                          opacity: 0.7,
+                        }}
+                      >
+
                           ₱{amount.toLocaleString()} ({percent}%)
                         </Text>
                       </View>
 
                       <View style={{
                         height: 14,
-                        backgroundColor: "#E2E8F0",
+                        backgroundColor: "#FFF8E7", // ✅ Light cream
                         borderRadius: 8,
                         overflow: "hidden",
-                      }}>
+                        borderWidth: 1,
+                        borderColor: "#F4B94220", // ✅ Light gold border
+                      }}
+    >
                         <View style={{
                           height: "100%",
                           width: `${percent}%`,
@@ -1062,7 +1094,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                 <View style={{ marginTop: 16, alignItems: "center" }}>
                   <Text style={{
                     fontSize: 13,
-                    color: "#1e3a8a",
+                    color: "#6B1C23",
                     fontWeight: "600",
                   }}>
                     Total Spending: ₱{totalBudget.toLocaleString()}
@@ -1074,21 +1106,21 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
 
           <View style={{
             marginTop: 12,
-            backgroundColor: "#F0F9FF",
+            backgroundColor: "#FFF8E7",
             borderLeftWidth: 3,
-            borderLeftColor: "#3b82f6",
+            borderLeftColor: "#F4B942",
             padding: 10,
             borderRadius: 8,
           }}>
             <Text style={{
               fontSize: 13,
-              color: "#1e3a8a",
+              color: "#6B1C23",
               fontWeight: "600",
               marginBottom: 2,
             }}>
               💡 Tip:
             </Text>
-            <Text style={{ fontSize: 12.5, color: "#334155", lineHeight: 18 }}>
+          <Text style={{ fontSize: 12.5, color: "#6B1C23", lineHeight: 18, opacity: 0.8 }}> {/* ✅ Maroon */}
               This clean bar chart lets you compare categories more precisely.
               Longer bars represent higher spending.
             </Text>
@@ -1103,7 +1135,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
         <View style={styles.chartCard}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIconContainer}>
-              <Ionicons name="stats-chart" size={18} color="#3b82f6" />
+          <Ionicons name="stats-chart" size={18} color="#F4B942" /> {/* ✅ Gold */}
             </View>
             <Text style={styles.sectionTitle}>Spending Behavior (Radar View)</Text>
           </View>
@@ -1147,7 +1179,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                         <Polygon
                           key={idx}
                           points={gridPoints}
-                          stroke="#CBD5E1"
+                          stroke="#F4B94240"
                           strokeWidth="0.5"
                           fill="none"
                         />
@@ -1156,8 +1188,8 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
 
                     <Polygon
                       points={areaPoints}
-                      fill="rgba(59,130,246,0.25)"
-                      stroke="#2563EB"
+                  fill="rgba(107, 28, 35, 0.25)" // ✅ Maroon with transparency
+                      stroke="#6B1C23"
                       strokeWidth="2"
                     />
 
@@ -1169,7 +1201,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                           cx={x}
                           cy={y}
                           r="3"
-                          fill="#1D4ED8"
+                          fill="#F4B942"
                           stroke="#fff"
                           strokeWidth="1"
                         />
@@ -1185,7 +1217,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                           y={y}
                           textAnchor="middle"
                           fontSize="11"
-                          fill="#334155"
+                          fill="#6B1C23"
                         >
                           {d.category}
                         </SvgText>
@@ -1196,30 +1228,61 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
 
                 <View style={{
                   marginTop: 10,
-                  backgroundColor: "#F0F9FF",
+                  backgroundColor: "#FFF8E7",
                   borderLeftWidth: 3,
-                  borderLeftColor: "#3b82f6",
+                  borderLeftColor: "#F4B942",
                   padding: 10,
                   borderRadius: 8,
                 }}>
                   <Text style={{
                     fontSize: 13,
-                    color: "#1e3a8a",
+                    color: "#6B1C23",
                     fontWeight: "600",
                     marginBottom: 4,
                   }}>
                     💡 Tip: How to Read This Chart
-                  </Text>
-                  <Text style={{ fontSize: 12.5, color: "#334155", lineHeight: 18 }}>
-                    Each axis represents a spending category. The blue shape shows your spending intensity.
-                  </Text>
-                </View>
-              </View>
-            );
-          })()}
-        </View>
-      </View>
-    )}
+                   </Text>
+
+
+              <Text style={{ fontSize: 12.5, color: "#6B1C23", lineHeight: 18, opacity: 0.8 }}> {/* ✅ Maroon */}
+                Each axis represents a spending category. The maroon shape shows your spending intensity —
+                the farther a point is from the center, the higher your spending in that category.
+              </Text>
+
+
+              <Text
+                style={{
+                  fontSize: 12.5,
+                  color: "#6B1C23", // ✅ Maroon
+                  lineHeight: 18,
+                  marginTop: 6,
+                  opacity: 0.8,
+                }}
+              >
+                A balanced, round shape means your budget is evenly distributed. A long spike in one
+                direction shows a dominant category — usually where you're spending the most.
+              </Text>
+
+
+              <Text
+                style={{
+                  fontSize: 12.5,
+                  color: "#6B1C23", // ✅ Maroon
+                  lineHeight: 18,
+                  marginTop: 6,
+                  opacity: 0.8,
+                }}
+              >
+                This radar chart helps you visualize multi-dimensional behavior — e.g., overspending,
+                eating out, impulse buying, and entertainment — so you can quickly spot imbalances.
+              </Text>
+            </View>
+          </View>
+        );
+      })()}
+    </View>
+  </View>
+)}
 
     {/* Adaptive Spending Pattern Chart */}
     {(() => {
@@ -1269,7 +1332,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
           <View style={styles.chartCard}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="trending-up" size={18} color="#3b82f6" />
+            <Ionicons name="trending-up" size={18} color="#F4B942" /> {/* ✅ Gold */}
               </View>
               <Text style={styles.sectionTitle}>Spending Pattern</Text>
             </View>
@@ -1284,13 +1347,13 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                 <View style={{
                   width: 24,
                   height: 12,
-                  backgroundColor: "#3b82f6",
+                  backgroundColor: "#6B1C23",
                   borderRadius: 4,
                   marginRight: 6,
                 }} />
                 <Text style={{
                   fontSize: 13,
-                  color: "#64748b",
+                  color: "#6B1C23",
                   fontWeight: "600",
                 }}>
                   {budgetPeriod === "Daily" ? "Hourly Spending" : "Daily Spending"}
@@ -1306,7 +1369,7 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                     data: spendingData.data.slice(-14).length > 0
                       ? spendingData.data.slice(-14)
                       : [0],
-                    color: () => "#3b82f6",
+                    color: () => "#6B1C23",
                     strokeWidth: 3,
                   }],
                 }}
@@ -1319,58 +1382,55 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
                   backgroundGradientFrom: "#FFFFFF",
                   backgroundGradientTo: "#FFFFFF",
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(59,130,246,${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(75,85,99,${opacity})`,
-                  propsForDots: {
-                    r: "5",
-                    strokeWidth: "2",
-                    stroke: "#3b82f6",
-                    fill: "#FFFFFF",
-                  },
-                  propsForBackgroundLines: {
-                    strokeDasharray: "",
-                    stroke: "rgba(75,85,99,0.15)",
-                    strokeWidth: 1,
-                  },
-                  fillShadowGradient: "#3b82f6",
-                  fillShadowGradientOpacity: 0.1,
-                }}
-                bezier
-                style={{
-                  borderRadius: 16,
-                  backgroundColor: "#FFFFFF",
-                }}
+              color: (opacity = 1) => `rgba(107, 28, 35, ${opacity})`, // ✅ Maroon with opacity
+              labelColor: (opacity = 1) => `rgba(107, 28, 35, ${opacity})`, // ✅ Maroon labels
+              propsForDots: {
+                r: "5",
+                strokeWidth: "2",
+                stroke: "#F4B942", // ✅ Gold dot border
+                fill: "#FFFFFF",
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: "",
+                stroke: "rgba(244, 185, 66, 0.2)", // ✅ Light gold grid lines
+                strokeWidth: 1,
+              },
+              fillShadowGradient: "#6B1C23", // ✅ Maroon gradient
+              fillShadowGradientOpacity: 0.1,
+            }}
+            bezier
+            style={{
+              borderRadius: 16,
+              backgroundColor: "#FFFFFF",
+            }}
+
               />
 
               <View style={{
                 marginTop: 18,
-                backgroundColor: "#F0F9FF",
+                backgroundColor: "#FFF8E7",
                 borderLeftWidth: 3,
-                borderLeftColor: "#3b82f6",
+                borderLeftColor: "#F4B942",
                 padding: 12,
                 borderRadius: 8,
               }}>
                 <Text style={{
                   fontSize: 13,
-                  color: "#1e3a8a",
+                  color: "#6B1C23",
                   fontWeight: "600",
                   marginBottom: 4,
                 }}>
                   💡 Tip: Understanding Your Spending Pattern
                 </Text>
-                <Text style={{ fontSize: 12.5, color: "#334155", lineHeight: 18 }}>
+            <Text style={{ fontSize: 12.5, color: "#6B1C23", lineHeight: 18, opacity: 0.8 }}> {/* ✅ Maroon */}
                   {budgetPeriod === "Daily"
                     ? "Each point shows how much you spent per hour today. Peaks mean times when you spent the most."
                     : "Each point shows your total spending for that day. Watch for spikes—they mark days when you spent more than usual."}
                 </Text>
               </View>
 
-              <Text style={{
-                textAlign: "center",
-                color: "#64748b",
-                fontSize: 12,
-                marginTop: 10,
-              }}>
+                <Text style={{ fontSize: 12.5, color: "#6B1C23", lineHeight: 18, marginTop: 6, opacity: 0.8 }}> {/* ✅ Maroon */}
+
                 {budgetPeriod === "Daily"
                   ? "Hourly spending trend for today"
                   : "Daily spending pattern for this period"}
@@ -1383,12 +1443,12 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
           <View style={styles.chartCard}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="trending-up" size={18} color="#3b82f6" />
+            <Ionicons name="trending-up" size={18} color="#F4B942" /> {/* ✅ Gold */}
               </View>
               <Text style={styles.sectionTitle}>Spending Pattern</Text>
             </View>
             <View style={styles.emptyChartContainer}>
-              <Ionicons name="bar-chart-outline" size={48} color="#D1D5DB" />
+          <Ionicons name="bar-chart-outline" size={48} color="#F4B94240" /> {/* ✅ Light gold */}
               <Text style={styles.emptyChartText}>No spending data available</Text>
               <Text style={styles.emptyChartSubtext}>
                 Start tracking expenses to see trends
@@ -1404,8 +1464,8 @@ if (event.type === 'set' && date) setHistoryEndDate(date);
       <View style={styles.categoryDetailsSection}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionIconContainer}>
-            <Ionicons name="list" size={18} color="#3b82f6" />
-          </View>
+        <Ionicons name="list" size={18} color="#F4B942" /> {/* ✅ Gold */}
+                  </View>
           <Text style={styles.sectionTitle}>Category Details</Text>
         </View>
         <View style={styles.categoryList}>

@@ -9,7 +9,7 @@ import { saveToken, getToken } from '../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../lib/api';
 import { TextInput as RNTextInput } from "react-native";
-import { removeToken } from "../lib/auth";
+
 
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === "web") {
@@ -19,12 +19,15 @@ const showAlert = (title: string, message: string) => {
   }
 };
 
+
 const { height: windowHeight, width: windowWidth } = Dimensions.get('window');
+
 
 // Dynamic sizing based on screen height
 const isSmallScreen = windowHeight < 700;
 const BUTTON_SIZE = isSmallScreen ? 60 : 70;
 const LOGO_SIZE = isSmallScreen ? 100 : 130;
+
 
 const NUMBER_ROWS = [
   ['1', '2', '3'],
@@ -32,6 +35,7 @@ const NUMBER_ROWS = [
   ['7', '8', '9'],
   ['', '0', '←'],
 ];
+
 
 // --- PIN DOTS INPUT FOR WEB ---
 type PinDotsInputWebProps = {
@@ -82,6 +86,7 @@ const PinDotsInputWeb = forwardRef<TextInput, PinDotsInputWebProps>(
     </Pressable>
   )
 );
+
 
 // --- DIAL PAD FOR NATIVE ---
 type PinDotsAndDialProps = {
@@ -134,6 +139,7 @@ function PinDotsAndDial({ pin, handleDial }: PinDotsAndDialProps) {
   );
 }
 
+
 // ---- NATIVE LOGIN ----
 function AppLogin() {
   const router = useRouter();
@@ -144,10 +150,12 @@ function AppLogin() {
   const [showDial, setShowDial] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
 
+
  useEffect(() => {
   (async () => {
     const token = await getToken();
     const net = await NetInfo.fetch();
+
 
     if (token && token.token) {
       if (net.isConnected) {
@@ -159,16 +167,9 @@ function AppLogin() {
           console.log("✅ Token valid — logging in automatically");
           router.replace("/(tabs)");
         } catch (err) {
-  console.log("❌ Token invalid or expired — clearing session");
-
-  await removeToken();         // <--- use your central cleanup function
-  await AsyncStorage.removeItem("migo-email");
-  await AsyncStorage.removeItem("authExpiry");
-
-  router.replace("/login");
-  return;
-}
-
+          console.log("❌ Token invalid, clearing...");
+          await AsyncStorage.multiRemove(["migo-email"]);
+        }
       } else {
         // 📴 Offline — trust cached login
         console.log("📦 Offline mode: using saved session");
@@ -177,6 +178,8 @@ function AppLogin() {
     }
   })();
 }, []);
+
+
 
 
   useEffect(() => {
@@ -193,14 +196,17 @@ function AppLogin() {
     });
   }, []);
 
+
   useEffect(() => {
     if (!hasSavedEmail && /\S+@\S+\.\S+/.test(email)) setShowDial(true);
     else if (!hasSavedEmail) setShowDial(false);
   }, [email, hasSavedEmail]);
 
+
   useEffect(() => {
     if (/^\d{6}$/.test(pin) && (email && email.length > 0)) handleLogin(pin);
   }, [pin]);
+
 
   const handleLogin = async (inputPin: string) => {
   if (!email) {
@@ -212,19 +218,21 @@ function AppLogin() {
     return;
   }
 
+
   try {
     const response = await api.post('/auth/login', { email, pin: inputPin });
+
 
     if (response.data.needsVerification) {
       router.push({ pathname: '/verify-code', params: { email } });
       return;
     }
 
+
     // ✅ 1-day expiry for demo
     const now = new Date();
     const expiry = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
 
-    console.log("LOGIN RESPONSE:", JSON.stringify(response.data, null, 2));
 
     await saveToken({
       token: response.data.user.token,
@@ -233,16 +241,18 @@ function AppLogin() {
       id: response.data.user.id,
       budgetPeriod: response.data.user.budgetPeriod,
       avatarUrl: response.data.user.avatarUrl || null,
-        
     });
+
 
     await AsyncStorage.setItem('authExpiry', expiry.toISOString());
     await AsyncStorage.setItem('migo-email', email);
+
 
     // ✅ Initialize offline sync listener
     import("../lib/offlineCache").then(({ initOfflineSyncListener }) => {
       initOfflineSyncListener();
     });
+
 
     // ✅ Redirect to index/home screen
     router.replace('/(tabs)');
@@ -251,6 +261,8 @@ function AppLogin() {
     setError('Login failed. Please try again.');
   }
 };
+
+
 
 
   const handleSwitchAccount = async () => {
@@ -263,10 +275,12 @@ function AppLogin() {
     setTimeout(() => emailInputRef.current?.focus(), 200);
   };
 
+
   const handleDial = (value: string) => {
     if (value === '←') setPin(pin.slice(0, -1));
     else if (value && pin.length < 6) setPin(pin + value);
   };
+
 
   return (
     <KeyboardAvoidingView
@@ -289,11 +303,12 @@ function AppLogin() {
           </Text>
         </View>
 
+
         <View style={styles.card}>
           <Text style={styles.accountLabel}>Account</Text>
           {hasSavedEmail ? (
             <>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.emailBadge}
                 onPress={handleSwitchAccount}
                 activeOpacity={0.7}
@@ -315,20 +330,20 @@ function AppLogin() {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholderTextColor="#94a3b8"
+               placeholderTextColor="#9ca3af"
                 autoFocus
               />
               {showDial && <PinDotsAndDial pin={pin} handleDial={handleDial} />}
             </>
           )}
-          
+         
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorIcon}>⚠️</Text>
               <Text style={styles.error}>{error}</Text>
             </View>
           ) : null}
-          
+         
           <View style={styles.linkContainer}>
             <TouchableOpacity onPress={() => router.push('/reset-pin')}>
               <Text style={styles.forgotPin}>Forgot PIN?</Text>
@@ -345,6 +360,7 @@ function AppLogin() {
   );
 }
 
+
 // ---- WEB LOGIN ----
 function WebLogin() {
   const router = useRouter();
@@ -355,15 +371,18 @@ function WebLogin() {
   const pinInputRef = useRef<RNTextInput>(null);
   const emailInputRef = useRef<RNTextInput>(null);
 
+
   useEffect(() => {
   (async () => {
     const token = await getToken();
     const expiry = await AsyncStorage.getItem('authExpiry');
     const net = await NetInfo.fetch();
 
+
     if (token && token.token && expiry) {
       const now = new Date();
       const expiryDate = new Date(expiry);
+
 
       if (now < expiryDate) {
         if (net.isConnected) {
@@ -390,6 +409,8 @@ function WebLogin() {
 }, []);
 
 
+
+
   useEffect(() => {
     AsyncStorage.getItem('migo-email').then((migoEmail) => {
       if (migoEmail) {
@@ -404,9 +425,11 @@ function WebLogin() {
     });
   }, []);
 
+
   useEffect(() => {
     if (/^\d{6}$/.test(pin) && (email && email.length > 0)) handleLogin(pin);
   }, [pin]);
+
 
   const handleLogin = async (inputPin: string) => {
     if (!email) {
@@ -424,7 +447,7 @@ if (response.data.needsVerification) {
 } else {
   const now = new Date();
   const expiry = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000); // 7 days
-  
+ 
   await saveToken({
     token: response.data.user.token,
     firstName: response.data.user.firstName,
@@ -432,13 +455,13 @@ if (response.data.needsVerification) {
     id: response.data.user.id,
     budgetPeriod: response.data.user.budgetPeriod,
     avatarUrl: response.data.user.avatarUrl || null,
-    
   });
   await AsyncStorage.setItem('authExpiry', expiry.toISOString());
   await AsyncStorage.setItem('migo-email', email);
-  
+ 
   router.replace('/(tabs)');
 }
+
 
     } catch (err: any) {
       const msg = err.response?.data?.error || 'PIN incorrect';
@@ -449,8 +472,10 @@ if (response.data.needsVerification) {
         pinInputRef.current?.focus();
       }, 500);
 
+
     }
   };
+
 
   const handleSwitchAccount = async () => {
     await AsyncStorage.removeItem('migo-email');
@@ -460,6 +485,7 @@ if (response.data.needsVerification) {
     setError('');
     setTimeout(() => emailInputRef.current?.focus(), 300);
   };
+
 
   return (
     <KeyboardAvoidingView
@@ -482,11 +508,12 @@ if (response.data.needsVerification) {
           </Text>
         </View>
 
+
         <View style={styles.card}>
           <Text style={styles.accountLabel}>Account</Text>
           {hasSavedEmail ? (
             <>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.emailBadge}
                 onPress={handleSwitchAccount}
               >
@@ -510,7 +537,7 @@ if (response.data.needsVerification) {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholderTextColor="#94a3b8"
+                 placeholderTextColor="#9ca3af"
                 autoFocus
               />
               <PinDotsInputWeb
@@ -520,14 +547,14 @@ if (response.data.needsVerification) {
               />
             </>
           )}
-          
+         
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorIcon}>⚠️</Text>
               <Text style={styles.error}>{error}</Text>
             </View>
           ) : null}
-          
+         
           <View style={styles.linkContainer}>
             <TouchableOpacity onPress={() => router.push('/reset-pin')}>
               <Text style={styles.forgotPin}>Forgot PIN?</Text>
@@ -544,13 +571,15 @@ if (response.data.needsVerification) {
   );
 }
 
+
 export default Platform.OS === 'web' ? WebLogin : AppLogin;
+
 
 // --- STYLES ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#6B1C23',
   },
   content: {
     flex: 1,
@@ -571,59 +600,59 @@ const styles = StyleSheet.create({
   welcome: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
     marginBottom: isSmallScreen ? 2 : 2,
     textAlign: 'center',
     letterSpacing: -0.5,
     marginTop: isSmallScreen ? 4 : 8,
   },
   brand: {
-    color: '#2563eb',
+    color: '#F4B942',
     fontWeight: '800',
   },
   tagline: {
     fontSize: isSmallScreen ? 13 : 15,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
     lineHeight: isSmallScreen ? 18 : 22,
     maxWidth: 280,
   },
   taglineAccent: {
-    color: '#10b981',
-    fontWeight: '600',
+    color: '#F4B942',
+    fontWeight: '700',
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
     width: windowWidth > 400 ? 380 : '100%',
     borderRadius: 24,
     padding: isSmallScreen ? 16 : 20,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    elevation: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderWidth: 2,
+    borderColor: '#F4B942',
   },
   accountLabel: {
-    color: '#64748b',
+    color: '#6B1C23',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     alignSelf: 'flex-start',
     marginBottom: isSmallScreen ? 8 : 10,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   emailBadge: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#F4B942',
     paddingHorizontal: 16,
     paddingVertical: isSmallScreen ? 8 : 10,
     borderRadius: 12,
     alignSelf: 'stretch',
     marginBottom: isSmallScreen ? 12 : 16,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderWidth: 2,
+    borderColor: '#6B1C23',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -631,54 +660,54 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   accountEmail: {
-    color: '#1e40af',
+    color: '#6B1C23',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     flexShrink: 1,
     flexGrow: 1,
     minWidth: 0,
     marginRight: 10,
   },
   switchAccountText: {
-    color: '#2563eb',
+    color: '#6B1C23',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   input: {
     width: '100%',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
+    borderColor: '#6B1C23',
+      backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: isSmallScreen ? 12 : 16,
     fontSize: 16,
-    color: '#0f172a',
+    color: '#6B1C23',
     marginBottom: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   emailInput: {
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
+    borderColor: '#6B1C23',
+        backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: isSmallScreen ? 12 : 16,
     fontSize: 16,
-    color: '#0f172a',
+    color: '#6B1C23',
     marginBottom: isSmallScreen ? 12 : 16,
-    fontWeight: '500',
+    fontWeight: '600',
     width: '100%',
     alignSelf: 'center',
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#FEE2E2',
     paddingHorizontal: 12,
     paddingVertical: isSmallScreen ? 8 : 10,
     borderRadius: 12,
     marginTop: isSmallScreen ? 8 : 12,
-    borderWidth: 1,
-    borderColor: '#fecaca',
+    borderWidth: 2,
+    borderColor: '#DC2626',
     alignSelf: 'stretch',
   },
   errorIcon: {
@@ -686,7 +715,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   error: {
-    color: '#dc2626',
+    color: '#DC2626',
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
@@ -697,19 +726,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgotPin: {
-    color: '#2563eb',
-    fontWeight: '600',
+    color: '#6B1C23',
+    fontWeight: '700',
     fontSize: 14,
   },
   registerLinkText: {
-    color: '#64748b',
+    color: '#6B1C23',
     fontSize: 14,
+    fontWeight: '500',
   },
   registerLink: {
-    fontWeight: '700',
-    color: '#2563eb',
+    fontWeight: '800',
+    color: '#6B1C23',
   },
 });
+
 
 // --- DIAL PAD STYLES ---
 const dialStyles = StyleSheet.create({
@@ -732,7 +763,7 @@ const dialStyles = StyleSheet.create({
     backgroundColor: "#cbd5e1",
   },
   dotFilled: {
-    backgroundColor: "#2563eb",
+    backgroundColor: '#F4B942',
   },
   dialWrap: {
     marginTop: isSmallScreen ? 6 : 8,
@@ -751,9 +782,9 @@ const dialStyles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    elevation: 1,
+    borderWidth: 2,
+    borderColor: '#6B1C23',
+    elevation: 2,
   },
   dialBtnBack: {
     width: BUTTON_SIZE,
@@ -765,11 +796,11 @@ const dialStyles = StyleSheet.create({
   dialNum: {
     fontSize: isSmallScreen ? 20 : 22,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#6B1C23',
   },
   dialBackIcon: {
     fontSize: isSmallScreen ? 28 : 32,
-    color: '#64748b',
+    color: '#ffffff',
     fontWeight: 'bold',
   },
   dialBtnEmpty: {
@@ -779,12 +810,13 @@ const dialStyles = StyleSheet.create({
   },
 });
 
+
 // --- WEB PIN DOTS STYLES ---
 const webPinStyles = {
   pinContainer: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: '#6B1C23',
     borderRadius: 16,
     padding: 5,
     width: '100%',
@@ -820,7 +852,7 @@ const webPinStyles = {
     transition: 'background 0.2s',
   },
   dotFilled: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#F4B942',
   },
   hiddenInput: {
     position: 'absolute',
@@ -830,3 +862,4 @@ const webPinStyles = {
     zIndex: -1,
   },
 };
+

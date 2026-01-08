@@ -2,8 +2,9 @@ import { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Dimensions, ScrollView, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../lib/api';
-import { Alert } from 'react-native'; // ✅ Add this import
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const showAlert = (title: string, message: string, onConfirm?: () => void) => {
   if (Platform.OS === "web") {
@@ -14,7 +15,9 @@ const showAlert = (title: string, message: string, onConfirm?: () => void) => {
   }
 };
 
+
 const { width: windowWidth } = Dimensions.get('window');
+
 
 export default function Register() {
   const router = useRouter();
@@ -29,6 +32,7 @@ export default function Register() {
   const emailRef = useRef<TextInput>(null);
   const pinRef = useRef<TextInput>(null);
 
+
   const handleRegister = async () => {
   if (!firstName || !lastName || !email || !pin) {
     setError('All fields required');
@@ -40,8 +44,10 @@ export default function Register() {
     return;
   }
 
+
   if (loading) return;
   setLoading(true);
+
 
   try {
     const res = await api.post('/auth/register', {
@@ -51,12 +57,14 @@ export default function Register() {
       pin,
     });
 
+
     console.log('✅ Registration response:', res.data);
+
 
     if (res.data.success) {
       await AsyncStorage.setItem('migo-email', email);
       setError('');
-      setShowSuccessModal(true); // ✅ Show modal instead of alert
+      setShowSuccessModal(true);
     } else {
       const msg = res.data.error || 'Registration failed';
       setError(msg);
@@ -73,30 +81,32 @@ export default function Register() {
   }
 };
 
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoContainer}>
-          <Image 
-            source={require('../assets/images/moneymigo-nobackg.png')} 
-            style={styles.logo} 
-            resizeMode="contain" 
+          <Image
+            source={require('../assets/images/moneymigo-nobackg.png')}
+            style={styles.logo}
+            resizeMode="contain"
           />
           <Text style={styles.appTitle}>MoneyMigo</Text>
           <Text style={styles.subtitle}>Start your savings journey</Text>
         </View>
 
+
         <View style={styles.card}>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.description}>Join thousands saving smarter every day</Text>
-          
+         
           <View style={styles.formSection}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>First Name</Text>
@@ -111,6 +121,7 @@ export default function Register() {
                 onSubmitEditing={() => lastNameRef.current?.focus()}
               />
             </View>
+
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Last Name</Text>
@@ -127,6 +138,7 @@ export default function Register() {
               />
             </View>
 
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
               <TextInput
@@ -142,6 +154,7 @@ export default function Register() {
                 onSubmitEditing={() => pinRef.current?.focus()}
               />
             </View>
+
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Security PIN</Text>
@@ -166,6 +179,7 @@ export default function Register() {
             </View>
           </View>
 
+
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorIcon}>⚠️</Text>
@@ -173,8 +187,9 @@ export default function Register() {
             </View>
           ) : null}
 
-          <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]} 
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleRegister}
             disabled={loading}
             activeOpacity={0.8}
@@ -184,11 +199,13 @@ export default function Register() {
             </Text>
           </TouchableOpacity>
 
+
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
+
 
           <TouchableOpacity onPress={() => router.push('/login')}>
             <Text style={styles.loginLink}>
@@ -197,11 +214,13 @@ export default function Register() {
           </TouchableOpacity>
         </View>
 
+
         <Text style={styles.footer}>
           By creating an account, you agree to our{'\n'}
           <Text style={styles.footerLink}>Terms of Service</Text> and <Text style={styles.footerLink}>Privacy Policy</Text>
         </Text>
       </ScrollView>
+
 
        {/* Success Modal */}
       <Modal
@@ -236,10 +255,11 @@ export default function Register() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#6B1C23',
   },
   scrollContent: {
     flexGrow: 1,
@@ -260,13 +280,13 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#2563eb',
+    color: '#F4B942',
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 15,
-    color: '#64748b',
+    color: '#ffffff',
     fontWeight: '500',
   },
   card: {
@@ -274,19 +294,19 @@ const styles = StyleSheet.create({
     width: windowWidth > 400 ? 420 : '100%',
     borderRadius: 24,
     padding: 32,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    elevation: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderWidth: 2,
+    borderColor: '#F4B942',
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#6B1C23',
     marginBottom: 8,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -307,19 +327,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#6B1C23',
     marginBottom: 8,
     letterSpacing: 0.3,
   },
   input: {
     width: '100%',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
+    borderColor: '#6B1C23',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    color: '#0f172a',
+    color: '#6B1C23',
     fontWeight: '500',
   },
   pinInput: {
@@ -358,24 +378,27 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#F4B942',
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 20,
-    shadowColor: '#2563eb',
+    shadowColor: '#F4B942',
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+    borderWidth: 2,
+    borderColor: '#6B1C23',
   },
   buttonDisabled: {
     backgroundColor: '#94a3b8',
+    borderColor: '#94a3b8',
     shadowOpacity: 0.1,
   },
   buttonText: {
-    color: '#ffffff',
+    color: '#6B1C23',
     fontWeight: '700',
     fontSize: 17,
     letterSpacing: 0.5,
@@ -404,22 +427,22 @@ const styles = StyleSheet.create({
   },
   loginLinkBold: {
     fontWeight: '700',
-    color: '#2563eb',
+    color: '#6B1C23',
   },
   footer: {
     marginTop: 24,
     fontSize: 12,
-    color: '#94a3b8',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     lineHeight: 18,
   },
   footerLink: {
-    color: '#2563eb',
+    color: '#F4B942',
     fontWeight: '600',
   },
-  odalOverlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(107, 28, 35, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -436,6 +459,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
+    borderWidth: 3,
+    borderColor: '#F4B942',
   },
   modalEmoji: {
     fontSize: 64,
@@ -444,7 +469,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#6B1C23',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -456,22 +481,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#F4B942',
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 32,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#2563eb',
+    shadowColor: '#F4B942',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+    borderWidth: 2,
+    borderColor: '#6B1C23',
   },
   modalButtonText: {
-    color: '#ffffff',
+    color: '#6B1C23',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
 });
+

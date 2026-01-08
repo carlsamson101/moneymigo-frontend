@@ -48,14 +48,13 @@ type Category = {
 };
 
 const BUILT_IN_CATEGORIES: Category[] = [
-  { name: 'Food', icon: <Ionicons name="fast-food-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  { name: 'Transport', icon: <Ionicons name="bus-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  { name: 'Bills', icon: <Ionicons name="flash-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  { name: 'School', icon: <Ionicons name="school-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  { name: 'Shopping', icon: <Ionicons name="cart-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  // 👇 Add Savings here so it's treated as top-level
-  { name: 'Savings', icon: <Ionicons name="cash-outline" size={22} color="#fff" />, color: '#1f4b81ff' },
-  { name: 'Others', icon: <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color="#fbfbfbff" />, color: '#1f4b81ff' },
+  { name: 'Food', icon: <Ionicons name="fast-food-outline" size={22} color="#fff" />, color: '#6B1C23' }, // Changed from #6B1C23
+  { name: 'Transport', icon: <Ionicons name="bus-outline" size={22} color="#fff" />, color: '#6B1C23' },
+  { name: 'Bills', icon: <Ionicons name="flash-outline" size={22} color="#fff" />, color: '#6B1C23' },
+  { name: 'School', icon: <Ionicons name="school-outline" size={22} color="#fff" />, color: '#6B1C23' },
+  { name: 'Shopping', icon: <Ionicons name="cart-outline" size={22} color="#fff" />, color: '#6B1C23' },
+  { name: 'Savings', icon: <Ionicons name="cash-outline" size={22} color="#fff" />, color: '#6B1C23' },
+  { name: 'Others', icon: <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color="#fff" />, color: '#6B1C23' }, // Changed from #fbfbfbff icon color
 ];
 
 const OTHERS_KEY = "Others";
@@ -237,7 +236,7 @@ useEffect(() => {
           ),
         color:
           BUILT_IN_CATEGORIES.find(c => c.name === OTHERS_KEY)?.color ||
-          "#1f4b81ff",
+          "#6B1C23",
       })),
     ];
 
@@ -364,7 +363,7 @@ const fetchExpenses = async (
       <Ionicons name="ellipsis-horizontal-circle-outline" size={20} color="#fff" />
     ),
   color:
-    BUILT_IN_CATEGORIES.find((c) => c.name === OTHERS_KEY)?.color || "#1f4b81ff",
+    BUILT_IN_CATEGORIES.find((c) => c.name === OTHERS_KEY)?.color || "#6B1C23",
 };
 
         });
@@ -702,7 +701,7 @@ const saveMultiPercentAllocations = async () => {
               ),
             color:
               BUILT_IN_CATEGORIES.find(c => c.name === OTHERS_KEY)?.color ||
-              "#1f4b81ff",
+              "#6B1C23",
           }));
 
         return [...prev, ...newCustom];
@@ -941,7 +940,7 @@ return (
       {/* Header with gradient background */}
 
 <LinearGradient
-    colors={['#1f4b81ff', '#7fb1d6ff']}
+  colors={['#6B1C23', '#8B2635']} // Changed from ['#6B1C23', '#7fb1d6ff']
   start={{ x: 0, y: 0 }}
   end={{ x: 1, y: 1 }}
   style={styles.headerGradient}
@@ -965,7 +964,7 @@ return (
     <View style={styles.titleSection}>
       <Text style={styles.heading}>Budget Overview</Text>
       <View style={styles.durationPill}>
-        <Ionicons name="calendar-outline" size={12} color="#8ab4f8" />
+<Ionicons name="calendar-outline" size={12} color="#F4B942" /> 
         <Text style={styles.durationText} numberOfLines={1} ellipsizeMode="tail">
           {budgetPeriod}
           {budgetPeriodStart && budgetPeriodEnd
@@ -998,7 +997,7 @@ return (
         {/* Total Budget Card */}
         <View style={styles.summaryCard}>
           <View style={styles.cardIcon}>
-            <Ionicons name="wallet" size={14} color="#8ab4f8" />
+<Ionicons name="wallet" size={14} color="#F4B942" /> 
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardLabel}>TOTAL BUDGET</Text>
@@ -1015,7 +1014,7 @@ return (
             <Ionicons 
               name="trending-down" 
               size={14} 
-              color={totalExpenses > totalBudget ? "#f28b82" : "#f48fb1"} 
+  color={totalExpenses > totalBudget ? "#DC2626" : "#F4B942"} // Changed from #f48fb1
             />
           </View>
           <View style={styles.cardContent}>
@@ -1035,7 +1034,7 @@ return (
             <Ionicons 
               name={remainingAmount > 0 ? "checkmark-circle" : "alert-circle"} 
               size={14} 
-              color={remainingAmount > 0 ? "#1f4b81ff" : "#1f4b81ff"} 
+  color={remainingAmount > 0 ? "#00b894" : "#DC2626"} // Changed from #6B1C23
             />
           </View>
           <View style={styles.cardContent}>
@@ -1190,13 +1189,13 @@ return (
     onPress={() => setShowPercentModal(true)}
   >
     <LinearGradient
-      colors={["#1f4b81ff", "#7fb1d6ff"]}
+    colors={["#6B1C23", "#8B2635"]} // Changed from ["#6B1C23", "#7fb1d6ff"]
       style={styles.actionBtnGradient}
     >
       <Ionicons
         name="pie-chart-outline"
         size={20}
-        color="#fff"
+        color="#F4B942"
         style={{ marginRight: 8 }}
       />
       <Text style={styles.actionBtnText}>Set Allocation</Text>
@@ -1211,7 +1210,7 @@ return (
     <Ionicons
       name="refresh-outline"
       size={18}
-      color="#1f4b81ff"
+      color="#6B1C23"
       style={{ marginRight: 6 }}
     />
     <Text style={styles.secondaryActionText}>Clear All</Text>
@@ -1395,7 +1394,7 @@ return (
   <Ionicons
     name="copy-outline"
     size={18}
-    color="#00b894"
+    color="#6B1C23"
     style={{ marginRight: 6 }}
   />
   <Text style={styles.copyPeriodText}>Copy Last Period</Text>
@@ -1406,7 +1405,7 @@ return (
 
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#667eea" />
+          <ActivityIndicator size="large" color="#F4B942" />
           <Text style={styles.loadingText}>Loading budgets...</Text>
         </View>
       )}
@@ -1420,7 +1419,7 @@ return (
    
   {/* Header */}
   <LinearGradient
-       colors={['#1f4b81ff', '#7fb1d6ff']}
+  colors={['#6B1C23', '#8B2635']} // Changed from ['#6B1C23', '#7fb1d6ff']
     start={{ x: 0, y: 0 }}
     end={{ x: 1, y: 0 }}
     style={styles.tableHeader}
@@ -1543,7 +1542,7 @@ return (
                 </>
               ) : (
                 <View style={styles.unplannedBadge}>
-                  <Ionicons name="alert-circle" size={16} color="#1f4b81ff" />
+                  <Ionicons name="alert-circle" size={16} color="#6B1C23" />
                   <Text style={styles.unplannedText}>Unplanned</Text>
                 </View>
               )}
@@ -1596,13 +1595,13 @@ return (
             <Ionicons
               name={othersExpanded ? "chevron-down" : "chevron-forward"}
               size={20}
-              color="#74B9FF"
+              color="#F4B942"
               style={{ marginRight: 6 }}
             />
             <Text
               style={[
                 styles.dividerText,
-                { fontWeight: "600", color: "#74B9FF" },
+                { fontWeight: "600", color: "#F4B942" },
               ]}
             >
               {OTHERS_KEY}
@@ -1676,7 +1675,7 @@ return (
                       <View
                         style={[
                           styles.categoryIcon,
-                          { backgroundColor: color || "#1f4b81ff" },
+                          { backgroundColor: color || "#6B1C23" },
                         ]}
                       >
                         {icon}
@@ -1746,7 +1745,7 @@ return (
                           <Ionicons
                             name="alert-circle"
                             size={16}
-                            color="#1f4b81ff"
+                            color="#6B1C23"
                           />
                           <Text style={styles.unplannedText}>Unplanned</Text>
                         </View>
@@ -1858,7 +1857,7 @@ return (
                     >
                       {c.name}
                     </Text>
-                        {isOthers && <Ionicons name="chevron-down" size={16} color="#74B9FF" />}
+                        {isOthers && <Ionicons name="chevron-down" size={16} color="#F4B942" />}
                       </View>
 
                       {isOthers ? (
@@ -1879,7 +1878,7 @@ return (
                         </View>
                       )}
 
-                      <Text style={[styles.pesoEquivalent, { color: isOthers ? '#74B9FF' : '#667eea' }]}>
+                      <Text style={[styles.pesoEquivalent, { color: isOthers ? '#F4B942' : '#667eea' }]}>
                         ₱{pesoEquivalent.toLocaleString()}
                       </Text>
                     </View>
@@ -2026,13 +2025,14 @@ const styles = StyleSheet.create({
 unallocatedPill: {
   flexDirection: "row",
   alignItems: "center",
-  backgroundColor: "#1f4b81ff",
+  backgroundColor: "#6B1C23", // Changed from #6B1C23
   paddingHorizontal: 12,
   paddingVertical: 6,
   borderRadius: 16,
   borderWidth: 1,
-  borderColor: "#1f4b81ff",
+  borderColor: "#8B2530", // Changed from #6B1C23
 },
+
 overspentPill: {
   flexDirection: "row",
   alignItems: "center",
@@ -2046,12 +2046,12 @@ overspentPill: {
 unplannedPill: {
   flexDirection: "row",
   alignItems: "center",
-  backgroundColor: "#1f4b81ff",
+  backgroundColor: "#6B1C23", // Changed from #6B1C23
   paddingHorizontal: 12,
   paddingVertical: 6,
   borderRadius: 16,
   borderWidth: 1,
-  borderColor: "#1f4b81ff",
+  borderColor: "#8B2530", // Changed from #6B1C23
 },
 
 pillText: {
@@ -2146,7 +2146,7 @@ secondaryActionBtn: {
   alignItems: 'center',
   justifyContent: 'center',
   borderWidth: 1.5,
-  borderColor: '#1f4b81ff',
+  borderColor: '#6B1C23',
   backgroundColor: '#fff',
   paddingVertical: 8,
   paddingHorizontal: 12,
@@ -2156,7 +2156,7 @@ secondaryActionBtn: {
   marginBottom: 10,
 },
 secondaryActionText: {
-  color: '#1f4b81ff',
+  color: '#6B1C23',
   fontWeight: '500',
   fontSize: 13,
 },
@@ -2165,15 +2165,15 @@ secondaryActionText: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#d1f2eb',
+    backgroundColor: '#FEF3C7',
     borderWidth: 1,
-    borderColor: '#00b894',
+    borderColor: '#F4B942',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 16,
   },
   copyPeriodText: {
-    color: '#00b894',
+    color: '#6B1C23',
     fontWeight: '600',
     fontSize: 15,
   },
@@ -2192,7 +2192,7 @@ secondaryActionText: {
 
   tableHeaderWrapper: {
   marginBottom: 0,
-  shadowColor: '#262e51',   // ✅ shadow hue based on your gradient
+  shadowColor: '#6B1C23',   // ✅ shadow hue based on your gradient
   shadowOpacity: 0.5,
   shadowRadius: 6,
   shadowOffset: { width: 0, height: 3 },
@@ -2205,7 +2205,7 @@ categoriesWrapper: {
   borderRadius: 16,
   overflow: "hidden",          // ✅ rounded edges apply to children
   backgroundColor: "#fff",
-  shadowColor: "#262e51",      // ✅ matches your gradient hue
+  shadowColor: "#6B1C23",      // ✅ matches your gradient hue
   shadowOpacity: 0.25,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 4 },
@@ -2351,7 +2351,7 @@ budgetColumn: {
   },
   unplannedText: {
     fontSize: 11,
-    color: '#1f4b81ff',
+    color: '#6B1C23',
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -2379,7 +2379,7 @@ budgetColumn: {
   dividerText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#74B9FF',
+    color: '#F4B942',
   },
 
   // Modal Styles
@@ -2553,7 +2553,7 @@ percentInputContainer: {
   },
   autoSumText: {
     fontSize: 12,
-    color: '#74B9FF',
+    color: '#F4B942',
     fontStyle: 'italic',
     fontWeight: '500',
     marginHorizontal: 12,
@@ -2654,7 +2654,7 @@ noBudgetText: {
 
 
 unplannedSpendingBadge: {
-  backgroundColor: '#1f4b81ff', // orange
+  backgroundColor: '#6B1C23', // orange
   paddingHorizontal: 8,
   paddingVertical: 4,
   borderRadius: 8,
@@ -2667,7 +2667,7 @@ unplannedSpendingText: {
 },
 
 unplannedOverspentBadge: {
-  backgroundColor: '#1f4b81ff', // red
+  backgroundColor: '#6B1C23', // red
   paddingHorizontal: 5,
   paddingVertical: 4,
   borderRadius: 8,
@@ -2998,7 +2998,7 @@ if (isMobile) {
       fontSize: 11,                  // ✅ added
     },
     unplannedSpendingBadge: {
-      backgroundColor: '#1f4b81ff',
+      backgroundColor: '#6B1C23',
       paddingHorizontal: 5,          // ✅ reduced from 6
       paddingVertical: 2,            // ✅ reduced from 3
       borderRadius: 8,

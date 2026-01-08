@@ -7,12 +7,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import api from "../lib/api";
 
+
 // ✅ Prevent multiple navigations (web & hot reload safe)
 if (typeof globalThis.__splashNavigated === "undefined")
   globalThis.__splashNavigated = false;
 
+
 export default function SplashScreen() {
   const router = useRouter();
+
 
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.85)).current;
@@ -22,6 +25,7 @@ export default function SplashScreen() {
   const shimmer = useRef(new Animated.Value(0)).current;
   const fadeOut = useRef(new Animated.Value(1)).current;
 
+
   /* -------------------------------------------------------------------------- */
   /* ✅ AUTH CHECK — only runs ONCE per app session                             */
   /* -------------------------------------------------------------------------- */
@@ -30,8 +34,10 @@ export default function SplashScreen() {
   if (globalThis.__splashNavigated) return;
   globalThis.__splashNavigated = true;
 
+
   try {
     const path = typeof window !== "undefined" ? window.location.pathname : "";
+
 
     // 🚫 Allow special pages to bypass this redirect
     if (
@@ -44,15 +50,19 @@ export default function SplashScreen() {
       return;
     }
 
+
     const tokenData = await AsyncStorage.getItem("token");
     const expiry = await AsyncStorage.getItem("authExpiry");
     const net = await NetInfo.fetch();
 
+
     let nextRoute = "/login"; // default
+
 
     if (tokenData && expiry) {
       const now = new Date();
       const expiryDate = new Date(expiry);
+
 
       if (now < expiryDate) {
         if (net.isConnected) {
@@ -78,6 +88,7 @@ export default function SplashScreen() {
       console.log("🔑 No token found — go to login");
     }
 
+
     // ⏳ Delay 3s before navigation (fade + route)
     Animated.timing(fadeOut, {
       toValue: 0,
@@ -97,8 +108,11 @@ export default function SplashScreen() {
 };
 
 
+
+
     checkAuth();
   }, []);
+
 
   // ✅ Animation Setup
   useEffect(() => {
@@ -131,6 +145,7 @@ export default function SplashScreen() {
       ]),
     ]).start();
 
+
     const floatAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(float, {
@@ -146,6 +161,7 @@ export default function SplashScreen() {
       ])
     );
     floatAnimation.start();
+
 
     const shimmerAnimation = Animated.loop(
       Animated.sequence([
@@ -163,46 +179,52 @@ export default function SplashScreen() {
     );
     shimmerAnimation.start();
 
+
     return () => {
       floatAnimation.stop();
       shimmerAnimation.stop();
     };
   }, []);
 
+
   const floatY = float.interpolate({
     inputRange: [0, 1],
     outputRange: [0, -10],
   });
+
 
   const shimmerX = shimmer.interpolate({
     inputRange: [0, 1],
     outputRange: [-300, 300],
   });
 
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeOut }]}>
       <LinearGradient
-        colors={['#1c5f93ff', '#1f4b81ff', '#7fb1d6ff']}
+        colors={['#6B1C23', '#6B1C23', '#4A1419']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
 
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.shape1,
           { opacity: opacity.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] }) }
-        ]} 
+        ]}
       />
-      <Animated.View 
+      <Animated.View
         style={[
           styles.shape2,
-          { 
+          {
             opacity: opacity.interpolate({ inputRange: [0, 1], outputRange: [0, 0.25] }),
             transform: [{ translateY: floatY }]
           }
-        ]} 
+        ]}
       />
+
 
       <Animated.View
         style={[
@@ -218,6 +240,7 @@ export default function SplashScreen() {
         />
       </Animated.View>
 
+
       <Animated.View
         style={[
           styles.textContainer,
@@ -228,12 +251,14 @@ export default function SplashScreen() {
           <Text style={styles.tagline}>Save Smarter. Live Better.</Text>
         </View>
 
+
         <View style={styles.brandBox}>
           <Text style={styles.brand}>You've got </Text>
           <View style={styles.accentBox}>
             <Text style={styles.brandAccent}>A Migo</Text>
           </View>
         </View>
+
 
         <View style={styles.featureRow}>
           <View style={styles.feature}>
@@ -254,10 +279,11 @@ export default function SplashScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1f4b81ff',
+    backgroundColor: '#6B1C23',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -275,7 +301,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#fbbf24',
+    backgroundColor: '#F4B942',
     bottom: -50,
     left: -60,
   },
@@ -342,13 +368,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   accentBox: {
-    backgroundColor: '#fbbf24',
+    backgroundColor: '#F4B942',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   brandAccent: {
-    color: '#065f46',
+    color: '#6B1C23',
     fontWeight: '900',
     fontSize: 18,
     letterSpacing: 0.5,
@@ -378,3 +404,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+

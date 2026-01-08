@@ -23,7 +23,7 @@ LogBox.ignoreLogs([
     Alert,
   } from 'react-native';
   import { Ionicons, MaterialIcons} from '@expo/vector-icons';
-  import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+  import { MaterialCommunityIcons } from '@expo/vector-icons';
   import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getBudgetHistory } from '../../lib/api';
 import { Image } from "react-native";
@@ -104,7 +104,7 @@ type BudgetPayload = {
 };
 
 
-const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
+const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart, onSettingsPress }) => {
   const [message, setMessage] = React.useState("");
   const [isVisible, setIsVisible] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -129,7 +129,7 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
       const diff = lockEnd.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setMessage(" ");
+        setMessage("locked");
         setIsVisible(true);
         return;
       }
@@ -143,7 +143,7 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
           ? `${hours}h ${minutes}m`
           : `${minutes}m ${seconds}s`;
 
-      setMessage(`${timeLeft} to edit`);
+      setMessage(timeLeft);
       setIsVisible(true);
     };
 
@@ -152,38 +152,70 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
     return () => clearInterval(timer);
   }, [budgetPeriod, budgetPeriodStart]);
 
-  if (!isVisible || !message) return null;
+  if (!isVisible) return null;
 
-  const isLocked = message.includes(" ");
+  const isLocked = message === "locked";
 
   return (
     <>
-      {/* Floating Badge - Positioned absolutely at top */}
-<TouchableOpacity
-  activeOpacity={0.9}
-  onPress={() => setIsExpanded(!isExpanded)}
-  style={styles.lockBadgeFloating}
->
- <Ionicons
-  name={isLocked ? "lock-closed" : "time-outline"}
-  size={width < 360 ? 8 : (isMobile ? 10 : 14)}
-  color={isLocked ? "#1f4b81ff" : "#D97706"}
-/>
-  <Text
-  style={[styles.lockBadgeText, { color: isLocked ? "#1f4b81ff" : "#D97706" }]}
-  numberOfLines={1}
-  ellipsizeMode="tail"
->
-    {message}
-  </Text>
-<Ionicons
-  name={isExpanded ? "chevron-up" : "chevron-down"}
-  size={width < 360 ? 7 : (isMobile ? 8 : 12)}
-  color={isLocked ? "#1f4b81ff" : "#D97706"}
-/>
-</TouchableOpacity>
+      {/* Combined Settings/Lock Button */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onSettingsPress}
+        onLongPress={() => setIsExpanded(true)}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: isLocked ? '#E5E7EB' : '#F4B942',
+          paddingHorizontal: 10,
+          paddingVertical: 7,
+          borderRadius: 8,
+          borderWidth: 2,
+          borderColor: isLocked ? '#9CA3AF' : '#6B1C23',
+          opacity: isLocked ? 0.7 : 1,
+          gap: 6,
+          shadowColor: '#6B1C23',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          elevation: 3,
+        }}
+      >
+        <Ionicons
+          name={isLocked ? "lock-closed" : "create-outline"}
+          size={16}
+          color={isLocked ? '#6B7280' : '#6B1C23'}
+        />
+        
+        {/* Main Label */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '700',
+              color: isLocked ? '#6B7280' : '#6B1C23',
+            }}
+          >
+            {isLocked ? 'Locked' : 'Set Budget'}
+          </Text>
+          
+          {/* Show timer countdown when not locked */}
+          {!isLocked && (
+            <Text
+              style={{
+                fontSize: 10,
+                fontWeight: '600',
+                color: '#6B1C23',
+                opacity: 0.7,
+              }}
+            >
+              ({message})
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
 
-      {/* Expanded Popout as Modal - Renders at top level */}
+      {/* Info Modal - Shows on long press */}
       {isExpanded && (
         <Modal
           visible={isExpanded}
@@ -207,7 +239,7 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
                 borderRadius: isMobile ? 10 : 12,
                 padding: isMobile ? 12 : 16,
                 borderWidth: 1,
-                borderColor: isLocked ? '#1f4b81ff' : '#FDE68A',
+                borderColor: isLocked ? '#6B1C23' : '#F4B942',
                 shadowColor: '#000',
                 shadowOpacity: 0.2,
                 shadowRadius: 15,
@@ -229,17 +261,17 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
                   zIndex: 1,
                 }}
               >
-                <Ionicons name="close" size={16} color="#1f4b81ff" />
+                <Ionicons name="close" size={16} color="#6B1C23" />
               </TouchableOpacity>
 
-              {/* Compact Icon + Title Row */}
+              {/* Icon + Title Row */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingRight: 20 }}>
                 <View
                   style={{
                     width: isMobile ? 32 : 40,
                     height: isMobile ? 32 : 40,
                     borderRadius: isMobile ? 16 : 20,
-                    backgroundColor: isLocked ? '#f8f3f3ff' : '#FEF3C7',
+                    backgroundColor: isLocked ? '#FEF2F2' : '#FEF3C7',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginRight: 10,
@@ -248,7 +280,7 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
                   <Ionicons
                     name={isLocked ? "lock-closed" : "time-outline"}
                     size={isMobile ? 16 : 20}
-                    color={isLocked ? "#1f4b81ff" : "#D97706"}
+                    color={isLocked ? "#6B1C23" : "#F4B942"}
                   />
                 </View>
                 <Text
@@ -263,21 +295,40 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
                 </Text>
               </View>
 
-              {/* Message - Compact */}
+              {/* Message */}
               <Text
                 style={{
                   fontSize: isMobile ? 11 : 13,
-                  color: '#1f4b81ff',
+                  color: '#6B1C23',
                   lineHeight: isMobile ? 16 : 18,
                   marginBottom: 10,
                 }}
               >
                 {isLocked
-                  ? "If the set budget timer runs out, you can only add budget. Setting another budget is restricted for this period."
-                  : "You can still set or edit your budget. After timer expires, only additions will be allowed."}
+                  ? "The edit window has expired. You can only add to your budget now. Setting a new budget is restricted for this period."
+                  : `You can still set or edit your budget for ${message}. After the timer expires, only additions will be allowed.`}
               </Text>
 
-             
+              {/* Tip */}
+              <View
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: 8,
+                  padding: 10,
+                  borderLeftWidth: 3,
+                  borderLeftColor: '#F4B942',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: isMobile ? 10 : 12,
+                    color: '#6B1C23',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  💡 Tip: {isLocked ? 'Use the "Add Budget" button to increase your budget.' : 'Tap to edit, long press for details.'}
+                </Text>
+              </View>
             </View>
           </Pressable>
         </Modal>
@@ -285,6 +336,7 @@ const BudgetLockTimer = ({ budgetPeriod, budgetPeriodStart }) => {
     </>
   );
 };
+
 
   export default function Home() {
     const [fullName, setFullName] = useState<string | null>(null);
@@ -309,7 +361,24 @@ const [customEndDate, setCustomEndDate] = useState(null);
 
  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
+// Add this helper function to check if budget is locked
+const isBudgetLocked = () => {
+  if (!budgetPeriodStart) return false;
 
+  const lockRules = {
+    Daily: 2,
+    Weekly: 48,
+    Monthly: 72,
+    Custom: 24,
+  };
+
+  const allowedHours = lockRules[budgetPeriod] || 0;
+  const lockEnd = new Date(budgetPeriodStart);
+  lockEnd.setHours(lockEnd.getHours() + allowedHours);
+
+  const now = new Date();
+  return now >= lockEnd; // Returns true if locked
+};
     // Modals and form states
     const [showSetBudgetModal, setShowSetBudgetModal] = useState(false);
     const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
@@ -929,13 +998,13 @@ const fetchExpensesForCurrentPeriod = async () => {
 
 
 const categoryIcons: any = {
-  Food: <Ionicons name="fast-food" size={20} color="#475569" />,
-  Transport: <MaterialCommunityIcons name="bus" size={20} color="#475569" />,
-  Bills: <MaterialCommunityIcons name="file-document-outline" size={20} color="#475569" />,
-  School: <MaterialCommunityIcons name="school" size={20} color="#475569" />,
-  Shopping: <MaterialCommunityIcons name="cart" size={20} color="#475569" />,
-  Savings: <Ionicons name="cash-outline" size={20} color="#16a34a" />,   // ✅ New
-  Others: <MaterialCommunityIcons name="dots-horizontal" size={20} color="#475569" />,
+  Food: <Ionicons name="fast-food" size={20} color="#6B1C23" />,
+  Transport: <MaterialCommunityIcons name="bus" size={20} color="#6B1C23" />,
+  Bills: <MaterialCommunityIcons name="file-document-outline" size={20} color="#6B1C23" />,
+  School: <MaterialCommunityIcons name="school" size={20} color="#6B1C23" />,
+  Shopping: <MaterialCommunityIcons name="cart" size={20} color="#6B1C23" />,
+  Savings: <Ionicons name="cash-outline" size={20} color="#6B1C23" />,   // ✅ New
+  Others: <MaterialCommunityIcons name="dots-horizontal" size={20} color="#6B1C23" />,
 };
 
 
@@ -944,28 +1013,20 @@ const categoryIcons: any = {
   try {
     const user = await getToken();
     if (!user || !user.id) return;
-
-    // 🔥 FIX: set safe fallback
-    const period =
-      budgetPeriod?.toLowerCase() ||
-      user.budgetPeriod?.toLowerCase() ||
-      "weekly";
-
-    console.log("FETCH REMAINING BUDGET → period:", period);
+    // 🔥 Log period sent
+    console.log('[FETCH BUDGET] period:', budgetPeriod);
 
     const res = await api.get('/auth/balance', {
       params: {
         userId: user.id,
-        period,
+        period: (budgetPeriod ?? '').toLowerCase(),
       },
     });
-
     setRemainingBudget(res.data.remainingBudget);
     setBudgetAmount(res.data.budgetAmount);
-  } catch (err) {
-    console.log("❌ fetchRemainingBudget error:", err?.response?.data || err);
-  }
+  } catch (err) {}
 };
+
 
 const updateBudgetPeriod = async (
   newPeriod: string,
@@ -1086,14 +1147,13 @@ const capitalize = (str?: string) => {
 };
 
 const shortcuts = [ 
-  { icon: '💸', label: 'Expenses', path: '/expenses?period=' + budgetPeriod }, 
-  { icon: '💰', label: 'Budget Plan', path: '/budget' }, 
-  { icon: '🛍️', label: 'Marketplace', path: '/deals' }, 
-  { icon: '📘', label: 'Tools', path: '/tools' }, 
-  { icon: '📈', label: 'Tracker', path: '/analytics' }, 
-  { icon: '🎯', label: 'Savings Goals', path: '/savings' }, ];
-
-
+  { icon: 'cash-outline', label: 'Expenses', path: '/expenses?period=' + budgetPeriod }, 
+  { icon: 'wallet-outline', label: 'Budget Plan', path: '/budget' }, 
+  { icon: 'cart-outline', label: 'Marketplace', path: '/deals' }, 
+  { icon: 'book-outline', label: 'Tools', path: '/tools' }, 
+  { icon: 'trending-up-outline', label: 'Tracker', path: '/analytics' }, 
+  { icon: 'trophy-outline', label: 'Savings Goals', path: '/savings' }, 
+];
 
 useEffect(() => {
   const fetchUser = async () => {
@@ -1133,6 +1193,437 @@ useEffect(() => {
   fetchUser();
 }, []);
 
+// Add these to your Home component states
+const [showPeriodEndingModal, setShowPeriodEndingModal] = useState(false);
+const [timeUntilPeriodEnd, setTimeUntilPeriodEnd] = useState('');
+const [periodEndingProgress, setPeriodEndingProgress] = useState(0);
+
+// ==================== PERIOD ENDING CHECK ====================
+useEffect(() => {
+  if (!budgetPeriodEnd) return;
+
+  const checkPeriodEnding = async () => {
+    const now = new Date();
+    const end = new Date(budgetPeriodEnd);
+    const start = budgetPeriodStart ? new Date(budgetPeriodStart) : now;
+    
+    const msRemaining = end.getTime() - now.getTime();
+    const msSinceStart = now.getTime() - start.getTime();
+    
+    // Calculate hours remaining
+    const hoursRemaining = msRemaining / (1000 * 60 * 60);
+    const minutesSinceStart = msSinceStart / (1000 * 60);
+    
+    // 🧪 TEST MODE: Show if within first 5 minutes of period starting
+    const warningThresholds = {
+      Daily: 6,      // Alert when 6 hours left
+      Weekly: 24,    // Alert when 24 hours (1 day) left
+      Monthly: 72,   // Alert when 72 hours (3 days) left
+      Custom: 24,    // Alert when 24 hours left
+    };
+    
+    const threshold = warningThresholds[budgetPeriod] || 24;
+    
+    // ✅ TEST: Show modal if within first 5 minutes OR within threshold
+    const shouldShow = (hoursRemaining > 0 && hoursRemaining <= threshold) || 
+                       (minutesSinceStart >= 0 && minutesSinceStart <= 5);
+    
+    if (shouldShow) {
+      const token = await getToken();
+      if (!token?.id) return;
+      
+      const modalKey = `periodEndingShown_${token.id}_${budgetPeriodStart}`;
+      const hasShown = await AsyncStorage.getItem(modalKey);
+      
+      if (!hasShown) {
+        setShowPeriodEndingModal(true);
+        await AsyncStorage.setItem(modalKey, 'true');
+      }
+    }
+  };
+
+  checkPeriodEnding();
+  
+  // Check every minute for testing
+  const interval = setInterval(checkPeriodEnding, 60 * 1000);
+  return () => clearInterval(interval);
+}, [budgetPeriodEnd, budgetPeriod, budgetPeriodStart]);
+
+// ==================== PERIOD ENDING TIMER ====================
+// Real-time countdown timer
+useEffect(() => {
+  // ✅ Use 'endDate' instead of 'budgetPeriodEnd'
+  if (!endDate) {
+    console.log('❌ No endDate');
+    return;
+  }
+
+  const updateTimer = () => {
+    const now = new Date();
+    const end = new Date(endDate); // ✅ Changed here
+    const start = startDate ? new Date(startDate) : now; // ✅ Changed here
+    
+    const totalDuration = end.getTime() - start.getTime();
+    const remaining = end.getTime() - now.getTime();
+    
+    console.log('⏰ Timer running:', { remaining, endDate, startDate });
+    
+    if (remaining <= 0) {
+      setTimeUntilPeriodEnd('Period ended');
+      setPeriodEndingProgress(100);
+      return;
+    }
+    
+    // Calculate progress (0-100)
+    const progress = ((totalDuration - remaining) / totalDuration) * 100;
+    setPeriodEndingProgress(Math.min(100, Math.max(0, progress)));
+    
+    // Format time remaining
+    const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+      setTimeUntilPeriodEnd(`${days}d ${hours}h left`);
+    } else if (hours > 0) {
+      setTimeUntilPeriodEnd(`${hours}h ${minutes}m left`);
+    } else {
+      setTimeUntilPeriodEnd(`${minutes}m left`);
+    }
+  };
+
+  updateTimer();
+  const timer = setInterval(updateTimer, 60000); // Update every minute
+  return () => clearInterval(timer);
+}, [endDate, startDate]); // ✅ Changed dependencies
+
+// ==================== PERIOD ENDING MODAL COMPONENT ====================
+const PeriodEndingModal = () => {
+  const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
+  
+  return (
+    <Modal
+      visible={showPeriodEndingModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowPeriodEndingModal(false)}
+    >
+      <Pressable
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        }}
+        onPress={() => setShowPeriodEndingModal(false)}
+      >
+        <Pressable
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 16,
+            padding: isMobile ? 20 : 24,
+            width: '100%',
+            maxWidth: 400,
+            shadowColor: '#000',
+            shadowOpacity: 0.3,
+            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 15,
+          }}
+          onStartShouldSetResponder={() => true}
+        >
+          {/* Icon */}
+          <View
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: '#FEF3C7',
+              alignItems: 'center',
+              justifyContent: 'center',
+              alignSelf: 'center',
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="time-outline" size={32} color="#F4B942" />
+          </View>
+
+          {/* Title */}
+          <Text
+            style={{
+              fontSize: isMobile ? 18 : 20,
+              fontWeight: '700',
+              color: '#1E293B',
+              textAlign: 'center',
+              marginBottom: 8,
+            }}
+          >
+            ⏰ Budget Period Ending Soon
+          </Text>
+
+          {/* Subtitle */}
+          <Text
+            style={{
+              fontSize: isMobile ? 13 : 14,
+              color: '#6B7280',
+              textAlign: 'center',
+              marginBottom: 20,
+            }}
+          >
+            Your {budgetPeriod?.toLowerCase()} budget period is almost over
+          </Text>
+
+          {/* Time Remaining Card */}
+          <View
+            style={{
+              backgroundColor: '#FEF3C7',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+              borderLeftWidth: 4,
+              borderLeftColor: '#F4B942',
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, color: '#6B1C23', fontWeight: '600' }}>
+                Time Remaining
+              </Text>
+              <Text style={{ fontSize: 12, color: '#6B1C23', fontWeight: '700' }}>
+                {timeUntilPeriodEnd}
+              </Text>
+            </View>
+            
+            {/* Progress Bar */}
+            <View
+              style={{
+                height: 8,
+                backgroundColor: '#FFF',
+                borderRadius: 4,
+                overflow: 'hidden',
+              }}
+            >
+              <View
+                style={{
+                  height: '100%',
+                  width: `${periodEndingProgress}%`,
+                  backgroundColor: periodEndingProgress > 80 ? '#EF4444' : '#F4B942',
+                  borderRadius: 4,
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Stats Grid */}
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 12,
+              marginBottom: 20,
+            }}
+          >
+            {/* Budget Amount */}
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: '#F3F4F6',
+                borderRadius: 12,
+                padding: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>
+                Budget
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E293B' }}>
+                ₱{budgetAmount.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Remaining */}
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: '#F3F4F6',
+                borderRadius: 12,
+                padding: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>
+                Remaining
+              </Text>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: remainingBudget < 0 ? '#EF4444' : '#10B981',
+                }}
+              >
+                ₱{remainingBudget.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Spent */}
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: '#F3F4F6',
+                borderRadius: 12,
+                padding: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>
+                Spent
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E293B' }}>
+                ₱{totalExpense.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Tips */}
+          <View
+            style={{
+              backgroundColor: '#F0F9FF',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 20,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                color: '#1E40AF',
+                fontWeight: '600',
+                marginBottom: 6,
+              }}
+            >
+              💡 What happens next?
+            </Text>
+            <Text style={{ fontSize: 11, color: '#1E40AF', lineHeight: 16 }}>
+              • Your period will automatically roll over when it ends{'\n'}
+              • All data will be saved to history{'\n'}
+              • A new budget period will start
+            </Text>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => setShowPeriodEndingModal(false)}
+              style={{
+                flex: 1,
+                backgroundColor: '#F3F4F6',
+                borderRadius: 12,
+                paddingVertical: 14,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#6B7280' }}>
+                Got it
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setShowPeriodEndingModal(false);
+                router.push('/budget');
+              }}
+              style={{
+                flex: 1,
+                backgroundColor: '#6B1C23',
+                borderRadius: 12,
+                paddingVertical: 14,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>
+                View Budget
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
+
+const PeriodStatusIndicator = () => {
+  if (!endDate || !timeUntilPeriodEnd) {
+    return null;
+  }
+  
+  const now = new Date();
+  const end = new Date(endDate);
+  const hoursRemaining = (end.getTime() - now.getTime()) / (1000 * 60 * 60);
+  
+  // Show as urgent when less than 24 hours left
+  const isUrgent = hoursRemaining <= 24;
+  
+  return (
+    <TouchableOpacity
+      onPress={() => setShowPeriodEndingModal(true)}
+      activeOpacity={0.7}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        gap: 8,
+        borderWidth: 2,
+        borderColor: isUrgent ? '#6B1C23' : '#F4B942',
+        shadowColor: '#6B1C23',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+      }}
+    >
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: isUrgent ? '#6B1C23' : '#F4B942',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons
+          name="time-outline"
+          size={14}
+          color="#FFFFFF"
+        />
+      </View>
+      <View style={{ flexDirection: 'column', gap: 1 }}>
+        <Text
+          style={{
+            fontSize: 9,
+            fontWeight: '600',
+            color: '#6B1C23',
+            textTransform: 'uppercase',
+            letterSpacing: 0.3,
+          }}
+        >
+          Period Ending
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: '700',
+            color: isUrgent ? '#6B1C23' : '#F4B942',
+          }}
+        >
+          {timeUntilPeriodEnd}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 
 
@@ -1542,19 +2033,19 @@ useEffect(() => {
         width: 300,
         alignItems: "center",
         borderWidth: 2,
-        borderColor: "#2563EB", // deep blue border
+        borderColor: "#6B1C23", // deep blue border
         shadowColor: "#000",
         shadowOpacity: 0.2,
         shadowRadius: 10,
         elevation: 5,
       }}
     >
-      <Ionicons name="information-circle-outline" size={42} color="#2563EB" />
+      <Ionicons name="information-circle-outline" size={42} color="#6B1C23" />
       <Text
         style={{
           fontSize: 18,
           fontWeight: "700",
-          color: "#1E3A8A",
+          color: "#6B1C23",
           marginTop: 10,
           textAlign: "center",
         }}
@@ -1572,7 +2063,7 @@ useEffect(() => {
         }}
       >
         💡 Welcome! Your default budget period is set to{" "}
-        <Text style={{ fontWeight: "700", color: "#2563EB" }}>Weekly</Text>.
+        <Text style={{ fontWeight: "700", color: "#6B1C23" }}>Weekly</Text>.
         {"\n"}
         You can change this anytime by tapping the{" "}
         <Text style={{ fontWeight: "600" }}>Duration</Text> 
@@ -1580,7 +2071,7 @@ useEffect(() => {
 
       <TouchableOpacity
         style={{
-          backgroundColor: "#2563EB",
+          backgroundColor: "#6B1C23",
           paddingVertical: 10,
           paddingHorizontal: 20,
           borderRadius: 10,
@@ -1726,7 +2217,7 @@ useEffect(() => {
 
       {rolloverContext === 'manual' && (
         <View style={styles.infoBox}>
-          <MaterialIcons name="info" size={16} color="#2563EB" style={{ marginRight: 6, marginTop: 2 }} />
+          <MaterialIcons name="info" size={16} color="#6B1C23" style={{ marginRight: 6, marginTop: 2 }} />
           <View style={{ flex: 1 }}>
             <Text style={styles.infoText}>
               Period type is locked after a <Text style={{ fontWeight: 'bold' }}>manual change</Text>.
@@ -1752,210 +2243,581 @@ useEffect(() => {
   </Pressable>
 </Modal>
 
-
-
-
-        {/* Budget Options Modal */}
-        <Modal
-          visible={showBudgetAction}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowBudgetAction(false)}
-        >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowBudgetAction(false)}>
-            <View style={[styles.dropdownModal, { gap: 10, minWidth: 220 }]}>
-              <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Budget Options</Text>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#1f4b81ff',
-                  padding: 10,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={() => {
-                  setShowBudgetAction(false);
-                  setShowSetBudgetModal(true);
-                }}
-              >
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>Set Budget</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#1f4b81ff',
-                  padding: 10,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={() => {
-                  setShowBudgetAction(false);
-                  setShowAddBudgetModal(true);
-                }}
-              >
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>Add Budget</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#F1F5F9',
-                  padding: 10,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={() => setShowBudgetAction(false)}
-              >
-                <Text style={{ color: '#545353ff', fontWeight: 'bold' }}>Cancel</Text>
-              </TouchableOpacity>
+<Modal visible={showSetBudgetModal} transparent animationType="fade">
+  <Pressable style={styles.modalOverlay} onPress={() => setShowSetBudgetModal(false)}>
+    <Pressable 
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        width: '85%',
+        maxWidth: 400,
+        borderWidth: 3,
+        borderColor: '#F4B942',
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+      }} 
+      onPress={() => {}}
+    >
+      {/* Show lock warning if budget is locked */}
+      {isBudgetLocked() ? (
+        <>
+          {/* Header with Icon */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{
+              backgroundColor: '#F4B942',
+              borderRadius: 12,
+              width: 48,
+              height: 48,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: 12,
+            }}>
+              <Ionicons name="lock-closed" size={24} color="#6B1C23" />
             </View>
-          </Pressable>
-        </Modal>
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                fontWeight: 'bold', 
+                fontSize: 20,
+                color: '#6B1C23',
+                marginBottom: 2,
+              }}>
+                Budget Locked
+              </Text>
+              <Text style={{
+                fontSize: 12,
+                color: '#7D2E3A',
+              }}>
+                Cannot modify budget amount
+              </Text>
+            </View>
+          </View>
 
-        {/* Set Budget Modal */}
-        <Modal visible={showSetBudgetModal} transparent animationType="fade">
-          <Pressable style={styles.modalOverlay} onPress={() => setShowSetBudgetModal(false)}>
-            <Pressable style={[styles.dropdownModal, { gap: 10 }]} onPress={() => {}}>
-              <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Set Budget</Text>
+          {/* Lock Message Box */}
+          <View style={{
+            backgroundColor: '#FEF9C3',
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 16,
+            borderLeftWidth: 4,
+            borderLeftColor: '#F4B942',
+          }}>
+            <Text style={{
+              fontSize: 13,
+              color: '#6B1C23',
+              lineHeight: 20,
+            }}>
+              The edit window has expired for this period. You can only add to your budget now, not set a new amount.
+            </Text>
+          </View>
+          
+          {/* Add to Budget Instead Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F4B942',
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: 'center',
+              borderWidth: 2,
+              borderColor: '#6B1C23',
+              marginBottom: 10,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+            onPress={() => {
+              setShowSetBudgetModal(false);
+              setShowAddBudgetModal(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-circle" size={20} color="#6B1C23" />
+            <Text style={{ color: '#6B1C23', fontWeight: 'bold', fontSize: 15 }}>
+              Add to Budget Instead
+            </Text>
+          </TouchableOpacity>
+
+          {/* Cancel Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F1F5F9',
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: 'center',
+            }}
+            onPress={() => setShowSetBudgetModal(false)}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#6B1C23', fontWeight: '600', fontSize: 14 }}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          {/* Header with Icon */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{
+              backgroundColor: '#F4B942',
+              borderRadius: 12,
+              width: 48,
+              height: 48,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: 12,
+            }}>
+              <Ionicons name="create-outline" size={24} color="#6B1C23" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                fontWeight: 'bold', 
+                fontSize: 20,
+                color: '#6B1C23',
+                marginBottom: 2,
+              }}>
+                Set Budget
+              </Text>
+              <Text style={{
+                fontSize: 12,
+                color: '#7D2E3A',
+              }}>
+                Define your total budget amount
+              </Text>
+            </View>
+          </View>
+
+          {/* Current Budget Display */}
+          {budgetAmount > 0 && (
+            <View style={{
+              backgroundColor: '#FEF9C3',
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 16,
+            }}>
+              <Text style={{ 
+                fontSize: 11, 
+                color: '#7D2E3A', 
+                fontWeight: '600',
+                marginBottom: 4,
+                letterSpacing: 0.5,
+              }}>
+                CURRENT BUDGET
+              </Text>
+              <Text style={{ 
+                fontSize: 22, 
+                fontWeight: 'bold', 
+                color: '#6B1C23' 
+              }}>
+                ₱{Number(budgetAmount).toLocaleString('en-PH', {
+                  minimumFractionDigits: 2,
+                })}
+              </Text>
+            </View>
+          )}
+
+          {/* Amount Input Section */}
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ 
+              fontSize: 13, 
+              color: '#6B1C23', 
+              fontWeight: '600',
+              marginBottom: 8,
+              letterSpacing: 0.3,
+            }}>
+              NEW BUDGET AMOUNT
+            </Text>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#fff',
+              borderRadius: 10,
+              borderWidth: 2,
+              borderColor: '#F4B942',
+              paddingHorizontal: 12,
+            }}>
+              <Text style={{ 
+                fontSize: 18, 
+                color: '#6B1C23', 
+                fontWeight: 'bold',
+                marginRight: 4,
+              }}>
+                ₱
+              </Text>
               <TextInput
-                placeholder="Enter total budget (e.g. 5000)"
+                placeholder="0"
                 keyboardType="numeric"
                 value={setBudgetValue}
                 onChangeText={setSetBudgetValue}
                 style={{
-                  backgroundColor: '#fff',
-                  padding: 10,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#CBD5E1',
+                  flex: 1,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  color: '#6B1C23',
+                  fontWeight: '600',
                 }}
+                placeholderTextColor="#C4C4C4"
               />
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#2563EB',
-                  padding: 10,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={handleSetBudget}
-              >
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>
-                  {isLoading ? 'Saving...' : 'Save'}
-                </Text>
-              </TouchableOpacity>
-            </Pressable>
-          </Pressable>
-        </Modal>
+            </View>
+          </View>
 
-        {/* Add to Budget Modal */}
-        <Modal visible={showAddBudgetModal} transparent animationType="fade">
-          <Pressable style={styles.modalOverlay} onPress={() => setShowAddBudgetModal(false)}>
-            <Pressable style={[styles.dropdownModal, { gap: 10 }]} onPress={() => {}}>
-              <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Add Budget</Text>
-              <TextInput
-                placeholder="Enter amount to add (e.g. 1000)"
-                keyboardType="numeric"
-                value={addBudgetValue}
-                onChangeText={setAddBudgetValue}
-                style={{
-                  backgroundColor: '#fff',
-                  padding: 10,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#CBD5E1',
-                }}
-              />
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#22c55e',
-                  padding: 10,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={handleAddBudget}
-              >
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>
-                  {isLoading ? 'Saving...' : 'Add'}
-                </Text>
-              </TouchableOpacity>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          {/* Save Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F4B942',
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: 'center',
+              borderWidth: 2,
+              borderColor: '#6B1C23',
+              marginBottom: 10,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+            onPress={handleSetBudget}
+            activeOpacity={0.8}
+            disabled={isLoading}
+          >
+            <Ionicons 
+              name={isLoading ? "hourglass-outline" : "checkmark-circle"} 
+              size={20} 
+              color="#6B1C23" 
+            />
+            <Text style={{ color: '#6B1C23', fontWeight: 'bold', fontSize: 15 }}>
+              {isLoading ? 'Saving...' : 'Set Budget'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Cancel Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F1F5F9',
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: 'center',
+            }}
+            onPress={() => setShowSetBudgetModal(false)}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#6B1C23', fontWeight: '600', fontSize: 14 }}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </Pressable>
+  </Pressable>
+</Modal>
+
+
+      {/* Add to Budget Modal - Maroon & Gold Design */}
+<Modal visible={showAddBudgetModal} transparent animationType="fade">
+  <Pressable 
+    style={styles.modalOverlay} 
+    onPress={() => setShowAddBudgetModal(false)}
+  >
+    <Pressable 
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 24,
+        width: '90%',
+        maxWidth: 400,
+        shadowColor: '#6B1C23',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 10,
+        borderWidth: 3,
+        borderColor: '#F4B942', // Gold border
+      }} 
+      onPress={() => {}}
+    >
+      {/* Header with Icon */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 2,
+        borderBottomColor: '#F4B942',
+      }}>
+        <View style={{
+          backgroundColor: '#F4B942',
+          borderRadius: 12,
+          width: 48,
+          height: 48,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        }}>
+          <Ionicons name="wallet" size={28} color="#6B1C23" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ 
+            fontWeight: '800', 
+            fontSize: 20, 
+            color: '#6B1C23',
+            letterSpacing: 0.3,
+          }}>
+            Add Budget
+          </Text>
+          <Text style={{
+            fontSize: 13,
+            color: '#7D2E3A',
+            marginTop: 2,
+          }}>
+            Increase your budget amount
+          </Text>
+        </View>
+      </View>
+
+      {/* Current Budget Display */}
+      <View style={{
+        backgroundColor: '#FEF9C3',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: '#F4B942',
+      }}>
+        <Text style={{
+          fontSize: 12,
+          color: '#7D2E3A',
+          fontWeight: '600',
+          marginBottom: 4,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+        }}>
+          Current Budget
+        </Text>
+        <Text style={{
+          fontSize: 24,
+          fontWeight: '800',
+          color: '#6B1C23',
+        }}>
+          ₱{budgetAmount?.toLocaleString() || '0'}
+        </Text>
+      </View>
+
+      {/* Input Section */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{
+          fontSize: 13,
+          fontWeight: '700',
+          color: '#6B1C23',
+          marginBottom: 8,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+        }}>
+          Amount to Add
+        </Text>
+        
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#FFFFFF',
+          borderRadius: 12,
+          borderWidth: 2,
+          borderColor: '#F4B942',
+          paddingHorizontal: 16,
+          shadowColor: '#6B1C23',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+        }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: '800',
+            color: '#6B1C23',
+            marginRight: 8,
+          }}>
+            ₱
+          </Text>
+          <TextInput
+            placeholder="0"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+            value={addBudgetValue}
+            onChangeText={setAddBudgetValue}
+            style={{
+              flex: 1,
+              fontSize: 18,
+              fontWeight: '700',
+              color: '#6B1C23',
+              paddingVertical: 14,
+            }}
+          />
+        </View>
+
+        {/* New Budget Preview */}
+        {addBudgetValue && Number(addBudgetValue) > 0 && (
+          <View style={{
+            marginTop: 12,
+            backgroundColor: '#FEF2F2',
+            borderRadius: 10,
+            padding: 10,
+            borderWidth: 1,
+            borderColor: '#F4B942',
+          }}>
+            <Text style={{
+              fontSize: 12,
+              color: '#7D2E3A',
+              textAlign: 'center',
+            }}>
+              New budget will be:{' '}
+              <Text style={{ fontWeight: '800', color: '#6B1C23' }}>
+                ₱{(Number(budgetAmount || 0) + Number(addBudgetValue)).toLocaleString()}
+              </Text>
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Action Buttons */}
+      <View style={{ gap: 10 }}>
+        {/* Add Button */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#F4B942',
+            paddingVertical: 14,
+            borderRadius: 12,
+            alignItems: 'center',
+            shadowColor: '#6B1C23',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 6,
+            borderWidth: 2,
+            borderColor: '#E6A020',
+          }}
+          onPress={handleAddBudget}
+          activeOpacity={0.8}
+          disabled={isLoading}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {!isLoading && (
+              <Ionicons name="add-circle" size={20} color="#6B1C23" />
+            )}
+            <Text style={{ 
+              color: '#6B1C23', 
+              fontWeight: '800',
+              fontSize: 16,
+              letterSpacing: 0.5,
+            }}>
+              {isLoading ? 'Adding...' : 'Add to Budget'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Cancel Button */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#F8FAFC',
+            paddingVertical: 12,
+            borderRadius: 12,
+            alignItems: 'center',
+            borderWidth: 2,
+            borderColor: '#E2E8F0',
+          }}
+          onPress={() => setShowAddBudgetModal(false)}
+          activeOpacity={0.7}
+        >
+          <Text style={{ 
+            color: '#6B1C23', 
+            fontWeight: '700',
+            fontSize: 15,
+          }}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </Pressable>
+  </Pressable>
+</Modal>
 
        
 
-        {/* Header */}
-      <View style={styles.headerContainer}>
-<View style={styles.profileRow}>
-  <TouchableOpacity onPress={() => setMenuVisible(true)}>
-    {user?.avatarUrl ? (
-      <Image
+
+{/* Header */}
+<View style={styles.headerContainer}>
+  <View style={styles.profileRow}>
+    <TouchableOpacity onPress={() => setMenuVisible(true)}>
+      {user?.avatarUrl ? (
+        <Image
           source={{ uri: user.avatarUrl }}
           style={{
-          width: 38,
-          height: 38,
-          borderRadius: 19,
-          borderWidth: 1,
-          borderColor: "blue" }}
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            borderWidth: 2,
+            borderColor: "#6B1C23"
+          }}
           onError={() => setAvatarUrl(null)} 
         />
       ) : (
         <Image
           source={require("../../assets/images/moneymigo-icon.png")}
-          style={{ width: 38,
-          height: 38,
-          borderRadius: 19,
-          borderWidth: 1,
-          borderColor: "red" }}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            borderWidth: 2,
+            borderColor: "#6B1C23"
+          }}
         />
       )}
-  </TouchableOpacity>
+    </TouchableOpacity>
 
-  <Text style={styles.greeting}>
-    {fullName ? `Hi, ${fullName}` : "Loading..."}
-  </Text>
-</View>
+    <Text style={styles.greeting}>
+      {fullName ? `Hi, ${fullName}` : "Loading..."}
+    </Text>
+  </View>
 
-
-
- <TouchableOpacity 
-  onPress={() => router.push("/notification")}
-  style={{ position: 'relative' }}
->
-  <Ionicons name="notifications-outline" size={28} color="#1E293B" />
-  
-  {/* ✅ Unread badge */}
-  {unreadNotifications > 0 && (
-    <View style={{
-      position: 'absolute',
-      top: -4,
-      right: -4,
-      backgroundColor: '#EF4444',
-      borderRadius: 10,
-      minWidth: 18,
-      height: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 4,
-      borderWidth: 2,
-      borderColor: '#fff',
-      shadowColor: '#EF4444',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 4,
-    }}>
-      <Text style={{
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: '700',
+  <TouchableOpacity 
+    onPress={() => router.push("/notification")}
+    style={{ position: 'relative' }}
+  >
+    <Ionicons name="notifications-outline" size={28} color="#1E293B" />
+    
+    {/* ✅ Unread badge */}
+    {unreadNotifications > 0 && (
+      <View style={{
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#EF4444',
+        borderRadius: 10,
+        minWidth: 18,
+        height: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 4,
+        borderWidth: 2,
+        borderColor: '#fff',
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
       }}>
-        {unreadNotifications > 9 ? '9+' : unreadNotifications}
-      </Text>
-    </View>
-  )}
-</TouchableOpacity>
-
+        <Text style={{
+          color: '#fff',
+          fontSize: 10,
+          fontWeight: '700',
+        }}>
+          {unreadNotifications > 9 ? '9+' : unreadNotifications}
+        </Text>
+      </View>
+    )}
+  </TouchableOpacity>
 </View>
 
          {/* Dropdown Menu */}
-{/* Professional Dropdown Menu */}
 <Modal
   visible={menuVisible}
   transparent
@@ -1964,15 +2826,12 @@ useEffect(() => {
 >
   <Pressable style={styles.modalOverlayProfile} onPress={() => setMenuVisible(false)}>
     <View style={styles.menuDropdownProfile}>
-      
       <TouchableOpacity 
         style={styles.menuItemContainer}
         onPress={() => { router.push('/profile'); setMenuVisible(false); }}
         activeOpacity={0.7}
       >
-        <View style={styles.iconWrapper}>
-          <Ionicons name="person-outline" size={20} color="#4B5563" />
-        </View>
+        <Text style={styles.menuIcon}>👤</Text>
         <Text style={styles.menuItemText}>Manage Profile</Text>
       </TouchableOpacity>
 
@@ -1981,21 +2840,8 @@ useEffect(() => {
         onPress={() => { router.push("/gettingStarted"); setMenuVisible(false); }}
         activeOpacity={0.7}
       >
-        <View style={styles.iconWrapper}>
-          <Ionicons name="rocket-outline" size={20} color="#4B5563" />
-        </View>
+        <Text style={styles.menuIcon}>✨</Text>
         <Text style={styles.menuItemText}>Getting Started</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuItemContainer}
-        onPress={() => { router.push("/downloadPage"); setMenuVisible(false); }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.iconWrapper}>
-          <Ionicons name="download-outline" size={20} color="#4B5563" />
-        </View>
-        <Text style={styles.menuItemText}>Download App</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -2003,23 +2849,19 @@ useEffect(() => {
         onPress={() => { router.push("/feedbacksurvey"); setMenuVisible(false); }}
         activeOpacity={0.7}
       >
-        <View style={styles.iconWrapper}>
-          <MaterialIcons name="feedback" size={20} color="#4B5563" />
-        </View>
-        <Text style={styles.menuItemText}>Feedback & Survey</Text>
+        <Text style={styles.menuIcon}>📝</Text>
+        <Text style={styles.menuItemText}> Feedback & Survey</Text>
       </TouchableOpacity>
       
       <View style={styles.menuDivider} />
       
       <TouchableOpacity
-        style={[styles.menuItemContainer, styles.logoutButton]}
+        style={styles.menuItemContainer}
         onPress={() => { setMenuVisible(false); logout(); }}
         activeOpacity={0.7}
       >
-        <View style={[styles.iconWrapper, styles.logoutIconWrapper]}>
-          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-        </View>
-        <Text style={[styles.menuItemText, styles.logoutText]}>Logout</Text>
+        <Text style={styles.menuIcon}>🚪</Text>
+        <Text style={[styles.menuItemText, { color: '#DC2626' }]}>Logout</Text>
       </TouchableOpacity>
     </View>
   </Pressable>
@@ -2028,7 +2870,7 @@ useEffect(() => {
 {/* ==================== FULL BUDGET OVERVIEW CONTAINER ==================== */}
 <View
   style={{
-    backgroundColor: '#7fb1d6ff',
+    backgroundColor: '#6B1C23',
     borderRadius: 14,
     padding: 10,
     marginVertical: 8,
@@ -2038,7 +2880,7 @@ useEffect(() => {
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#C48A92',
   }}
 >
   {/* ==================== BALANCE SUMMARY ==================== */}
@@ -2051,11 +2893,11 @@ useEffect(() => {
         flex: 1,
         marginRight: 4,
         borderWidth: 1,
-        borderColor: '#BAE6FD',
+        borderColor: '#F4B942',
     }]}>
       <View style={styles.cardHeader}>
         <View style={{
-          backgroundColor: '#1f4b81ff',
+          backgroundColor: '#E6A020',
             borderRadius: 8,
             width: 24,
             height: 24,
@@ -2065,62 +2907,65 @@ useEffect(() => {
         }}>
           <Ionicons name="wallet" size={14} color="#ffffff" />
         </View>
-         <Text style={{ fontSize: 12, color: '#212f45ff', fontWeight: '600', top: 5 }}>Budget Left</Text>
+         <Text style={{ fontSize: 12, color: '#6B1C23', fontWeight: '600', top: 5 }}>Budget Left</Text>
       </View>
 
       <View style={[styles.valueRow, { 
       alignItems: 'center', 
       gap: 8,
     }]}>
-      <Text
-  style={{
-    fontSize: (() => {
-      const amount = remainingBudget || 0;
-
-      // FIXED DIGIT COUNT
-      const amountStr = String(
-        Number(amount).toFixed(2).replace('.', '')
-      );
-      const digitCount = amountStr.length;
-
-      if (digitCount >= 9) return isMobile ? 12 : 14; // 10M+
-      if (digitCount >= 7) return isMobile ? 14 : 16; // 1M+
-      if (digitCount >= 6) return isMobile ? 16 : 18; // 100k+
-      return isMobile ? 19 : 20; // Default
-    })(),
-    fontWeight: "800",
-    color: "#1f4b81ff",
-    flexShrink: 1,
-    width: "100%",
-
-  }}
-  numberOfLines={1}
-  adjustsFontSizeToFit={true}
-  minimumFontScale={0.5}
->
-  ₱
-  {remainingBudget
-    ? Number(remainingBudget).toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-      })
-    : "0.00"}
-</Text>
+      <Text 
+        style={{ 
+          fontSize: (() => {
+            const amount = remainingBudget || 0;
+            const digitCount = Math.floor(Math.log10(Math.abs(amount))) + 1;
+            
+            if (digitCount >= 7) return isMobile ? 12 : 14;
+            if (digitCount >= 6) return isMobile ? 14 : 16;
+            if (digitCount >= 5) return isMobile ? 16 : 18;
+            return isMobile ? 18 : 20;
+          })(),
+          fontWeight: '800', 
+          color: '#6B1C23',
+          flex: 1,
+          flexShrink: 1,
+        }}
+        numberOfLines={1}
+        adjustsFontSizeToFit={true}
+        minimumFontScale={0.5}
+      >
+        ₱{remainingBudget
+          ? Number(remainingBudget).toLocaleString('en-PH', {
+              minimumFractionDigits: 2,
+            })
+          : '0.00'}
+      </Text>
         {/* ✅ Add Budget Button */}
         <TouchableOpacity
-          onPress={() => setShowBudgetAction(true)}
-          style={{
-             backgroundColor: '#F0F9FF',
-            borderRadius: 8,
-            padding: 4,
-            flexShrink: 0,
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add-circle" size={24} color="#1f4b81ff" />
-        </TouchableOpacity>
+  onPress={() => setShowAddBudgetModal(true)}
+  style={{
+    backgroundColor: '#F4B942',
+    borderRadius: 23,
+    width: 23,
+    height: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    shadowColor: '#6B1C23',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#E6A020',
+  }}
+  activeOpacity={0.7}
+>
+  <Ionicons name="add-circle" size={24} color="#6B1C23" />
+</TouchableOpacity>
       </View>
 
-      <BudgetLockTimer budgetPeriod={budgetPeriod} budgetPeriodStart={startDate} />
+      {/* ✅ REMOVED: BudgetLockTimer from here */}
     </View>
           
 
@@ -2133,14 +2978,14 @@ useEffect(() => {
         flex: 1,
         marginLeft: 4,
         borderWidth: 1,
-        borderColor: '#FECACA',
+        borderColor: '#F4B942',
       }]}
       activeOpacity={0.75}
       onPress={() => router.push("/expenses")}
     >
       <View style={styles.cardHeader}>
         <View style={{
-           backgroundColor: '#1f4b81ff',
+           backgroundColor: '#E6A020',
             borderRadius: 8,
             width: 24,
             height: 24,
@@ -2149,13 +2994,13 @@ useEffect(() => {
         }}>
           <Ionicons name="trending-down" size={14} color="#ffffff" />
         </View>
-           <Text style={{ fontSize: 12, color: '#212f45ff', fontWeight: '600' }}>Expenses</Text>
+           <Text style={{ fontSize: 12, color: '#6B1C23', fontWeight: '600' }}>Expenses</Text>
       </View>
 
       <Text style={{
         fontSize: 20,
           fontWeight: '800',
-          color: '#1f4b81ff',
+          color: '#6B1C23',
           marginTop: 4,
       }}>
         ₱{Number(totalExpense).toLocaleString('en-PH', {
@@ -2182,48 +3027,72 @@ useEffect(() => {
     elevation: 2,
   }}
 >
-  {/* ==================== DURATION HEADER ==================== */}
-  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Ionicons name="calendar" size={16} color="#1f4b81ff" style={{ marginRight: 8 }} />
-      <Text style={{ fontSize: 13, fontWeight: '700', color: '#212f45ff' }}>Budget Period</Text>
-    </View>
+{/* ==================== DURATION HEADER ==================== */}
+<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <Ionicons name="calendar" size={16} color="#F4B942" style={{ marginRight: 8 }} />
+    <Text style={{ fontSize: 13, fontWeight: '700', color: '#6B1C23' }}>Budget Period</Text>
+    {/* ✅ MOVED HERE: Period Ending Status Indicator */}
+    <PeriodStatusIndicator />
+  </View>
+  
+  {/* Right side: Duration + Combined Settings/Lock Button */}
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+    {/* Duration Dropdown */}
     <TouchableOpacity
       onPress={() => setDropdownOpen(true)}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#EEF2FF',
+        backgroundColor: '#F9D78F',
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#6366F1',
+        borderColor: '#F4B942',
       }}
     >
-      <Text style={{ fontSize: 12, fontWeight: '700', color: '#212f45ff', marginRight: 4 }}>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B1C23', marginRight: 4 }}>
         {budgetPeriod}
       </Text>
-      <Ionicons name="chevron-down" size={12} color="#1f4b81ff" />
+      <Ionicons name="chevron-down" size={12} color="#6B1C23" />
     </TouchableOpacity>
+
+    {/* Combined Settings/Lock Button with Timer */}
+    <BudgetLockTimer 
+      budgetPeriod={budgetPeriod} 
+      budgetPeriodStart={startDate}
+      onSettingsPress={() => {
+        if (isBudgetLocked()) {
+          Alert.alert(
+            'Budget Locked',
+            'The edit window has expired. You can only add to your budget now.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          setShowSetBudgetModal(true);
+        }
+      }}
+    />
   </View>
+</View>
 
   {/* ==================== DATE RANGE ==================== */}
   {startDate && endDate && (
     <View
       style={{
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#f9d78f36',
         padding: 10,
         borderRadius: 8,
         borderLeftWidth: 3,
-        borderLeftColor: '#1f4b81ff',
+        borderLeftColor: '#F4B942',
         marginBottom: 16,
       }}
     >
       <Text
         style={{
           fontSize: 12,
-          color: '#1f4b81ff',
+          color: '#6B1C23',
           fontWeight: '600',
         }}
       >
@@ -2243,7 +3112,7 @@ useEffect(() => {
   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
     <View
       style={{
-        backgroundColor: '#1f4b81ff',
+        backgroundColor: '#F4B942',
         borderRadius: 8,
         width: 32,
         height: 32,
@@ -2252,9 +3121,9 @@ useEffect(() => {
         marginRight: 10,
       }}
     >
-      <Ionicons name="stats-chart" size={16} color="#FFFFFF" />
+      <Ionicons name="stats-chart" size={16} color="#6B1C23" />
     </View>
-    <Text style={{ fontSize: 13, fontWeight: '700', color: '#212f45ff' }}>
+    <Text style={{ fontSize: 13, fontWeight: '700', color: '#6B1C23' }}>
       Budget Progress
     </Text>
     <Text
@@ -2262,7 +3131,7 @@ useEffect(() => {
         marginLeft: 'auto',
         fontSize: 16,
         fontWeight: '700',
-        color: totalExpense > budgetAmount ? '#DC2626' : '#1f4b81ff',
+        color: totalExpense > budgetAmount ? '#6B1C23' : '#F4B942',
       }}
     >
       {budgetAmount > 0 ? ((totalExpense / budgetAmount) * 100).toFixed(1) : 0}%
@@ -2285,8 +3154,8 @@ useEffect(() => {
     <LinearGradient
       colors={
         totalExpense > budgetAmount
-          ? ['#FCA5A5', '#EF4444', '#B91C1C']
-          : ['#818CF8', '#6366F1', '#1f4b81ff']
+          ? ['#A85860', '#7D2E3A', '#6B1C23']
+          : ['#F9D78F', '#F4B942', '#E6A020']
       }
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
@@ -2325,7 +3194,7 @@ useEffect(() => {
       </Text>
       <Text
         style={{
-          color: totalExpense > budgetAmount ? '#1f4b81ff' : '#1f4b81ff',
+          color: totalExpense > budgetAmount ? '#6B1C23' : '#F4B942',
           fontWeight: '700',
           fontSize: 15,
         }}
@@ -2338,7 +3207,7 @@ useEffect(() => {
     <View style={{ alignItems: 'flex-end' }}>
       <Text
         style={{
-          color: '#1f4b81ff',
+          color: '#64748B',
           fontSize: 11,
           fontWeight: '600',
           marginBottom: 4,
@@ -2349,7 +3218,7 @@ useEffect(() => {
       </Text>
       <Text
         style={{
-          color: '#1f4b81ff',
+          color: '#F4B942',
           fontWeight: '700',
           fontSize: 15,
         }}
@@ -2366,7 +3235,7 @@ useEffect(() => {
     <View
       style={{
         backgroundColor: '#FEF2F2',
-        borderColor: '#FCA5A5',
+        borderColor: '#C48A92',
         borderWidth: 1.5,
         borderRadius: 10,
         padding: 12,
@@ -2386,12 +3255,12 @@ useEffect(() => {
           <Ionicons
             name="warning-outline"
             size={20}
-            color="#DC2626"
+            color="#6B1C23"
             style={{ marginRight: 8 }}
           />
           <Text
             style={{
-              color: '#B91C1C',
+              color: '#6B1C23',
               fontWeight: '700',
               fontSize: 13,
               flex: 1,
@@ -2406,12 +3275,12 @@ useEffect(() => {
         <Ionicons
           name={showOverspendDetails ? 'chevron-up' : 'chevron-down'}
           size={18}
-          color="#B91C1C"
+          color="#6B1C23"
         />
       </TouchableOpacity>
 
       {showOverspendDetails && (
-        <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#FCA5A5' }}>
+        <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#C48A92' }}>
           {overspentCategories.map((cat, idx) => (
             <View
               key={idx}
@@ -2421,9 +3290,9 @@ useEffect(() => {
                 marginBottom: 6,
               }}
             >
-              <Text style={{ color: '#7F1D1D', fontSize: 13 }}>{cat.name}</Text>
+              <Text style={{ color: '#7D2E3A', fontSize: 13 }}>{cat.name}</Text>
               <Text
-                style={{ color: '#B91C1C', fontWeight: '600', fontSize: 13 }}
+                style={{ color: '#6B1C23', fontWeight: '600', fontSize: 13 }}
               >
                 ₱{cat.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
               </Text>
@@ -2434,7 +3303,7 @@ useEffect(() => {
             <View style={{ marginTop: 8 }}>
               <Text
                 style={{
-                  color: '#7F1D1D',
+                  color: '#7D2E3A',
                   fontSize: 12,
                   fontStyle: 'italic',
                   marginBottom: 10,
@@ -2450,7 +3319,7 @@ useEffect(() => {
               <View
                 style={{
                   backgroundColor: '#FEF9C3',
-                  borderColor: '#FDE68A',
+                  borderColor: '#F4B942',
                   borderWidth: 1,
                   borderRadius: 8,
                   padding: 10,
@@ -2459,7 +3328,7 @@ useEffect(() => {
                 <Text
                   style={{
                     fontSize: 11,
-                    color: '#854D0E',
+                    color: '#6B1C23',
                     lineHeight: 16,
                   }}
                 >
@@ -2477,7 +3346,7 @@ useEffect(() => {
             <Text
               style={{
                 marginTop: 10,
-                color: '#7F1D1D',
+                color: '#7D2E3A',
                 fontSize: 12,
                 textDecorationLine: 'underline',
                 fontWeight: '600',
@@ -2544,7 +3413,7 @@ useEffect(() => {
         }}
       >
         Your default budget period is set to{" "}
-        <Text style={{ fontWeight: "bold", color: "#2563eb" }}>Weekly</Text>.
+        <Text style={{ fontWeight: "bold", color: "#6B1C23" }}>Weekly</Text>.
         {"\n\n"}Let’s get started with a quick guide:
       </Text>
 
@@ -2566,7 +3435,7 @@ useEffect(() => {
         <TouchableOpacity
           style={{
             flex: 1,
-            backgroundColor: "#2563eb",
+            backgroundColor: "#6B1C23",
             paddingVertical: 10,
             borderRadius: 10,
             marginRight: 6,
@@ -2687,7 +3556,7 @@ useEffect(() => {
 
 
 
-  {/* Shortcuts */}
+{/* Shortcuts */}
 <View style={styles.featuresGrid}>
  {shortcuts.map((shortcut, index) => (
   <TouchableOpacity
@@ -2696,20 +3565,39 @@ useEffect(() => {
    onPress={() => router.push(shortcut.path)}
    activeOpacity={0.7}
   >
-    <View style={styles.featureIconCircle}>
-      <Text style={styles.featureIcon}>{shortcut.icon}</Text>
+    <View style={[styles.featureIconCircle, {
+      backgroundColor: '#F4B942', // Gold background
+      borderColor: '#6B1C23', // Maroon border
+    }]}>
+      <Ionicons name={shortcut.icon} size={28} color="#6B1C23" />
     </View>
-    <Text style={styles.featureLabel}>{shortcut.label}</Text>
+    <Text style={[styles.featureLabel, {
+      color: '#6B1C23', // Maroon text
+    }]}>
+      {shortcut.label}
+    </Text>
   </TouchableOpacity>
 ))}
 </View>
 
 
 <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 12 }}>
-
-  {/* ==================== EXPENSE LOGS ==================== */}
-  <View style={[styles.logsSection, { marginBottom: 30 }]}>
-    <Text style={styles.sectionTitle}>Expense Logs</Text>
+{/* ==================== EXPENSE LOGS ==================== */}
+<View style={[styles.logsSection, { marginBottom: 30 }]}>
+    <View style={styles.logsSectionHeader}>
+      <Ionicons 
+        name="receipt-outline" 
+        size={24} 
+        color="#6B1C23" 
+        style={{
+          backgroundColor: '#F4B942', // Gold background
+          padding: 8,
+          borderRadius: 8,
+          marginRight: 8,
+        }}
+      />
+      <Text style={styles.sectionTitle}>Expense Logs</Text>
+    </View>
     <ScrollView
       style={{ maxHeight: 280, marginTop: 10 }}
       nestedScrollEnabled
@@ -2718,14 +3606,30 @@ useEffect(() => {
       {Object.entries(groupTransactionsByDate(transactions))
         .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
         .map(([date, items]) => (
-          <View key={date} style={{ marginBottom: 10 }}>
-            <Text style={{ fontWeight: 'bold', marginBottom: 6, color: '#1E293B' }}>
-              {new Date(date).toLocaleDateString('en-PH', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
+          <View key={date} style={{ marginBottom: 16 }}>
+            {/* Date Header */}
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              marginBottom: 8,
+              paddingBottom: 6,
+              borderBottomWidth: 2,
+              borderBottomColor: '#9392912a', // Gold underline
+            }}>
+              <Ionicons name="calendar" size={14} color="#6B1C23" /> {/* Gold */}
+              <Text style={{ 
+                fontWeight: '700', 
+                marginLeft: 6, 
+                color: '#6B1C23', // Maroon
+                fontSize: 15,
+              }}>
+                {new Date(date).toLocaleDateString('en-PH', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
 
             {items
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -2733,23 +3637,40 @@ useEffect(() => {
               .map((item) => (
                 <TouchableOpacity
                   key={item._id}
-                  style={styles.transactionItem}
+                  style={[styles.transactionItem, {
+                    backgroundColor: '#fff', // Light gold
+                    borderLeftWidth: 3,
+                    borderLeftColor: '#6B1C23', // Maroon accent
+                    marginBottom: 8,
+                  }]}
                   onPress={() => {
                     setSelectedTransaction(item);
                     setShowDetailModal(true);
                   }}
+                  activeOpacity={0.7}
                 >
                   <View>
                     {item.notes && (
-                      <Text style={{ fontSize: 12, color: '#999' }}>{item.notes}</Text>
+                      <Text style={{ 
+                        fontSize: 12, 
+                        color: '#7D2E3A', // Medium maroon
+                        fontStyle: 'italic',
+                        marginBottom: 4,
+                      }}>
+                        📝 {item.notes}
+                      </Text>
                     )}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       {categoryIcons[capitalize(item.category?.trim())] ??
                         categoryIcons['Others']}
-                      <Text style={{ fontSize: 13, color: '#475569', fontWeight: '500' }}>
+                      <Text style={{ 
+                        fontSize: 14, 
+                        color: '#6B1C23', // Maroon
+                        fontWeight: '600',
+                      }}>
                         {item.category ?? 'Others'}
                       </Text>
-                      <Text style={{ fontSize: 12, color: '#64748B' }}>
+                      <Text style={{ fontSize: 12, color: '#7D2E3A' }}> {/* Medium maroon */}
                         •{' '}
                         {new Date(item.date).toLocaleTimeString('en-PH', {
                           hour: 'numeric',
@@ -2758,9 +3679,15 @@ useEffect(() => {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.transactionAmount, { color: '#DC2626' }]}>
-                    -₱{Math.abs(item.amount).toLocaleString()}
-                  </Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[styles.transactionAmount, { 
+                      color: '#6B1C23', // Maroon for expense
+                      fontWeight: '800',
+                    }]}>
+                      -₱{Math.abs(item.amount).toLocaleString()}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color="#F4B942" /> {/* Gold */}
+                  </View>
                 </TouchableOpacity>
               ))}
           </View>
@@ -2768,12 +3695,12 @@ useEffect(() => {
     </ScrollView>
   </View>
 
-  {/* ==================== BUDGET LOGS ==================== */}
+ {/* ==================== BUDGET LOGS ==================== */}
   <View style={[styles.budgetLogsSection, { marginBottom: 30 }]}>
   <View style={styles.budgetLogsSectionHeader}>
     <View style={styles.budgetLogsHeaderLeft}>
       <View style={styles.budgetLogsHeaderIconContainer}>
-        <Ionicons name="receipt-outline" size={22} color="#1f4b81ff" />
+        <Ionicons name="receipt-outline" size={22} color="#6B1C23" /> {/* ✅ Maroon */}
       </View>
       <View>
         <Text style={styles.budgetLogsSectionTitle}>Budget Logs</Text>
@@ -2795,7 +3722,7 @@ useEffect(() => {
     {budgetLogs.length === 0 ? (
       <View style={styles.budgetLogsEmptyState}>
         <View style={styles.budgetLogsEmptyIconContainer}>
-          <Ionicons name="document-text-outline" size={56} color="#1f4b81ff" />
+          <Ionicons name="document-text-outline" size={56} color="#6B1C23" /> {/* ✅ Maroon */}
         </View>
         <Text style={styles.budgetLogsEmptyTitle}>No logs yet</Text>
         <Text style={styles.budgetLogsEmptyText}>
@@ -2828,7 +3755,7 @@ useEffect(() => {
             <View key={dateKey} style={styles.budgetLogDateGroup}>
               {/* Date Header */}
               <View style={styles.budgetLogDateHeader}>
-                <Ionicons name="calendar" size={14} color="#1f4b81ff" />
+                <Ionicons name="calendar" size={14} color="#6B1C23" /> {/* ✅ Gold */}
                 <Text style={styles.budgetLogDateHeaderText}>{dateKey}</Text>
                 <View style={styles.budgetLogDateLine} />
               </View>
@@ -2837,27 +3764,27 @@ useEffect(() => {
               {logsForDate.map((log, index) => {
                 const prev = Number(log.previousAmount || 0);
                 const curr = Number(log.amount);
-                let color = '#1f4b81ff',
+                let color = '#6B1C23', // ✅ Maroon
                   icon = 'cash-outline',
-                  bgColor = '#EFF6FF';
+                  bgColor = '#F4B942'; // ✅ Light maroon background
 
                 if (log.type === 'Add Budget') {
-                  color = '#16A34A';
+                  color = '#6B1C23'; // ✅ Gold
                   icon = 'add-circle';
-                  bgColor = '#F0FDF4';
+                  bgColor = '#F4B942'; // ✅ Light gold background
                 } else if (log.type === 'Set Budget') {
                   if (prev === 0) {
-                    color = '#1f4b81ff';
+                    color = '#6B1C23'; // ✅ Maroon
                     icon = 'create-outline';
-                    bgColor = '#EFF6FF';
+                    bgColor = '#F4B942'; // ✅ Light maroon
                   } else if (curr > prev) {
-                    color = '#16A34A';
+                    color = '#6B1C23'; // ✅ Gold (increase)
                     icon = 'trending-up';
-                    bgColor = '#F0FDF4';
+                    bgColor = '#F4B942'; // ✅ Light gold
                   } else if (curr < prev) {
-                    color = '#DC2626';
+                    color = '#6B1C23'; // ✅ Maroon (decrease)
                     icon = 'trending-down';
-                    bgColor = '#FEF2F2';
+                    bgColor = '#F4B942'; // ✅ Light maroon
                   }
                 }
 
@@ -2877,7 +3804,7 @@ useEffect(() => {
                         <View style={styles.budgetLogCardContent}>
                           <Text style={styles.budgetLogType}>{log.type}</Text>
                           <View style={styles.budgetLogTimeContainer}>
-                            <Ionicons name="time-outline" size={12} color="#1f4b81ff" />
+                            <Ionicons name="time-outline" size={12} color="#6B1C23" /> {/* ✅ Medium maroon */}
                             <Text style={styles.budgetLogTime}>
                               {new Date(log.date).toLocaleTimeString('en-US', {
                                 hour: '2-digit',
@@ -2902,7 +3829,7 @@ useEffect(() => {
                                 ₱{prev.toLocaleString()}
                               </Text>
                               <View style={styles.budgetLogArrowContainer}>
-                                <Ionicons name="arrow-forward" size={14} color="#1f4b81ff" />
+                                <Ionicons name="arrow-forward" size={14} color="#6B1C23" /> {/* ✅ Medium maroon */}
                               </View>
                               <Text style={[styles.budgetLogCurrAmount, { color }]}>
                                 ₱{curr.toLocaleString()}
@@ -2925,7 +3852,7 @@ useEffect(() => {
                     {log.budgetPeriod && (
                       <View style={styles.budgetLogFooter}>
                         <View style={styles.budgetLogPeriodBadge}>
-                          <Ionicons name="calendar-outline" size={12} color="#1f4b81ff" />
+                          <Ionicons name="calendar-outline" size={12} color="#E6A020" /> {/* ✅ Dark gold */}
                           <Text style={styles.budgetLogPeriodText}>{log.budgetPeriod}</Text>
                         </View>
                       </View>
@@ -2943,7 +3870,7 @@ useEffect(() => {
  {/* ==================== BUDGET HISTORY ==================== */}
 <View style={[styles.logsSection, { marginBottom: 50 }]}>
   <View style={styles.logsSectionHeader}>
-    <Ionicons name="bar-chart-outline" size={24} color="#1f4b81ff" />
+    <Ionicons name="bar-chart-outline" size={24} color="#6B1C23" /> {/* ✅ Maroon */}
     <Text style={styles.logsSectionTitle}>Budget History</Text>
   </View>
 
@@ -2955,7 +3882,7 @@ useEffect(() => {
   >
     {budgetHistory.length === 0 ? (
       <View style={styles.emptyLogsState}>
-        <Ionicons name="time-outline" size={48} color="#1f4b81ff" />
+        <Ionicons name="time-outline" size={48} color="#6B1C23" /> {/* ✅ Maroon */}
         <Text style={styles.emptyLogsText}>No history available</Text>
       </View>
     ) : (
@@ -2971,21 +3898,21 @@ useEffect(() => {
           const withinBudget = spent <= budget;
           const spentPercentage = budget > 0 ? (spent / budget) * 100 : 0;
 
-          let statusColor = "#1f4b81ff";
+          let statusColor = "#F4B942"; // ✅ Gold for ongoing
           let statusText = "Ongoing";
           let statusIcon = "time";
-          let statusBg = "#FEF3C7";
+          let statusBg = "#FEF9C3"; // ✅ Light gold
 
           if (periodEnded && withinBudget) {
-            statusColor = "#1f4b81ff";
+            statusColor = "#F4B942"; // ✅ Gold for completed
             statusText = "Completed";
             statusIcon = "checkmark-circle";
-            statusBg = "#F0FDF4";
+            statusBg = "#FEF9C3"; // ✅ Light gold
           } else if (periodEnded && !withinBudget) {
-            statusColor = "#DC2626";
+            statusColor = "#6B1C23"; // ✅ Maroon for overspent
             statusText = "Overspent";
             statusIcon = "alert-circle";
-            statusBg = "#FEF2F2";
+            statusBg = "#FEF2F2"; // ✅ Light maroon
           }
 
           return (
@@ -3001,7 +3928,7 @@ useEffect(() => {
               {/* Header */}
               <View style={styles.historyCardHeader}>
                 <View style={styles.historyTitleRow}>
-                  <Ionicons name="calendar-outline" size={18} color="#1f4b81ff" />
+                  <Ionicons name="calendar-outline" size={18} color="#6B1C23" /> {/* ✅ Maroon */}
                   <Text style={styles.historyPeriod}>{log.period}</Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
@@ -3069,12 +3996,12 @@ useEffect(() => {
                 <Text
                   style={[
                     styles.historyRemainingAmount,
-                    { color: remaining >= 0 ? "#1f4b81ff" : "#DC2626" },
+                    { color: remaining >= 0 ? "#F4B942" : "#6B1C23" }, // ✅ Gold if positive, Maroon if negative
                   ]}
                 >
                   ₱{Math.abs(remaining).toLocaleString()}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color="#1f4b81ff" />
+                <Ionicons name="chevron-forward" size={16} color="#6B1C23" /> {/* ✅ Medium maroon */}
               </View>
             </TouchableOpacity>
           );
@@ -3109,7 +4036,7 @@ useEffect(() => {
         style={{
           fontSize: 18,
           fontWeight: "800",
-          color: "#1f4b81ff",
+          color: "#6B1C23", // ✅ Maroon
           textAlign: "center",
           marginBottom: 16,
         }}
@@ -3121,7 +4048,7 @@ useEffect(() => {
       {historyExpenses.length === 0 ? (
         <Text
           style={{
-            color: "#64748B",
+            color: "#7D2E3A", // ✅ Medium maroon
             fontSize: 14,
             textAlign: "center",
             marginTop: 10,
@@ -3162,7 +4089,7 @@ useEffect(() => {
                   style={{
                     fontSize: 15,
                     fontWeight: "700",
-                    color: "#1f4b81ff",
+                    color: "#6B1C23", // ✅ Maroon
                   }}
                 >
                   {exp.category || "Uncategorized"}
@@ -3171,7 +4098,7 @@ useEffect(() => {
                   style={{
                     fontSize: 15,
                     fontWeight: "800",
-                    color: "#1f4b81ff",
+                    color: "#F4B942", // ✅ Gold
                   }}
                 >
                   ₱{exp.amount?.toLocaleString("en-PH")}
@@ -3181,7 +4108,7 @@ useEffect(() => {
               {/* Date */}
               <Text
                 style={{
-                  color: "#6B7280",
+                  color: "#7D2E3A", // ✅ Medium maroon
                   fontSize: 12,
                   marginTop: 3,
                 }}
@@ -3197,7 +4124,7 @@ useEffect(() => {
               {exp.notes && (
                 <View
                   style={{
-                    backgroundColor: "#EEF2FF",
+                    backgroundColor: "#FEF9C3", // ✅ Light gold
                     borderRadius: 8,
                     padding: 6,
                     marginTop: 6,
@@ -3205,7 +4132,7 @@ useEffect(() => {
                 >
                   <Text
                     style={{
-                      color: "#4338CA",
+                      color: "#E6A020", // ✅ Dark gold
                       fontSize: 12,
                       fontStyle: "italic",
                     }}
@@ -3222,7 +4149,7 @@ useEffect(() => {
       {/* Footer */}
       <TouchableOpacity
         style={{
-          backgroundColor: "#2563EB",
+          backgroundColor: "#6B1C23", // ✅ Maroon button
           borderRadius: 10,
           paddingVertical: 10,
           marginTop: 16,
@@ -3243,86 +4170,145 @@ useEffect(() => {
     </View>
   </View>
 </Modal>
-
+</View>
 </View>
 
-
-</View>
 
 {/* ||| Transaction details */}
 <Modal visible={showDetailModal && !!selectedTransaction} transparent animationType="slide">
   <View style={styles.transactionDetailOverlay}>
     <View style={styles.transactionDetailContainer}>
       {/* Header with gradient effect */}
-      <View style={styles.transactionDetailHeader}>
+      <View style={[styles.transactionDetailHeader, {
+        backgroundColor: '#6B1C23', // Maroon background
+        borderBottomWidth: 3,
+        borderBottomColor: '#F4B942', // Gold accent
+      }]}>
         <View>
-          <Text style={styles.transactionDetailTitle}>Transaction Details</Text>
-          <Text style={styles.transactionDetailSubtitle}>Complete information</Text>
+          <Text style={[styles.transactionDetailTitle, { color: '#FFFFFF' }]}>
+            Transaction Details
+          </Text>
+          <Text style={[styles.transactionDetailSubtitle, { color: '#FEF9C3' }]}>
+            Complete information
+          </Text>
+        </View>
+        <View style={{
+          position: 'absolute',
+          right: 20,
+          top: 20,
+        }}>
+          <Ionicons name="receipt" size={40} color="#F4B942" style={{ opacity: 0.3 }} />
         </View>
       </View>
 
       {/* Content */}
       <View style={styles.transactionDetailContent}>
         {/* Amount - Featured */}
-        <View style={styles.transactionAmountCard}>
-          <View style={styles.transactionAmountIcon}>
-            <Text style={styles.transactionAmountIconText}>₱</Text>
+        <View style={[styles.transactionAmountCard, {
+          backgroundColor: '#ffffffff', // Light gold
+          borderWidth: 2,
+          borderColor: '#F4B942', // Gold border
+        }]}>
+          <View style={[styles.transactionAmountIcon, {
+            backgroundColor: '#6B1C23', // Maroon
+          }]}>
+            <Text style={[styles.transactionAmountIconText, { color: '#F4B942' }]}>
+              ₱
+            </Text>
           </View>
           <View>
-            <Text style={styles.transactionAmountLabel}>Amount</Text>
-            <Text style={styles.transactionAmountValue}>
+            <Text style={[styles.transactionAmountLabel, { color: '#7D2E3A' }]}>
+              Amount
+            </Text>
+            <Text style={[styles.transactionAmountValue, { color: '#6B1C23' }]}>
               ₱{selectedTransaction?.amount?.toLocaleString()}
             </Text>
           </View>
         </View>
 
         {/* Type */}
-        <View style={styles.transactionInfoCard}>
-          <View style={[styles.transactionIconContainer, styles.transactionTypeIcon]}>
-            <Text style={styles.transactionIconText}>🏷️</Text>
+        <View style={[styles.transactionInfoCard, {
+          backgroundColor: '#fbfbfbff', // Light maroon
+          borderLeftWidth: 4,
+          borderLeftColor: '#6B1C23', // Gold accent
+        }]}>
+          <View style={[styles.transactionIconContainer, styles.transactionTypeIcon, {
+            backgroundColor: '#F4B942', // Gold
+          }]}>
+            <Ionicons name="pricetag" size={20} color="#6B1C23" />
           </View>
           <View style={styles.transactionInfoContent}>
-            <Text style={styles.transactionInfoLabel}>Type</Text>
-            <Text style={styles.transactionInfoValue}>
+            <Text style={[styles.transactionInfoLabel, { color: '#7D2E3A' }]}>
+              Type
+            </Text>
+            <Text style={[styles.transactionInfoValue, { color: '#6B1C23' }]}>
               {capitalize(selectedTransaction?.type)}
             </Text>
           </View>
         </View>
 
         {/* Category */}
-        <View style={styles.transactionInfoCard}>
-          <View style={[styles.transactionIconContainer, styles.transactionCategoryIcon]}>
-            <Text style={styles.transactionIconText}>📂</Text>
+        <View style={[styles.transactionInfoCard, {
+          backgroundColor: '#ffffffff', // Light maroon
+          borderLeftWidth: 4,
+          borderLeftColor: '#6B1C23', // Gold accent
+        }]}>
+          <View style={[styles.transactionIconContainer, styles.transactionCategoryIcon, {
+            backgroundColor: '#F4B942', // Gold
+          }]}>
+            <Ionicons name="folder" size={20} color="#6B1C23" />
           </View>
           <View style={styles.transactionInfoContent}>
-            <Text style={styles.transactionInfoLabel}>Category</Text>
-            <Text style={styles.transactionInfoValue}>
+            <Text style={[styles.transactionInfoLabel, { color: '#7D2E3A' }]}>
+              Category
+            </Text>
+            <Text style={[styles.transactionInfoValue, { color: '#6B1C23' }]}>
               {capitalize(selectedTransaction?.category) || 'N/A'}
             </Text>
           </View>
         </View>
 
         {/* Date */}
-        <View style={styles.transactionInfoCard}>
-          <View style={[styles.transactionIconContainer, styles.transactionDateIcon]}>
-            <Text style={styles.transactionIconText}>📅</Text>
+        <View style={[styles.transactionInfoCard, {
+          backgroundColor: '#ffffffff', // Light maroon
+          borderLeftWidth: 4,
+          borderLeftColor: '#6B1C23', // Gold accent
+        }]}>
+          <View style={[styles.transactionIconContainer, styles.transactionDateIcon, {
+            backgroundColor: '#F4B942', // Gold
+          }]}>
+            <Ionicons name="calendar" size={20} color="#6B1C23" />
           </View>
           <View style={styles.transactionInfoContent}>
-            <Text style={styles.transactionInfoLabel}>Date & Time</Text>
-            <Text style={styles.transactionInfoValue}>
+            <Text style={[styles.transactionInfoLabel, { color: '#7D2E3A' }]}>
+              Date & Time
+            </Text>
+            <Text style={[styles.transactionInfoValue, { color: '#6B1C23' }]}>
               {selectedTransaction && new Date(selectedTransaction.date).toLocaleString()}
             </Text>
           </View>
         </View>
 
         {/* Notes */}
-        <View style={styles.transactionNotesCard}>
-          <View style={styles.transactionNotesIcon}>
-            <Text style={styles.transactionIconText}>📝</Text>
+        <View style={[styles.transactionNotesCard, {
+          backgroundColor: '#ffffffff', // Light gold
+          borderWidth: 1,
+          borderColor: '#F4B942', // Gold border
+          borderRadius: 12,
+        }]}>
+          <View style={[styles.transactionNotesIcon, {
+            backgroundColor: '#6B1C23', // Maroon
+          }]}>
+            <Ionicons name="document-text" size={20} color="#F4B942" />
           </View>
           <View style={styles.transactionNotesContent}>
-            <Text style={styles.transactionNotesLabel}>Notes</Text>
-            <Text style={styles.transactionNotesValue}>
+            <Text style={[styles.transactionNotesLabel, { color: '#7D2E3A' }]}>
+              Notes
+            </Text>
+            <Text style={[styles.transactionNotesValue, { 
+              color: '#6B1C23',
+              fontStyle: selectedTransaction?.notes ? 'normal' : 'italic',
+            }]}>
               {selectedTransaction?.notes || 'No notes available'}
             </Text>
           </View>
@@ -3331,15 +4317,22 @@ useEffect(() => {
 
       {/* Close Button */}
       <TouchableOpacity
-        style={styles.transactionDetailCloseButton}
+        style={[styles.transactionDetailCloseButton, {
+          backgroundColor: '#6B1C23', // Maroon
+          borderWidth: 2,
+          borderColor: '#F4B942', // Gold border
+        }]}
         onPress={() => setShowDetailModal(false)}
+        activeOpacity={0.8}
       >
-        <Text style={styles.transactionDetailCloseButtonText}>Close</Text>
+        <Ionicons name="close-circle" size={20} color="#fafafaff" style={{ marginRight: 8 }} />
+        <Text style={[styles.transactionDetailCloseButtonText, { color: '#FFFFFF' }]}>
+          Close
+        </Text>
       </TouchableOpacity>
     </View>
   </View>
 </Modal>
-
 
 
 {/* ||| Custom Picker Modal: */}
@@ -3489,22 +4482,17 @@ setShowSetBudgetModal(true);
     }
   }}
 />
-
-
       <Button title="Cancel" color="gray" onPress={() => setShowCustomPicker(false)} />
     </View>
   </View>
 </Modal>
-
-
 
 <View style={styles.footerContainer}>
   <Text style={styles.footerText}>
     © {new Date().getFullYear()} MoneyMigo — Track. Save. Thrive.
   </Text>
 </View>
-
-
+ <PeriodEndingModal />
       </ScrollView>
 
       
@@ -3527,18 +4515,18 @@ setShowSetBudgetModal(true);
   position: 'absolute',
   top: width < 360 ? 4 : (isMobile ? 0 : 0.5),
   right: width < 360 ? 4 : (isMobile ? 0 : 0.5),
-  backgroundColor: '#F0F9FF',
-  paddingHorizontal: width < 360 ? 4 : (isMobile ? 4 : 4),
-  paddingVertical: width < 360 ? 2 : (isMobile ? 2 : 2),
-  borderRadius: isMobile ? 4 : 6,
+  backgroundColor: '#F9D78F', // ✅ Changed from blue (#F0F9FF) to light gold
+  paddingHorizontal: width < 360 ? 4 : (isMobile ? 6 : 10),
+  paddingVertical: width < 360 ? 2 : (isMobile ? 3 : 5),
+  borderRadius: isMobile ? 6 : 8,
   borderWidth: 0.5,
-  borderColor: '#1f4b81ff',
+  borderColor: '#6B1C23', // ✅ Already maroon (correct!)
   flexDirection: 'row',
   alignItems: 'center',
-  gap: width < 360 ? 2 : (isMobile ? 2 : 3),
+  gap: width < 360 ? 2 : (isMobile ? 3 : 4),
   zIndex: 1001,
-  maxWidth: width < 360 ? '45%' : (isMobile ? '60%' : '60%'),
-  transform: width < 360 ? [{ scale: 0.75 }] : (isMobile ? [{ scale: 0.85 }] : [{ scale: 0.90 }]),
+  maxWidth: width < 360 ? '45%' : (isMobile ? '60%' : '70%'),
+  transform: width < 360 ? [{ scale: 0.75 }] : (isMobile ? [{ scale: 0.85 }] : [{ scale: 1 }]),
 },
 
 lockBadgeText: {
@@ -3555,17 +4543,17 @@ lockBadgeText: {
     greeting: {
       fontSize: 20,
       fontWeight: '600',
-      color: '#1E293B',
+      color: '#6B1C23',
     },
     card: {
-      backgroundColor: '#2563EB',
+      backgroundColor: '#6B1C23',
       borderRadius: 16,
       padding: 20,
       marginBottom: 20,
     },
     cardSubLabel: {
       fontSize: 14,
-      color: '#BFDBFE',
+      color: '#6B1C23',
       marginTop: 4,
     },
     features: {
@@ -3578,7 +4566,7 @@ lockBadgeText: {
       fontSize: 16,
       fontWeight: '600',
       marginBottom: 6,
-      color: '#212f45ff',
+      color: '#6B1C23',
     },
     transactionItem: {
       flexDirection: 'row',
@@ -3615,7 +4603,7 @@ lockBadgeText: {
     menuItem: {
       fontSize: 16,
       paddingVertical: 8,
-      color: '#1E293B',
+      color: '#6B1C23',
     },
     dropdownContainer: {
       flexDirection: 'row',
@@ -3626,7 +4614,7 @@ lockBadgeText: {
     },
     dropdownLabel: {
       fontSize: 14,
-      color: '#1E293B',
+      color: '#6B1C23',
       fontWeight: 'bold',
 
 
@@ -3671,7 +4659,7 @@ lockBadgeText: {
       elevation: 2,
     },
 balanceCard: {
-  backgroundColor: '#1f4b81ff', // deeper blue that matches gradient base
+  backgroundColor: '#6B1C23', // deeper blue that matches gradient base
   borderRadius: 16,
   padding: 12,
   marginBottom: 20,
@@ -3699,7 +4687,7 @@ summaryBox: {
 },
 boxLabel: {
   fontSize: 15, /* Reduced from 16 */
-  color: '#1E3A8A',
+  color: '#6B1C23',
   marginTop: 4, /* Reduced from 6 */
 },
 boxValue: {
@@ -3756,13 +4744,13 @@ featureIconCircle: {
   width: 54,
   height: 54,
   borderRadius: 32,
-  backgroundColor: '#e8f0f9',
+  backgroundColor: '#F4B942', // Change to gold
   borderWidth: 1.5,
-  borderColor: '#7fb1d6ff',
+  borderColor: '#6B1C23', // Keep maroon border
   justifyContent: 'center',
   alignItems: 'center',
   marginBottom: 8,
-  shadowColor: '#1f4b81',
+  shadowColor: '#6B1C23',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.15,
   shadowRadius: 4,
@@ -3777,11 +4765,10 @@ featureLabel: {
   fontSize: 12,
   textAlign: 'center',
   fontWeight: '600',
-  color: '#1f4b81',
+  color: '#6B1C23',
   lineHeight: 16,
   paddingHorizontal: 4,
 },
-
 modalContainer: {
   backgroundColor: '#fff',
   borderRadius: 20,
@@ -3792,18 +4779,20 @@ modalContainer: {
   maxWidth: 400,
   minWidth: 320,
   elevation: 12,
+  borderWidth: 2,
+  borderColor: '#F4B942', // Add gold border
 },
 modalTitle: {
   fontSize: 22,
   fontWeight: 'bold',
-  color: '#2563EB',
+  color: '#6B1C23', // Already maroon ✓
   marginBottom: 18,
   letterSpacing: 0.3,
 },
 label: {
   marginBottom: 8,
   fontWeight: '600',
-  color: '#1E293B',
+  color: '#6B1C23', // Change to maroon
   alignSelf: 'flex-start',
   fontSize: 15,
 },
@@ -3831,15 +4820,15 @@ periodBtn: {
   paddingVertical: 10,
   paddingHorizontal: 0,
   borderRadius: 30,
-  backgroundColor: '#E0F2FE',
+  backgroundColor: '#6B1C23',
   alignItems: 'center',
   justifyContent: 'center',
 },
 periodBtnActive: {
-  backgroundColor: '#2563EB',
+  backgroundColor: '#6B1C23',
 },
 periodBtnText: {
-  color: '#2563EB',
+  color: '#6B1C23',
   fontWeight: 'bold',
   fontSize: 15,
 },
@@ -3857,13 +4846,13 @@ infoBox: {
   width: '100%',
 },
 infoText: {
-  color: '#2563EB',
+  color: '#6B1C23',
   fontSize: 13,
   lineHeight: 16,
   flex: 1,
 },
 saveBtn: {
-  backgroundColor: '#2563EB',
+  backgroundColor: '#6B1C23',
   borderRadius: 12,
   paddingVertical: 12,
   alignItems: 'center',
@@ -3884,7 +4873,7 @@ cancelBtn: {
   marginBottom: 6,
 },
 cancelBtnText: {
-  color: '#2563EB',
+  color: '#6B1C23',
   fontWeight: 'bold',
   fontSize: 16,
 },
@@ -3949,7 +4938,7 @@ dateLabel: {
   padding: 32,
   alignItems: 'center',
   justifyContent: 'center',
-  shadowColor: '#2563EB',
+  shadowColor: '#6B1C23',
   shadowOffset: { width: 0, height: 8 },
   shadowOpacity: 0.10,
   shadowRadius: 18,
@@ -3960,7 +4949,7 @@ dateLabel: {
 rolloverTitle: {
   fontWeight: 'bold',
   fontSize: 22,
-  color: '#2563EB',
+  color: '#6B1C23',
   marginBottom: 8,
   textAlign: 'center',
   letterSpacing: 0.1,
@@ -3968,7 +4957,7 @@ rolloverTitle: {
 rolloverSubtitle: {
   fontSize: 17,
   marginBottom: 16,
-  color: '#22223B',
+  color: '#6B1C23',
   textAlign: 'center',
 },
 budgetValue: {
@@ -3990,14 +4979,14 @@ rolloverButtonRow: {
   width: '100%',
 },
 editButton: {
-  backgroundColor: '#2563EB',
+  backgroundColor: '#6B1C23',
   paddingVertical: 12,
   paddingHorizontal: 28,
   borderRadius: 10,
   marginHorizontal: 8,
   minWidth: 110,
   alignItems: 'center',
-  shadowColor: '#2563EB',
+  shadowColor: '#6B1C23',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.13,
   shadowRadius: 5,
@@ -4075,7 +5064,7 @@ logsSection: {
     padding: 14,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#2563EB',
+    borderLeftColor: '#6B1C23',
   },
   logCardHeader: {
     flexDirection: 'row',
@@ -4172,13 +5161,13 @@ tutorialBox: {
 tutorialTitle: {
   fontSize: 20,
   fontWeight: "700",
-  color: "#1f4b81ff",
+  color: "#6B1C23",
   textAlign: "center",
   marginBottom: 10,
 },
 tutorialText: {
   fontSize: 14,
-  color: "#334155",
+  color: "#6B1C23",
   textAlign: "center",
   lineHeight: 20,
 },
@@ -4190,7 +5179,7 @@ tutorialStep: {
 },
 tutorialButton: {
   marginTop: 20,
-  backgroundColor: "#1f4b81ff",
+  backgroundColor: "#6B1C23",
   paddingVertical: 12,
   borderRadius: 10,
   alignItems: "center",
@@ -4200,15 +5189,14 @@ tutorialButtonText: {
   fontWeight: "600",
   fontSize: 15,
 },
-
-  // Budget History Card Styles
+// Budget History Card Styles
   historyCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#fef2f251', // Light maroon tint
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#a89163df', // Gold border
   },
   historyCardHeader: {
     flexDirection: 'row',
@@ -4224,7 +5212,7 @@ tutorialButtonText: {
   historyPeriod: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#6B1C23', // Maroon
   },
   statusBadge: {
     flexDirection: 'row',
@@ -4240,7 +5228,7 @@ tutorialButtonText: {
   },
   historyDateRange: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#7D2E3A', // Medium maroon
     marginBottom: 12,
   },
   historyBudgetRow: {
@@ -4250,6 +5238,8 @@ tutorialButtonText: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#8d081351', // Light gold border
   },
   historyBudgetItem: {
     flex: 1,
@@ -4258,17 +5248,17 @@ tutorialButtonText: {
   historyBudgetDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F4B942', // Gold divider
   },
   historyBudgetLabel: {
     fontSize: 12,
-    color: '#1f4b81ff',
+    color: '#6B1C23', // Maroon
     marginBottom: 4,
   },
   historyBudgetAmount: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1f4b81ff',
+    color: '#6B1C23', // Maroon
   },
   historySpentAmount: {
     fontSize: 16,
@@ -4283,7 +5273,7 @@ tutorialButtonText: {
   progressBarBg: {
     flex: 1,
     height: 8,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#e9e18c2c', // Light gold background
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -4294,7 +5284,7 @@ tutorialButtonText: {
   progressPercentage: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1f4b81ff',
+    color: '#6B1C23', // Maroon
     minWidth: 40,
   },
   historyFooter: {
@@ -4303,11 +5293,11 @@ tutorialButtonText: {
     justifyContent: 'space-between',
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#d38e04ff', // Gold
   },
   historyRemainingLabel: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#7D2E3A', // Medium maroon
   },
   historyRemainingAmount: {
     fontSize: 15,
@@ -4318,9 +5308,9 @@ tutorialButtonText: {
   },
  
   budgetBox: {
-    backgroundColor: '#1f4b81ff', 
+    backgroundColor: '#6B1C23', // Maroon
     borderWidth: 2,
-    borderColor: '#1f4b81ff',
+    borderColor: '#F4B942', // Gold border
   },
   
   budgetGradient: {
@@ -4329,16 +5319,16 @@ tutorialButtonText: {
     right: 0,
     width: 100,
     height: 100,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#F4B942', // Gold gradient
     opacity: 0.15,
     borderRadius: 50,
   },
   
-  // Expenses Box - Lighter red for better readability
+  // Expenses Box
   expenseBox: {
-    backgroundColor: '#fca5a5', // Lighter red background
+    backgroundColor: '#F4B942', // Gold background
     borderWidth: 2,
-    borderColor: '#fca5a5',
+    borderColor: '#6B1C23', // Maroon border
   },
   
   expenseGradient: {
@@ -4347,7 +5337,7 @@ tutorialButtonText: {
     right: 0,
     width: 100,
     height: 100,
-    backgroundColor: '#fca5a5',
+    backgroundColor: '#6B1C23', // Maroon gradient
     opacity: 0.15,
     borderRadius: 50,
   },
@@ -4363,13 +5353,12 @@ tutorialButtonText: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#F4B942', // Gold
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#031934ff',
-  },
-  
+    borderColor: '#6B1C23', // Maroon border
+  },  
   iconWrapperExpense: {
     width: 36,
     height: 36,
@@ -4413,7 +5402,7 @@ tutorialButtonText: {
     borderRadius: 12,
     padding: 14,
     borderWidth: 2,
-    borderColor: '#93c5fd',
+    borderColor: '#6B1C23',
   },
   
   durationHeader: {
@@ -4427,18 +5416,18 @@ tutorialButtonText: {
   durationLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4c1d95',
+    color: '#6B1C23',
   },
   
   periodButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6366f1',
+    backgroundColor: '#6B1C23',
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 20,
     gap: 6,
-    shadowColor: '#6366f1',
+    shadowColor: '#6B1C23',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -4454,7 +5443,7 @@ tutorialButtonText: {
   
   dateRange: {
     fontSize: 13,
-    color: '#6b21a8',
+    color: '#6B1C23',
     fontWeight: '600',
   },
   
@@ -4533,7 +5522,7 @@ tutorialButtonText: {
   },
   
   dropdownItemSelectedText: {
-    color: '#6366f1',
+    color: '#6B1C23',
     fontWeight: '800',
   },
    transactionDetailOverlay: {
@@ -4556,7 +5545,7 @@ tutorialButtonText: {
     elevation: 10,
   },
   transactionDetailHeader: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#6B1C23',
     padding: 24,
     paddingBottom: 20,
   },
@@ -4584,7 +5573,7 @@ tutorialButtonText: {
     borderColor: '#e5e7eb',
   },
   transactionAmountIcon: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#6B1C23',
     width: 48,
     height: 48,
     borderRadius: 12,
@@ -4700,7 +5689,7 @@ tutorialButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },
-   // Budget Logs Section
+ // Budget Logs Section
   budgetLogsSection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -4723,7 +5712,7 @@ tutorialButtonText: {
     gap: 12,
   },
   budgetLogsHeaderIconContainer: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F4B942', // ✅ Light maroon background
     width: 44,
     height: 44,
     borderRadius: 12,
@@ -4733,15 +5722,15 @@ tutorialButtonText: {
   budgetLogsSectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#212f45ff',
+    color: '#6B1C23', // ✅ Maroon
   },
   budgetLogsSectionSubtitle: {
     fontSize: 12,
-    color: '#212f45ff',
+    color: '#7D2E3A', // ✅ Medium maroon
     marginTop: 2,
   },
   budgetLogsCountBadge: {
-    backgroundColor: '#1f4b81ff',
+    backgroundColor: '#F4B942', // ✅ Gold
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -4770,7 +5759,7 @@ tutorialButtonText: {
   budgetLogDateHeaderText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1f4b81ff',
+    color: '#6B1C23', // ✅ Maroon
   },
   budgetLogDateLine: {
     flex: 1,
@@ -4787,7 +5776,7 @@ tutorialButtonText: {
     paddingHorizontal: 24,
   },
   budgetLogsEmptyIconContainer: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FEF2F2', // ✅ Light maroon
     width: 96,
     height: 96,
     borderRadius: 48,
@@ -4798,12 +5787,12 @@ tutorialButtonText: {
   budgetLogsEmptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#475569',
+    color: '#7D2E3A', // ✅ Medium maroon
     marginBottom: 6,
   },
   budgetLogsEmptyText: {
     fontSize: 13,
-    color: '#1f4b81ff',
+    color: '#6B1C23', // ✅ Maroon
     textAlign: 'center',
   },
 
@@ -4838,7 +5827,7 @@ tutorialButtonText: {
   budgetLogType: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1f4b81ff',
+    color: '#6B1C23', // ✅ Maroon
     marginBottom: 4,
   },
   budgetLogTimeContainer: {
@@ -4848,7 +5837,7 @@ tutorialButtonText: {
   },
   budgetLogTime: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#7D2E3A', // ✅ Medium maroon
   },
 
   // Amount Container
@@ -4856,7 +5845,7 @@ tutorialButtonText: {
     marginTop: 8,
   },
   budgetLogAmountBadge: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffffffff', // ✅ Light gold
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -4869,19 +5858,19 @@ tutorialButtonText: {
   budgetLogTransition: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffffffff', // ✅ Light gold
     padding: 10,
     borderRadius: 8,
     gap: 8,
   },
   budgetLogPrevAmount: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#7D2E3A', // ✅ Medium maroon
     textDecorationLine: 'line-through',
     fontWeight: '500',
   },
   budgetLogArrowContainer: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#ffffffff',
     padding: 4,
     borderRadius: 4,
   },
@@ -4890,7 +5879,7 @@ tutorialButtonText: {
     fontWeight: '700',
   },
   budgetLogAddition: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffffffff', // ✅ Light gold
     padding: 10,
     borderRadius: 8,
   },
@@ -4901,16 +5890,16 @@ tutorialButtonText: {
   },
   budgetLogPrevLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#7D2E3A', // ✅ Medium maroon
   },
 
   // Footer
   budgetLogFooter: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#fef9c318', // ✅ Light gold
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#6B1C23', // ✅ Gold
   },
   budgetLogPeriodBadge: {
     flexDirection: 'row',
@@ -4919,7 +5908,7 @@ tutorialButtonText: {
   },
   budgetLogPeriodText: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#6B1C23', // ✅ Dark gold
     fontWeight: '500',
   },
 
@@ -4939,75 +5928,35 @@ menuIcon: {
 menuItemText: {
   fontSize: 15,
   fontWeight: '500',
-  color: '#1f4b81',
+  color: '#6B1C23', // ✅ Maroon
   flex: 1,
 },
 
 menuDivider: {
   height: 1,
-  backgroundColor: '#e8f0f9',
+  backgroundColor: '#FEF2F2', // ✅ Light maroon
   marginHorizontal: 12,
 },
-modalOverlayProfile: {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  justifyContent: 'flex-start', // stays the same (top)
-  alignItems: 'flex-start',     // changed from flex-end → flex-start (left)
-  paddingTop: 60,
-  paddingLeft: 16,              
-},
+
+ modalOverlayProfile: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-start',
+    paddingTop: 60,
+    paddingLeft: 16,
+  },
   menuDropdownProfile: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    paddingVertical: 8,
-    minWidth: 240,
-    shadowColor: '#000',
+    width: 220,
+    shadowColor: '#6B1C23', // ✅ Maroon shadow
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
-  },
-  menuItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginHorizontal: 6,
-    borderRadius: 8,
-    minHeight: 48,
-    backgroundColor: 'transparent',
-  },
-  iconWrapper: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-  },
-  menuItemText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1F2937',
-    flex: 1,
-    letterSpacing: 0.2,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
-    marginHorizontal: 16,
-  },
-  logoutButton: {
-    backgroundColor: '#FEF2F2',
-  },
-  logoutIconWrapper: {
-    backgroundColor: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#DC2626',
-    fontWeight: '600',
+    borderWidth: 1,
+    borderColor: '#F4B942', // ✅ Gold border
+    overflow: 'hidden',
   },
 });
 
@@ -5311,5 +6260,6 @@ overspendText: {
 
   
 }
+
 
 

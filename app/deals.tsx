@@ -1,11 +1,14 @@
 import { LogBox } from "react-native";
 
+
 LogBox.ignoreLogs([
   "Unexpected text node",                     // 🧘 hides RN-Web text node spam
   "Warning: Text strings must be rendered",   // companion message
 ]);
 
+
 import React, { useEffect, useState, useCallback } from 'react';
+
 
 import { Modal } from "react-native";
 import { router } from "expo-router";  
@@ -30,8 +33,10 @@ import {
 import api from '../lib/api';
 import UniversalMap from '../components/UniversalMap';
 
+
 const { width } = Dimensions.get('window');
 const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
+
 
 type Deal = {
   _id: string;
@@ -42,26 +47,30 @@ type Deal = {
   distance?: number;
   unit?: string;
   category?: string;
-  stock?: boolean; // ✅ Changed to boolean
+  stock?: number; // ✅ added
 };
+
+
 
 
 // Add this helper function to get category display info
 const getCategoryInfo = (category?: string) => {
   const categoryMap: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
-    'food': { label: 'Food', color: '#DC2626', bgColor: '#FEE2E2', icon: 'restaurant' },
-    'beverage': { label: 'Beverage', color: '#2563EB', bgColor: '#DBEAFE', icon: 'cafe' },
-    'personal care': { label: 'Personal Care', color: '#7C3AED', bgColor: '#EDE9FE', icon: 'sparkles' },
-    'household': { label: 'Household', color: '#059669', bgColor: '#D1FAE5', icon: 'home' },
-    'medicine': { label: 'Medicine', color: '#DC2626', bgColor: '#FEE2E2', icon: 'medical' },
-    'electronics': { label: 'Electronics', color: '#0891B2', bgColor: '#CFFAFE', icon: 'phone-portrait' },
-    'clothing': { label: 'Clothing', color: '#DB2777', bgColor: '#FCE7F3', icon: 'shirt' },
-    'tools': { label: 'Tools', color: '#CA8A04', bgColor: '#FEF9C3', icon: 'construct' },
+    'food': { label: 'Food', color: '#6B1C23', bgColor: '#FEE2E2', icon: 'restaurant' },
+    'beverage': { label: 'Beverage', color: '#6B1C23', bgColor: '#FEF3C7', icon: 'cafe' },
+    'personal care': { label: 'Personal Care', color: '#6B1C23', bgColor: '#FEE2E2', icon: 'sparkles' },
+    'household': { label: 'Household', color: '#6B1C23', bgColor: '#FEF3C7', icon: 'home' },
+    'medicine': { label: 'Medicine', color: '#6B1C23', bgColor: '#FEE2E2', icon: 'medical' },
+    'electronics': { label: 'Electronics', color: '#6B1C23', bgColor: '#FEF3C7', icon: 'phone-portrait' },
+    'clothing': { label: 'Clothing', color: '#6B1C23', bgColor: '#FEE2E2', icon: 'shirt' },
+    'tools': { label: 'Tools', color: '#6B1C23', bgColor: '#FEF3C7', icon: 'construct' },
     'other': { label: 'Other', color: '#6B7280', bgColor: '#F3F4F6', icon: 'ellipsis-horizontal' },
   };
 
+
   return categoryMap[category?.toLowerCase() || 'other'] || categoryMap['other'];
 };
+
 
 export default function DealsPage() {
   const [q, setQ] = useState('');
@@ -70,9 +79,13 @@ export default function DealsPage() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-    const [total, setTotal] = useState(0);
-const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-const [modalVisible, setModalVisible] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+
+
+
 
 
 
@@ -91,6 +104,7 @@ const [modalVisible, setModalVisible] = useState(false);
     { value: 'other', label: 'Other' },
   ];
 
+
   const fetchDeals = useCallback(async (isRefreshing = false) => {
     if (isRefreshing) {
       setRefreshing(true);
@@ -98,6 +112,7 @@ const [modalVisible, setModalVisible] = useState(false);
       setLoading(true);
     }
     setError(null);
+
 
     try {
       const params: any = {
@@ -107,6 +122,7 @@ const [modalVisible, setModalVisible] = useState(false);
         limit: 50,
       };
 
+
       // ✅ Send search query OR category, not both
       if (q.trim()) {
         params.item = q.trim();
@@ -115,7 +131,10 @@ const [modalVisible, setModalVisible] = useState(false);
       }
 
 
+
+
       console.log('Fetching with params:', params); // Debug log
+
 
       const res = await api.get('/deals', { params });
       setDeals(res.data);
@@ -130,65 +149,76 @@ const [modalVisible, setModalVisible] = useState(false);
     }
   }, [q, selectedCategory]);
 
+
   const fetchTotal = useCallback(async () => {
-  try {
-    const res = await api.get("/deals/total"); // backend route
-    console.log("🧮 Total deals:", res.data);
-    setTotal(res.data.total || 0);
-  } catch (err: any) {
-    console.error("Fetch total error:", err.response?.data || err.message);
-    setTotal(0);
-  }
-}, []);
-
-useEffect(() => {
-  fetchDeals();
-  if (!selectedCategory) fetchTotal(); // ✅ Only fetch total if "All" selected
-}, [selectedCategory, q]);
+    try {
+      const res = await api.get("/deals/total"); // backend route
+      console.log("🧮 Total deals:", res.data);
+      setTotal(res.data.total || 0);
+    } catch (err: any) {
+      console.error("Fetch total error:", err.response?.data || err.message);
+      setTotal(0);
+    }
+  }, []);
 
 
+  useEffect(() => {
+    fetchDeals();
+    if (!selectedCategory) fetchTotal(); // ✅ Only fetch total if "All" selected
+  }, [selectedCategory, q]);
 
 
-const onRefresh = () => {
-  fetchDeals(true);
-  fetchTotal();
-};
+
+
+
+
+
+
+  const onRefresh = () => {
+    fetchDeals(true);
+    fetchTotal();
+  };
+
+
+
 
 
 
   const cheapestPrice = deals.length ? Math.min(...deals.map(d => d.price)) : null;
 
+
   // Error State
   if (error && !refreshing && deals.length === 0) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
-        
+        <StatusBar barStyle="light-content" backgroundColor="#6B1C23" />
+       
         {/* Header */}
-        <LinearGradient colors={['#1f4b81ff', '#7fb1d6ff']} style={styles.header}>
+        <LinearGradient colors={['#6B1C23', '#8B2A32']} style={styles.header}>
           <View style={styles.headerRow}>
-            
-              <TouchableOpacity 
+           
+              <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
                 activeOpacity={0.7}
               >
-                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                <Ionicons name="arrow-back" size={24} color="#F4B942" />
               </TouchableOpacity>
-            
-            
+           
+           
             <View style={styles.headerContent}>
               <Text style={styles.title}>Marketplace</Text>
               <Text style={styles.subtitle}>Iligan City</Text>
             </View>
-            
+           
             {isMobile && <View style={styles.headerSpacer} />}
           </View>
         </LinearGradient>
 
+
         <View style={styles.errorContainer}>
           <View style={styles.errorIconCircle}>
-            <Ionicons name="alert-circle" size={48} color="#EF4444" />
+            <Ionicons name="alert-circle" size={48} color="#6B1C23" />
           </View>
           <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
           <Text style={styles.errorMessage}>{error}</Text>
@@ -204,37 +234,40 @@ const onRefresh = () => {
     );
   }
 
+
   return (
 <View style={styles.container}>
-    <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
-    
+    <StatusBar barStyle="light-content" backgroundColor="#6B1C23" />
+   
     {/* Header - Fixed at top */}
-    <LinearGradient colors={['#1f4b81ff', '#7fb1d6ff']} style={styles.header}>
+    <LinearGradient colors={['#6B1C23', '#8B2A32']} style={styles.header}>
       <View style={styles.headerRow}>
-        
-          <TouchableOpacity 
+       
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={24} color="#F4B942" />
           </TouchableOpacity>
-        
-        
+       
+       
         <View style={styles.headerContent}>
           <Text style={styles.title}>Marketplace</Text>
           <Text style={styles.subtitle}>Iligan City</Text>
         </View>
-        
+       
         {isMobile && <View style={styles.headerSpacer} />}
       </View>
     </LinearGradient>
+
 
     {/* Search - Fixed */}
     <View style={styles.searchContainer}>
      <View style={styles.searchWrapper}>
   {/* 🔍 Search Icon */}
   <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
+
 
   {/* 🧠 Input */}
   <TextInput
@@ -247,6 +280,8 @@ const onRefresh = () => {
   />
 
 
+
+
   {/* ❌ Clear Button */}
   {q.length > 0 && (
     <TouchableOpacity style={styles.clearButton} onPress={() => setQ("")}>
@@ -254,9 +289,9 @@ const onRefresh = () => {
     </TouchableOpacity>
   )}
 </View>
-  
-      <TouchableOpacity 
-        style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
+ 
+      <TouchableOpacity
+        style={[styles.searchButton, loading && styles.searchButtonDisabled]}
         onPress={() => fetchDeals()}
         disabled={loading}
         activeOpacity={0.8}
@@ -269,6 +304,7 @@ const onRefresh = () => {
       </TouchableOpacity>
     </View>
 
+
     {/* Category Dropdown - Fixed */}
     <View style={styles.dropdownContainer}>
       <Text style={styles.dropdownLabel}>Category:</Text>
@@ -280,7 +316,7 @@ const onRefresh = () => {
             setQ("");
           }}
           style={styles.picker}
-          dropdownIconColor="#1f4b81ff"
+          dropdownIconColor="#6B1C23"
         >
           {categories.map((cat) => (
             <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
@@ -288,6 +324,7 @@ const onRefresh = () => {
         </Picker>
       </View>
     </View>
+
 
     {/* Results Header - Fixed */}
     {!loading && deals.length > 0 && (
@@ -300,6 +337,7 @@ const onRefresh = () => {
               }`}
         </Text>
 
+
         {cheapestPrice && (
           <Text style={styles.bestPriceText}>
             Best price: ₱{cheapestPrice}
@@ -308,6 +346,7 @@ const onRefresh = () => {
       </View>
     )}
 
+
     {/* Map - Fixed height, interactive */}
     {!loading && deals.length > 0 && (
       <View style={styles.mapContainer}>
@@ -315,27 +354,29 @@ const onRefresh = () => {
       </View>
     )}
 
+
     {/* Loading State */}
     {loading && !refreshing && (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#6B1C23" />
         <Text style={styles.loadingText}>Finding best deals...</Text>
       </View>
     )}
+
 
     {/* Empty State */}
     {!loading && deals.length === 0 && !error && (
       <View style={styles.emptyStateContainer}>
         <View style={styles.emptyIconCircle}>
-          <Ionicons 
-            name={q || selectedCategory ? "search-outline" : "pricetags-outline"} 
-            size={48} 
-            color="#3B82F6" 
+          <Ionicons
+            name={q || selectedCategory ? "search-outline" : "pricetags-outline"}
+            size={48}
+            color="#F4B942"
           />
         </View>
         <Text style={styles.emptyStateTitle}>No deals found</Text>
         <Text style={styles.emptyStateMessage}>
-          {q 
+          {q
             ? `No results for "${q}". Try a different search term.`
             : selectedCategory
             ? `No deals available in ${categories.find(c => c.value === selectedCategory)?.label} category.`
@@ -356,6 +397,7 @@ const onRefresh = () => {
       </View>
     )}
 
+
     {/* ✅ SINGLE Product List - Limited to 30 items */}
     {!loading && deals.length > 0 && (
       <FlatList
@@ -367,7 +409,8 @@ const onRefresh = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#3B82F6']}
+            colors={['#6B1C23']}
+            tintColor="#6B1C23"
           />
         }
         renderItem={({ item }) => {
@@ -375,6 +418,7 @@ const onRefresh = () => {
           const isCheapest = cheapestPrice !== null && item.price === cheapestPrice;
           const [lng, lat] = item.location?.coordinates || [null, null];
           const categoryInfo = getCategoryInfo(item.category);
+
 
           return (
             <TouchableOpacity
@@ -392,8 +436,10 @@ const onRefresh = () => {
                 </View>
               )}
 
+
               <View style={styles.dealInfo}>
                 <Text style={styles.itemName} numberOfLines={1}>{item.itemName}</Text>
+
 
                 <View
                   style={[
@@ -406,6 +452,7 @@ const onRefresh = () => {
                     {categoryInfo.label}
                   </Text>
                 </View>
+
 
                 <View style={styles.storeInfo}>
                   <Ionicons name="storefront-outline" size={12} color="#6B7280" />
@@ -420,6 +467,7 @@ const onRefresh = () => {
                   )}
                 </View>
 
+
                 {distanceKm && (
                   <View style={styles.distanceInfo}>
                     <Ionicons name="location-outline" size={12} color="#9CA3AF" />
@@ -428,28 +476,31 @@ const onRefresh = () => {
                 )}
               </View>
 
+
               <View style={styles.stockContainer}>
-                {item.stock ? ( 
-                <>
-                  <Ionicons name="cube-outline" size={12} color="#059669" />
-                  <Text style={[styles.stockText, { color: "#059669" }]}>
-                    In Stock
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
-                  <Text style={[styles.stockText, { color: "#DC2626" }]}>
-                    Out of Stock
-                  </Text>
-                </>
-              )}
+                {item.stock && item.stock > 0 ? (
+                  <>
+                    <Ionicons name="cube-outline" size={12} color="#059669" />
+                    <Text style={[styles.stockText, { color: "#059669" }]}>
+                      {item.stock} in stock
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
+                    <Text style={[styles.stockText, { color: "#DC2626" }]}>
+                      No stock available
+                    </Text>
+                  </>
+                )}
               </View>
+
 
               <View style={styles.priceSection}>
                 <Text style={[styles.price, isCheapest && styles.cheapestPrice]}>
                   ₱{item.price}
                 </Text>
+
 
                 {lat && lng && (
                   <TouchableOpacity
@@ -460,7 +511,7 @@ const onRefresh = () => {
                     }
                     style={styles.directionsButton}
                   >
-                    <Ionicons name="navigate" size={12} color="#2563EB" />
+                    <Ionicons name="navigate" size={12} color="#6B1C23" />
                     <Text style={styles.directionsText}>Directions</Text>
                   </TouchableOpacity>
                 )}
@@ -470,6 +521,7 @@ const onRefresh = () => {
         }}
       />
     )}
+
 
     {/* Modal */}
     <Modal
@@ -484,25 +536,33 @@ const onRefresh = () => {
             <>
               <Text style={styles.modalTitle}>{selectedDeal.itemName}</Text>
 
+
               <Text style={styles.modalText}>🏪 Store: {selectedDeal.storeName}</Text>
               <Text style={styles.modalText}>
                 🏷️ Category: {selectedDeal.category || "N/A"}
               </Text>
               <Text style={styles.modalText}>💰 Price: ₱{selectedDeal.price}</Text>
 
-             <Text style={styles.modalText}>
-              📦 Stock: {selectedDeal.stock ? "In Stock" : "Out of Stock"}
-            </Text>
+
+              <Text style={styles.modalText}>
+                📦 Stock:{" "}
+                {selectedDeal.stock && selectedDeal.stock > 0
+                  ? `${selectedDeal.stock} in stock`
+                  : "No stock available"}
+              </Text>
+
 
               {selectedDeal.unit && (
                 <Text style={styles.modalText}>📏 Unit: {selectedDeal.unit}</Text>
               )}
+
 
               {selectedDeal.distance && (
                 <Text style={styles.modalText}>
                   📍 Distance: {(selectedDeal.distance / 1000).toFixed(2)} km
                 </Text>
               )}
+
 
               {selectedDeal.location?.coordinates && (
                 <TouchableOpacity
@@ -522,6 +582,7 @@ const onRefresh = () => {
                 </TouchableOpacity>
               )}
 
+
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
                 style={styles.closeModalButton}
@@ -533,13 +594,15 @@ const onRefresh = () => {
         </View>
       </View>
     </Modal>
-  </View> 
+  </View>
 );
 }
 
+
 const styles = StyleSheet.create({
-  
+ 
   container: { flex: 1, backgroundColor: '#F9FAFB' },
+
 
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : 16,
@@ -560,24 +623,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerContent: { 
+  headerContent: {
     marginTop: 12,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerSpacer: { width: 36 },
-  title: { 
-    fontSize: 22, 
-    fontWeight: '700', 
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
-  subtitle: { 
-    fontSize: 13, 
-    color: 'rgba(255,255,255,0.85)', 
+  subtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '500',
     marginTop: 2,
   },
+
 
   // Search - Compact
   searchContainer: {
@@ -597,26 +661,27 @@ const styles = StyleSheet.create({
     height: 42,
   },
   searchIcon: { marginRight: 6 },
-  searchInput: { 
-    flex: 1, 
-    fontSize: 14, 
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
     color: '#111827',
     paddingVertical: 0,
   },
   clearButton: { padding: 4 },
   searchButton: {
-    width: 42, 
-    height: 42, 
+    width: 42,
+    height: 42,
     borderRadius: 10,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center', 
+    backgroundColor: '#F4B942',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   searchButtonDisabled: { backgroundColor: '#9CA3AF' },
 
-  itemName: { 
-    fontSize: 15, 
-    fontWeight: '700', 
+
+  itemName: {
+    fontSize: 15,
+    fontWeight: '700',
     color: '#111827',
     textTransform: 'capitalize',
     flex: 1,
@@ -636,16 +701,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-  separator: { 
-    color: '#D1D5DB', 
+  separator: {
+    color: '#D1D5DB',
     marginHorizontal: 2,
     fontSize: 10,
   },
-  unit: { 
-    fontSize: 11, 
+  unit: {
+    fontSize: 11,
     color: '#6B7280',
     textTransform: 'capitalize',
   },
+
 
   // Category Filter
   categoryContainer: {
@@ -669,33 +735,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  categoryChipActive: { 
-    backgroundColor: '#1f4b81ff', 
-    borderColor: '#1f4b81ff',
+  categoryChipActive: {
+    backgroundColor: '#6B1C23',
+    borderColor: '#6B1C23',
   },
-  categoryText: { 
-    color: '#374151', 
-    fontSize: 13, 
+  categoryText: {
+    color: '#374151',
+    fontSize: 13,
     fontWeight: '600',
   },
   categoryTextActive: { color: '#FFFFFF' },
 
+
   resultsHeader: {
-  backgroundColor: '#FFFFFF',
-  paddingVertical: 6, // smaller
-  paddingHorizontal: 10,
-  borderBottomWidth: 1,
-  borderBottomColor: '#E5E7EB',
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 6, // smaller
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   resultsText: { fontSize: 12, fontWeight: '600', color: '#374151' },
-  bestPriceText: { fontSize: 12, color: '#1f4b81ff', fontWeight: '500', marginTop: 2 },
+  bestPriceText: { fontSize: 12, color: '#F4B942', fontWeight: '700' },
+
 
   mapContainer: {
-    margin: 12, 
-    borderRadius: 12, 
+    margin: 12,
+    borderRadius: 12,
     overflow: 'hidden',
     height: 200,
     shadowColor: '#000',
@@ -704,18 +772,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    paddingVertical: 40 
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40
   },
-  loadingText: { 
-    marginTop: 16, 
-    fontSize: 14, 
-    color: '#6B7280', 
-    fontWeight: '500' 
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500'
   },
+
 
   // Error State
   errorContainer: {
@@ -736,7 +806,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#6B1C23',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -750,7 +820,7 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#6B1C23',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -761,6 +831,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
 
   // Empty State
   emptyStateScroll: {
@@ -776,7 +847,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#FEF3C7',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -784,7 +855,7 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#6B1C23',
     marginBottom: 8,
   },
   emptyStateMessage: {
@@ -797,7 +868,7 @@ const styles = StyleSheet.create({
   clearFiltersButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#6B1C23',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -810,203 +881,216 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+
   // Product Cards
-  listContainer: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
-    paddingBottom: 32 
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingBottom: 32
   },
   dealCard: {
-    flexDirection: 'row', 
+    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12, 
+    borderRadius: 12,
     padding: 10,
     marginBottom: 8,
-    borderWidth: 1, 
-    borderColor: '#E5E7EB', 
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     position: 'relative',
   },
-  cheapestCard: { 
-    borderColor: '#1f4b81ff', 
-    borderWidth: 1.5 
+  cheapestCard: {
+    borderColor: '#F4B942',
+    borderWidth: 2,
+    shadowColor: '#F4B942',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cheapestBadge: {
-    position: 'absolute', 
-    top: -1, 
-    right: 10, 
-    backgroundColor: '#1f4b81ff',
-    flexDirection: 'row', 
+    position: 'absolute',
+    top: -1,
+    right: 10,
+    backgroundColor: '#F4B942',
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6, 
-    paddingVertical: 3, 
-    borderRadius: 6, 
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
     gap: 3,
   },
-  cheapestBadgeText: { 
-    color: '#FFFFFF', 
-    fontSize: 9, 
-    fontWeight: '700' 
+  cheapestBadgeText: {
+    color: '#6B1C23',
+    fontSize: 9,
+    fontWeight: '700'
   },
-  
+ 
   dealInfo: { flex: 1, paddingRight: 8 },
 
-  storeInfo: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+
+  storeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 3,
     gap: 4,
   },
-  storeName: { 
-    fontSize: 12, 
-    color: '#6B7280', 
+  storeName: {
+    fontSize: 12,
+    color: '#6B7280',
     fontWeight: '500',
     flex: 1,
   },
-  distanceInfo: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  distanceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 3,
   },
   distance: { fontSize: 11, color: '#9CA3AF' },
 
-  priceSection: { 
-    alignItems: 'flex-end', 
+
+  priceSection: {
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     minWidth: 80,
   },
-  price: { 
-    fontSize: 17, 
-    fontWeight: '800', 
-    color: '#111827',
+  price: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#6B1C23',
   },
-  cheapestPrice: { color: '#1f4b81ff', fontSize: 18 },
+  cheapestPrice: { color: '#F4B942', fontSize: 18 },
 
-  directionsButton: { 
-    flexDirection: 'row', 
+
+  directionsButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
     gap: 3,
   },
-  directionsText: { 
-    color: '#2563EB', 
-    fontSize: 11, 
+  directionsText: {
+    color: '#6B1C23',
+    fontSize: 11,
     fontWeight: '600',
   },
   stockContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginTop: 4,
-  gap: 4,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
 
-stockText: {
-  fontSize: 12,
-  fontWeight: '600',
-  color: '#059669',
-},
 
-outOfStockContainer: {
-  backgroundColor: '#FEE2E2',
-  borderColor: '#EF4444',
-  borderWidth: 1,
-  paddingVertical: 4,
-  paddingHorizontal: 8,
-  borderRadius: 6,
-  marginTop: 6,
-  alignSelf: 'flex-start',
-},
+  stockText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#059669',
+  },
 
-outOfStockText: {
-  color: '#B91C1C',
-  fontSize: 13,
-  fontWeight: '700',
-  textTransform: 'uppercase',
-},
-dropdownContainer: {
-  backgroundColor: '#FFFFFF',
-  paddingHorizontal: 10,
-  paddingVertical: 5, // less vertical space
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  borderBottomWidth: 1,
-  borderBottomColor: '#E5E7EB',
-  gap: 6,
-},
-dropdownLabel: {
-  fontSize: 13,
-  fontWeight: '600',
-  color: '#374151',
-  flexShrink: 0,
-  minWidth: 60,
-},
-dropdownWrapper: {
+
+  outOfStockContainer: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+    borderWidth: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+
+
+  outOfStockText: {
+    color: '#B91C1C',
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  dropdownContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5, // less vertical space
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    gap: 6,
+  },
+  dropdownLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B1C23',
+    flexShrink: 0,
+    minWidth: 60,
+  },
+  dropdownWrapper: {
     flex: 1,
-  borderWidth: 1,
-  borderColor: '#E5E7EB',
-  borderRadius: 6,
-  backgroundColor: '#F9FAFB',
-  height: 34, // reduced from 44
-  justifyContent: 'center',
-},
-picker: {
-  height: 55,
-  width: '100%',
-  color: '#111827',
-  fontSize: 13,
-},
-modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-},
-modalContent: {
-  backgroundColor: "white",
-  borderRadius: 16,
-  padding: 20,
-  width: "85%",
-  maxHeight: "80%",
-  elevation: 5,
-},
-modalTitle: {
-  fontSize: 18,
-  fontWeight: "700",
-  marginBottom: 10,
-  color: "#1f4b81",
-  textAlign: "center",
-},
-modalText: {
-  fontSize: 14,
-  marginBottom: 6,
-  color: "#374151",
-},
-closeModalButton: {
-  marginTop: 10,
-  backgroundColor: "#1f4b81",
-  borderRadius: 8,
-  paddingVertical: 10,
-},
-closeModalText: {
-  textAlign: "center",
-  color: "#fff",
-  fontWeight: "600",
-},
-mapButton: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#2563EB",
-  borderRadius: 8,
-  paddingVertical: 10,
-  marginTop: 10,
-},
-mapButtonText: {
-  color: "#fff",
-  fontWeight: "600",
-  marginLeft: 6,
-},
-emptyStateContainer: {
+    borderWidth: 1,
+    borderColor: '#F4B942',
+    borderRadius: 6,
+    backgroundColor: '#FFFBF0',
+    height: 34, // reduced from 44
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 55,
+    width: '100%',
+    color: '#6B1C23',
+    fontSize: 13,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(107, 28, 35, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+    width: "85%",
+    maxHeight: "80%",
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: '#F4B942',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#6B1C23",
+    textAlign: "center",
+  },
+  modalText: {
+    fontSize: 14,
+    marginBottom: 6,
+    color: "#374151",
+  },
+  closeModalButton: {
+    marginTop: 10,
+    backgroundColor: "#6B1C23",
+    borderRadius: 8,
+    paddingVertical: 10,
+  },
+  closeModalText: {
+    textAlign: "center",
+    color: "#fff",
+    fontWeight: "600",
+  },
+  mapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F4B942",
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  mapButtonText: {
+    color: "#6B1C23",
+    fontWeight: "600",
+    marginLeft: 6,
+  },
+  emptyStateContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1014,4 +1098,6 @@ emptyStateContainer: {
     paddingVertical: 60,
   },
 
+
 });
+

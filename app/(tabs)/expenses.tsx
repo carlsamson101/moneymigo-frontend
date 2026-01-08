@@ -76,13 +76,13 @@ function HistoryRangeButton({ onPress, expanded }: HistoryRangeButtonProps) {
   return (
     <TouchableOpacity style={styles.historyCard} onPress={onPress} activeOpacity={0.88}>
       <View style={styles.historyCardLeft}>
-        <Ionicons name="time-outline" size={16} color="#475569" style={{ marginRight: 10 }} />
+        <Ionicons name="time-outline" size={16} color="#F4B942" style={{ marginRight: 10 }} />
         <Text style={styles.historyLabel}>View History by Date Range</Text>
       </View>
       <Ionicons
         name={expanded ? "chevron-up" : "chevron-down"}
         size={15}
-        color="#2563EB"
+        color="#6B1C23"
       />
     </TouchableOpacity>
   );
@@ -276,7 +276,7 @@ const [voiceTranscript, setVoiceTranscript] = useState("");
   const [budgetAmount, setBudgetAmount] = useState(0);
 const [showVoiceFormatModal, setShowVoiceFormatModal] = useState(false);
 const [showScanGuideModal, setShowScanGuideModal] = useState(false);
-
+const [editCategoryCaller, setEditCategoryCaller] = useState(false);
 const [showPlannedModal, setShowPlannedModal] = useState(false);
 const [plannedExpenses, setPlannedExpenses] = useState<any[]>([]);
 const [plannedExpanded, setPlannedExpanded] = useState(false);
@@ -360,11 +360,18 @@ useEffect(() => {
   const builtInColors = {};
   const [categoryColors, setCategoryColors] = useState<{ [category: string]: string }>({ ...builtInColors });
   
-  const colorPalette = [
-    '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
-    '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC',
-  ];
-
+ const colorPalette = [
+  '#6B1C23', // Maroon (primary)
+  '#F4B942', // Gold (primary)
+  '#8B2A35', // Dark maroon
+  '#A52A3A', // Bright maroon
+  '#7D2E3A', // Medium maroon
+  '#9B2C3F', // Rose maroon
+  '#8B4513', // Saddle brown (warm)
+  '#A0522D', // Sienna (warm)
+  '#CD853F', // Peru/tan (warm)
+  '#D2691E', // Chocolate (warm)
+];
   const getCategoryIcon = (category: string) => {
   const icons: { [key: string]: string } = {
     'Food': 'restaurant',
@@ -378,33 +385,34 @@ useEffect(() => {
 
 const getCategoryColor = (category: string) => {
   const colors: { [key: string]: string } = {
-    'Food': '#F59E0B',
-    'Transport': '#3B82F6',
-    'Bills': '#EF4444',
-    'School': '#8B5CF6',
-    'Shopping': '#EC4899',
+    'Food': '#8B2A35',      // Dark maroon
+    'Transport': '#6B1C23', // Primary maroon
+    'Bills': '#A52A3A',     // Bright maroon
+    'School': '#7D2E3A',    // Medium maroon
+    'Shopping': '#9B2C3F',  // Rose maroon
   };
-  return colors[category] || '#6366F1';
+  return colors[category] || '#6B1C23';
 };
-  const categoryIcons: any = {
-    Food: <Ionicons name="fast-food" size={20} color="#1f4b81ff" />,
-    Transport: <MaterialCommunityIcons name="bus" size={20} color="#1f4b81ff" />,
-    Bills: <MaterialCommunityIcons name="file-document-outline" size={20} color="#1f4b81ff" />,
-    School: <MaterialCommunityIcons name="school" size={20} color="#1f4b81ff" />,
-    Shopping: <MaterialCommunityIcons name="cart" size={20} color="#1f4b81ff" />,
-    Savings: <Ionicons name="cash-outline" size={20} color="#16a34a" />,
-    Others: <MaterialCommunityIcons name="dots-horizontal" size={20} color="#1f4b81ff" />,
-  };
 
-  const getCategoryIconComponent = (category: string) => {
+ const categoryIcons: any = {
+  Food: <Ionicons name="fast-food" size={20} color="#FFFFFF" />,
+  Transport: <MaterialCommunityIcons name="bus" size={20} color="#FFFFFF" />,
+  Bills: <MaterialCommunityIcons name="file-document-outline" size={20} color="#FFFFFF" />,
+  School: <MaterialCommunityIcons name="school" size={20} color="#FFFFFF" />,
+  Shopping: <MaterialCommunityIcons name="cart" size={20} color="#FFFFFF" />,
+  Savings: <Ionicons name="cash-outline" size={20} color="#FFFFFF" />,
+  Others: <MaterialCommunityIcons name="dots-horizontal" size={20} color="#FFFFFF" />,
+};
+
+const getCategoryIconComponent = (category: string) => {
   const iconMap: any = {
-    Food: <Ionicons name="fast-food" size={20} color="#1f4b81ff" />,
-    Transport: <MaterialCommunityIcons name="bus" size={20} color="#1f4b81ff" />,
-    Bills: <MaterialCommunityIcons name="file-document-outline" size={20} color="#1f4b81ff" />,
-    School: <MaterialCommunityIcons name="school" size={20} color="#1f4b81ff" />,
-    Shopping: <MaterialCommunityIcons name="cart" size={20} color="#1f4b81ff" />,
-    Savings: <Ionicons name="cash-outline" size={20} color="#16a34a" />,
-    Others: <MaterialCommunityIcons name="dots-horizontal" size={20} color="#1f4b81ff" />,
+    Food: <Ionicons name="fast-food" size={20} color="#FFFFFF" />,
+    Transport: <MaterialCommunityIcons name="bus" size={20} color="#FFFFFF" />,
+    Bills: <MaterialCommunityIcons name="file-document-outline" size={20} color="#FFFFFF" />,
+    School: <MaterialCommunityIcons name="school" size={20} color="#FFFFFF" />,
+    Shopping: <MaterialCommunityIcons name="cart" size={20} color="#FFFFFF" />,
+    Savings: <Ionicons name="cash-outline" size={20} color="#FFFFFF" />,
+    Others: <MaterialCommunityIcons name="dots-horizontal" size={20} color="#FFFFFF" />,
   };
   return iconMap[category] || iconMap.Others;
 };
@@ -1815,10 +1823,19 @@ async function processReceiptImage(uri) {
       });
     }
 
-    if (!extractedText.trim()) {
-      Alert.alert("⚠️ OCR Failed", "No readable text detected. Try again.");
+   if (!extractedText.trim()) {
+      Alert.alert(
+        "⚠️ Can't Read Receipt", 
+        "No text detected. For best results:\n\n" +
+        "✓ Use good lighting (avoid shadows)\n" +
+        "✓ Keep receipt flat and straight\n" +
+        "✓ Avoid blur - hold camera steady\n" +
+        "✓ Ensure text is clear and readable\n\n" +
+        "Try taking another photo in a brighter area."
+      );
       return;
     }
+    
 
     console.log("✅ Extracted text:", extractedText);
 
@@ -2005,6 +2022,18 @@ async function processReceiptImage(uri) {
     setOcrDetectedAmount(detectedAmount ? detectedAmount.toFixed(2) : "");
     setOcrDetectedCategory(detectedCategory);
     setOcrDetectedNotes(""); // Clear previous notes
+      // Show helpful message if amount wasn't detected
+    if (!detectedAmount) {
+      Alert.alert(
+        "💡 Amount Not Found",
+        "Couldn't detect the amount automatically. For better results:\n\n" +
+        "✓ Take photo in bright lighting\n" +
+        "✓ Keep receipt flat (no wrinkles)\n" +
+        "✓ Focus on the total amount area\n" +
+        "✓ Avoid blur or glare\n\n" +
+        "You can manually enter the amount below."
+      );
+    }
     setShowOcrModal(true);
 
     console.log("✅ OCR Result", {
@@ -2420,7 +2449,7 @@ const HistorySection = (
         styles.submitButton,
         {
           marginTop: 10,
-          backgroundColor: !historyStartDate || !historyEndDate ? '#ccc' : '#2563EB',
+          backgroundColor: !historyStartDate || !historyEndDate ? '#ccc' : '#6B1C23',
         },
       ]}
       disabled={!historyStartDate || !historyEndDate}
@@ -2518,7 +2547,7 @@ const HistorySection = (
   
 
       <View style={styles.container}>
-    <StatusBar barStyle="light-content" backgroundColor="#1f4b81ff" />
+    <StatusBar barStyle="light-content" backgroundColor="#6B1C23" />
     <ScrollView 
       style={styles.scrollContainer}
       contentContainerStyle={styles.scrollContent}
@@ -2526,7 +2555,7 @@ const HistorySection = (
     >
         {/* Gradient Header Section */}
         <LinearGradient
-          colors={['#1f4b81ff', '#7fb1d6ff']}
+         colors={['#6B1C23', '#8B2A35']}  // Maroon gradient
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.headerContainer}
@@ -2543,7 +2572,7 @@ const HistorySection = (
                 onPress={() => router.back()}
                 activeOpacity={0.8}
               >
-                <Ionicons name="arrow-back" size={24} color="#ffffff" />
+                <Ionicons name="arrow-back" size={24} color="#F4B942" />
               </TouchableOpacity>
             
 
@@ -2768,7 +2797,7 @@ const HistorySection = (
     activeOpacity={0.88}
   >
     <View style={styles.plannedHeaderLeft}>
-      <Ionicons name="calendar-outline" size={20} color="#2563EB" style={{ marginRight: 10 }} />
+      <Ionicons name="calendar-outline" size={20} color="#F4B942" style={{ marginRight: 10 }} />
       <View>
         <Text style={styles.plannedTitle}>Planned Expenses</Text>
        <Text style={styles.plannedSubtitle}>
@@ -2789,7 +2818,7 @@ const HistorySection = (
     <Ionicons
       name={plannedExpanded ? "chevron-up" : "chevron-down"}
       size={20}
-      color="#2563EB"
+      color="#6B1C23"
     />
   </TouchableOpacity>
 
@@ -2923,7 +2952,7 @@ const HistorySection = (
         style={styles.addPlannedBtn}
         onPress={() => setShowPlannedModal(true)}
       >
-        <Ionicons name="add-circle-outline" size={20} color="#2563EB" />
+        <Ionicons name="add-circle-outline" size={20} color="#6B1C23" />
         <Text style={styles.addPlannedBtnText}>Add Planned Expense</Text>
       </TouchableOpacity>
     </View>
@@ -3105,7 +3134,7 @@ const HistorySection = (
       {/* FAB for Add Expense */}
       <TouchableOpacity style={styles.fab} onPress={() => setShowAddExpenseModal(true)}>
        <LinearGradient
-         colors={['#1f4b81ff', '#7fb1d6ff']}  
+    colors={['#6B1C23', '#8B2A35']}  // Maroon gradient
          style={styles.fabGradient}
        >
          <Ionicons name="add" size={28} color="#fff" />
@@ -3125,7 +3154,7 @@ const HistorySection = (
 
   {(Platform.OS === 'android' || Platform.OS === 'ios' || (Platform.OS === 'web' && width < 768)) && (
   <TouchableOpacity
-    style={[styles.submitButton, { backgroundColor: '#2563EB', marginBottom: 10 }]}
+    style={[styles.submitButton, { backgroundColor: '#6B1C23', marginBottom: 10 }]}
     onPress={handleScanReceipt}
     disabled={isScanning}
   >
@@ -3275,12 +3304,12 @@ const HistorySection = (
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: '#EFF6FF',
+          backgroundColor: '#FEF9C3',
           alignItems: 'center',
           justifyContent: 'center',
           marginRight: 10
         }}>
-          <Ionicons name="camera" size={18} color="#2563EB" />
+          <Ionicons name="camera" size={18} color="#6B1C23" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 17, fontWeight: "700", color: "#1E293B" }}>
@@ -3474,46 +3503,6 @@ const HistorySection = (
           />
         </View>
 
-        {/* Collapsible Extracted Text */}
-        <TouchableOpacity
-          onPress={() => setOthersExpanded(!othersExpanded)}
-          style={{
-            borderWidth: 1,
-            borderColor: "#E2E8F0",
-            borderRadius: 8,
-            padding: 10,
-            backgroundColor: "#F8FAFC",
-          }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 12, color: "#64748B", fontWeight: '600' }}>
-              📄 Extracted Text
-            </Text>
-            <Ionicons 
-              name={othersExpanded ? "chevron-up" : "chevron-down"} 
-              size={16} 
-              color="#64748B" 
-            />
-          </View>
-          
-          {othersExpanded && (
-            <ScrollView
-              style={{
-                maxHeight: 80,
-                marginTop: 8,
-                paddingTop: 8,
-                borderTopWidth: 1,
-                borderTopColor: "#E2E8F0",
-              }}
-              nestedScrollEnabled
-            >
-              <Text style={{ color: "#475569", fontSize: 12, lineHeight: 16 }}>
-                {ocrRawText || "No text extracted"}
-              </Text>
-            </ScrollView>
-          )}
-        </TouchableOpacity>
-      </View>
 
       {/* Action Buttons */}
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
@@ -3547,14 +3536,14 @@ const HistorySection = (
         <TouchableOpacity
           style={{
             flex: 1,
-            backgroundColor: "#2563EB",
+            backgroundColor: "#6B1C23",
             borderRadius: 10,
             paddingVertical: 12,
             paddingHorizontal: 8,
             alignItems: "center",
             justifyContent: "center",
             minWidth: 100,
-            shadowColor: "#2563EB",
+            shadowColor: "#6B1C23",
             shadowOpacity: 0.3,
             shadowRadius: 8,
             shadowOffset: { width: 0, height: 2 },
@@ -3616,13 +3605,22 @@ const HistorySection = (
 </Modal>
 
 
-     {/* Category Picker Modal */}
+    {/* Category Picker Modal */}
 <Modal
   visible={categoryModalVisible}
   transparent
   animationType="fade"
   onRequestClose={() => {
     setCategoryModalVisible(false);
+    
+    // ✅ Re-show expense detail modal if we were editing
+    if (editCategoryCaller) {
+      setTimeout(() => {
+        setShowExpenseDetailModal(true);
+        setEditCategoryCaller(false);
+      }, 100);
+    }
+    
     // ✅ Re-show planned modal if it was the caller
     if (categoryCallerModal === 'planned') {
       setTimeout(() => {
@@ -3636,6 +3634,15 @@ const HistorySection = (
     style={styles.modalOverlay}
     onPress={() => {
       setCategoryModalVisible(false);
+      
+      // ✅ Re-show expense detail modal if we were editing
+      if (editCategoryCaller) {
+        setTimeout(() => {
+          setShowExpenseDetailModal(true);
+          setEditCategoryCaller(false);
+        }, 100);
+      }
+      
       // ✅ Re-show planned modal if it was the caller
       if (categoryCallerModal === 'planned') {
         setTimeout(() => {
@@ -3646,73 +3653,86 @@ const HistorySection = (
     }}
   >
     <View style={[styles.modalContainer, { gap: 0, maxHeight: '70%', zIndex: 10002 }]}>
-      {/* ... header ... */}
+      {/* Header */}
+      <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12 }}>
+        Select Category
+      </Text>
 
       <ScrollView style={{ maxHeight: 400 }}>
-       {/* Main Categories */}
-{['Food', 'Transport', 'Bills', 'School', 'Shopping'].map((cat) => (
-  <TouchableOpacity
-    key={cat}
-    onPress={() => {
-      setExpenseCategory(cat);
-      
-      // ✅ Update the correct state based on which modal called us
-      if (categoryCallerModal === 'planned') {
-        setNewPlannedCategory(cat);
-      }
-      
-      setCategoryModalVisible(false);
-      
-      // ✅ Re-show planned modal after selection
-      if (categoryCallerModal === 'planned') {
-        setTimeout(() => {
-          setShowPlannedModal(true);
-        }, 100);
-      }
-      
-      setCategoryCallerModal(null);
-    }}
-    style={{
-      padding: 14,
-      paddingHorizontal: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: '#F1F5F9',
-      minWidth: 280,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: expenseCategory === cat ? '#F0F9FF' : 'transparent',
-    }}
-  >
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View style={{
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: getCategoryColor(cat),
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-      }}>
-        <Ionicons 
-          name={getCategoryIcon(cat)} 
-          size={18} 
-          color="#FFFFFF" 
-        />
-      </View>
-      <Text style={{ 
-        fontSize: 15, 
-        color: '#1E293B',
-        fontWeight: expenseCategory === cat ? '600' : '400'
-      }}>
-        {cat}
-      </Text>
-    </View>
-    {expenseCategory === cat && (
-      <Ionicons name="checkmark" size={20} color="#0EA5E9" />
-    )}
-  </TouchableOpacity>
-))}
+        {/* Main Categories */}
+        {['Food', 'Transport', 'Bills', 'School', 'Shopping'].map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            onPress={() => {
+              // ✅ Update the correct state based on caller
+              if (editCategoryCaller) {
+                setEditCategory(cat);
+              } else if (categoryCallerModal === 'planned') {
+                setNewPlannedCategory(cat);
+              } else {
+                setExpenseCategory(cat);
+              }
+              
+              setCategoryModalVisible(false);
+              
+              // ✅ Re-show expense detail modal if editing
+              if (editCategoryCaller) {
+                setTimeout(() => {
+                  setShowExpenseDetailModal(true);
+                  setEditCategoryCaller(false);
+                }, 100);
+              }
+              
+              // ✅ Re-show planned modal if it was the caller
+              if (categoryCallerModal === 'planned') {
+                setTimeout(() => {
+                  setShowPlannedModal(true);
+                }, 100);
+              }
+              
+              setCategoryCallerModal(null);
+            }}
+            style={{
+              padding: 14,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#FEF9C3',
+              minWidth: 280,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '#fcfcfcff' : 'transparent',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: getCategoryColor(cat),
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 12,
+              }}>
+                <Ionicons 
+                  name={getCategoryIcon(cat)} 
+                  size={18} 
+                  color="#FFFFFF" 
+                />
+              </View>
+              <Text style={{ 
+                fontSize: 15, 
+                color: '#6B1C23',
+                fontWeight: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '600' : '400'
+              }}>
+                {cat}
+              </Text>
+            </View>
+            {(editCategoryCaller ? editCategory === cat : expenseCategory === cat) && (
+              <Ionicons name="checkmark" size={20} color="#F4B942" />
+            )}
+          </TouchableOpacity>
+        ))}
 
         {/* Others Section */}
         <TouchableOpacity
@@ -3785,98 +3805,116 @@ const HistorySection = (
               </Text>
             </TouchableOpacity>
 
-{customCategories.map((cat) => (
-  <TouchableOpacity
-    key={cat}
-    onPress={() => {
-      setExpenseCategory(cat);
-      
-      if (categoryCallerModal === 'planned') {
-        setNewPlannedCategory(cat);
-      }
-      
-      setCategoryModalVisible(false);
-      
-      // ✅ Re-show planned modal
-      if (categoryCallerModal === 'planned') {
-        setTimeout(() => {
-          setShowPlannedModal(true);
-        }, 100);
-      }
-      
-      setCategoryCallerModal(null);
-    }}
-    style={{
-      padding: 12,
-      paddingLeft: 64,
-      borderBottomWidth: 1,
-      borderBottomColor: "#F1F5F9",
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: expenseCategory === cat ? '#F0F9FF' : 'transparent',
-    }}
-  >
-    <Text style={{ 
-      fontSize: 14, 
-      color: '#475569',
-      fontWeight: expenseCategory === cat ? '600' : '400'
-    }}>
-      {cat}
-    </Text>
-    {expenseCategory === cat && (
-      <Ionicons name="checkmark" size={18} color="#0EA5E9" />
-    )}
-  </TouchableOpacity>
-))}
+            {/* Custom Categories */}
+            {customCategories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => {
+                  if (editCategoryCaller) {
+                    setEditCategory(cat);
+                  } else if (categoryCallerModal === 'planned') {
+                    setNewPlannedCategory(cat);
+                  } else {
+                    setExpenseCategory(cat);
+                  }
+                  
+                  setCategoryModalVisible(false);
+                  
+                  if (editCategoryCaller) {
+                    setTimeout(() => {
+                      setShowExpenseDetailModal(true);
+                      setEditCategoryCaller(false);
+                    }, 100);
+                  }
+                  
+                  if (categoryCallerModal === 'planned') {
+                    setTimeout(() => {
+                      setShowPlannedModal(true);
+                    }, 100);
+                  }
+                  
+                  setCategoryCallerModal(null);
+                }}
+                style={{
+                  padding: 12,
+                  paddingLeft: 64,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#FEF9C3",
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '#FEF9C3' : 'transparent',
+                }}
+              >
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: '#6B1C23',
+                  fontWeight: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '600' : '400'
+                }}>
+                  {cat}
+                </Text>
+                {(editCategoryCaller ? editCategory === cat : expenseCategory === cat) && (
+                  <Ionicons name="checkmark" size={18} color="#F4B942" />
+                )}
+              </TouchableOpacity>
+            ))}
 
-        {otherSubcategories.map((sub) => (
-  <TouchableOpacity
-    key={sub}
-    onPress={() => {
-      setExpenseCategory(sub);
-      
-      if (categoryCallerModal === 'planned') {
-        setNewPlannedCategory(sub);
-      }
-      
-      setCategoryModalVisible(false);
-      
-      // ✅ Re-show planned modal
-      if (categoryCallerModal === 'planned') {
-        setTimeout(() => {
-          setShowPlannedModal(true);
-        }, 100);
-      }
-      
-      setCategoryCallerModal(null);
-    }}
-    style={{
-      padding: 12,
-      paddingLeft: 64,
-      borderBottomWidth: 1,
-      borderBottomColor: "#F1F5F9",
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: expenseCategory === sub ? '#F0F9FF' : 'transparent',
-    }}
-  >
-    <Text style={{ 
-      fontSize: 14, 
-      color: '#475569',
-      fontWeight: expenseCategory === sub ? '600' : '400'
-    }}>
-      {sub}
-    </Text>
-    {expenseCategory === sub && (
-      <Ionicons name="checkmark" size={18} color="#0EA5E9" />
-    )}
-  </TouchableOpacity>
-))}
-          </View>
+            {/* Other Subcategories */}
+            {otherSubcategories.map((sub) => (
+              <TouchableOpacity
+                key={sub}
+                onPress={() => {
+                  if (editCategoryCaller) {
+                    setEditCategory(sub);
+                  } else if (categoryCallerModal === 'planned') {
+                    setNewPlannedCategory(sub);
+                  } else {
+                    setExpenseCategory(sub);
+                  }
+                  
+                  setCategoryModalVisible(false);
+                  
+                  if (editCategoryCaller) {
+                    setTimeout(() => {
+                      setShowExpenseDetailModal(true);
+                      setEditCategoryCaller(false);
+                    }, 100);
+                  }
+                  
+                  if (categoryCallerModal === 'planned') {
+                    setTimeout(() => {
+                      setShowPlannedModal(true);
+                    }, 100);
+                  }
+                  
+                  setCategoryCallerModal(null);
+                }}
+                style={{
+                  padding: 12,
+                  paddingLeft: 64,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#FEF9C3",
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: (editCategoryCaller ? editCategory === sub : expenseCategory === sub) ? '#FEF9C3' : 'transparent',
+                }}
+              >
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: '#6B1C23',
+                  fontWeight: (editCategoryCaller ? editCategory === sub : expenseCategory === sub) ? '600' : '400'
+                }}>
+                  {sub}
+                </Text>
+                {(editCategoryCaller ? editCategory === sub : expenseCategory === sub) && (
+                  <Ionicons name="checkmark" size={18} color="#F4B942" />
+                )}
+              </TouchableOpacity>
+            ))}
+         </View>
         )}
-      </ScrollView>
+    </ScrollView>
     </View>
   </Pressable>
 </Modal>
@@ -3892,7 +3930,7 @@ const HistorySection = (
               style={styles.input}
             />
             <TouchableOpacity
-              style={[styles.submitButton, { marginBottom: 6, backgroundColor: '#2563EB' }]}
+              style={[styles.submitButton, { marginBottom: 6, backgroundColor: '#6B1C23' }]}
               onPress={async () => {
                 const trimmed = customCategoryInput.trim();
                 if (trimmed.length < 2) {
@@ -3954,8 +3992,7 @@ const HistorySection = (
       }
     }}
   >
-    <Pressable style={[styles.modalContainer, { alignItems: "stretch" }]} onPress={() => {}}>
-      {selectedExpense && (
+<View style={[styles.modalContainer, { alignItems: "stretch" }]}>  {selectedExpense && (
         <>
           <Text
             style={{
@@ -3984,7 +4021,7 @@ const HistorySection = (
               >
                 {/* 💰 Amount */}
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                  <MaterialCommunityIcons name="currency-php" size={20} color="#2563EB" />
+                  <MaterialCommunityIcons name="currency-php" size={20} color="#6B1C23" />
                   <Text
                     style={{
                       fontSize: 16,
@@ -4047,7 +4084,7 @@ const HistorySection = (
 
                 {/* 📅 Date */}
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Ionicons name="calendar-outline" size={20} color="#2563EB" />
+                  <Ionicons name="calendar-outline" size={20} color="#6B1C23" />
                   <Text style={{ fontSize: 15, marginLeft: 8 }}>
                     {selectedExpense.date
                       ? (() => {
@@ -4078,7 +4115,7 @@ const HistorySection = (
                     marginTop: 10,
                   }}
                 >
-                  <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+                  <Ionicons name="document-text-outline" size={20} color="#6B1C23" />
                   <Text
                     style={{
                       fontSize: 15,
@@ -4098,7 +4135,7 @@ const HistorySection = (
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  { backgroundColor: "#2563EB", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 2 }
+                  { backgroundColor: "#6B1C23", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 2 }
                 ]}
                 onPress={() => {
                   setIsEditMode(true);
@@ -4149,23 +4186,37 @@ const HistorySection = (
                   />
                 </View>
 
-                {/* Category Picker */}
-                <View>
-                  <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
-                    Category
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setExpenseCategory(editCategory);
-                      setCategoryModalVisible(true);
-                    }}
-                    style={[styles.input, { justifyContent: 'center' }]}
-                  >
-                    <Text style={{ color: editCategory === 'Select Category' ? '#64748B' : '#1E293B' }}>
-                      {editCategory}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+               {/* Category Picker */}
+<View>
+  <Text style={{ fontSize: 12, color: "#6B1C23", marginBottom: 4, fontWeight: '600' }}>
+    Category
+  </Text>
+  <TouchableOpacity
+    onPress={() => {
+      // ✅ Save current edit category to expenseCategory
+      setExpenseCategory(editCategory);
+      
+      // ✅ Mark that we're calling from edit mode
+      setEditCategoryCaller(true);
+      
+      // ✅ Hide expense detail modal FIRST
+      setShowExpenseDetailModal(false);
+      
+      // ✅ Then show category modal after a brief delay
+      setTimeout(() => {
+        setCategoryModalVisible(true);
+      }, 100);
+    }}
+    style={[styles.input, { 
+      justifyContent: 'center',
+      borderColor: '#F4B942', // Gold border
+    }]}
+  >
+    <Text style={{ color: editCategory === 'Select Category' ? '#7D2E3A' : '#6B1C23' }}>
+      {editCategory}
+    </Text>
+  </TouchableOpacity>
+</View>
 
                 {/* Notes Input */}
                 <View>
@@ -4229,7 +4280,7 @@ const HistorySection = (
               <View style={{ gap: 8, marginBottom: 5 }}>
                 <TouchableOpacity
                   style={[styles.submitButton,
-                  { backgroundColor: "#2563EB", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 2 }]}
+                  { backgroundColor: "#6B1C23", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 2 }]}
                   onPress={() => {
                     // Update the edited values back to the category picker
                     if (expenseCategory !== editCategory) {
@@ -4237,6 +4288,7 @@ const HistorySection = (
                     }
                     handleEditExpense();
                   }}
+                  
                   disabled={isLoading}
                 >
                   <Text style={styles.submitText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
@@ -4259,7 +4311,7 @@ const HistorySection = (
           )}
         </>
       )}
-    </Pressable>
+   </View>
   </Pressable>
 </Modal>
 
@@ -4377,7 +4429,7 @@ const HistorySection = (
     position: "absolute",
     bottom: isMobile ? 60 : 10,
     right: 16,
-    backgroundColor: isListening ? "#EF4444" : "#1f4b81",
+    backgroundColor: isListening ?  "#94A3B8" : "#6B1C23",  // Maroon
     borderRadius: 50,
     width: isMobile ? 35 : 45,
     height: isMobile ? 35 : 45,
@@ -4428,12 +4480,12 @@ const HistorySection = (
           width: isMobile ? 48 : 56,
           height: isMobile ? 48 : 56,
           borderRadius: isMobile ? 24 : 28,
-          backgroundColor: '#EFF6FF',
+          backgroundColor: '#FEF9C3',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: isMobile ? 8 : 10,
         }}>
-          <Ionicons name="mic" size={isMobile ? 24 : 28} color="#2563EB" />
+          <Ionicons name="mic" size={isMobile ? 24 : 28} color="#6B1C23" />
         </View>
         <Text style={{ 
           fontSize: isMobile ? 17 : 20, 
@@ -4459,12 +4511,12 @@ const HistorySection = (
       >
         {/* Command Format */}
         <View style={{
-          backgroundColor: '#F0F9FF',
+          backgroundColor: '#FEF9C3',
           borderRadius: isMobile ? 10 : 12,
           padding: isMobile ? 10 : 14,
           marginBottom: isMobile ? 10 : 12,
           borderWidth: 1,
-          borderColor: '#BFDBFE',
+          borderColor: '#F4B942',
         }}>
           <Text style={{ 
             fontSize: isMobile ? 13 : 14, 
@@ -4478,7 +4530,7 @@ const HistorySection = (
           <Text style={{
             fontSize: isMobile ? 14 : 16,
             fontWeight: '700',
-            color: '#2563EB',
+            color: '#6B1C23',
             textAlign: 'center',
             marginBottom: 4,
           }}>
@@ -4574,11 +4626,11 @@ const HistorySection = (
       <View style={{ gap: isMobile ? 6 : 8, marginTop: isMobile ? 8 : 10 }}>
         <TouchableOpacity
           style={{
-            backgroundColor: '#2563EB',
+            backgroundColor: '#6B1C23',
             borderRadius: isMobile ? 10 : 12,
             paddingVertical: isMobile ? 10 : 12,
             alignItems: 'center',
-            shadowColor: '#2563EB',
+            shadowColor: '#6B1C23',
             shadowOpacity: 0.3,
             shadowRadius: 8,
             shadowOffset: { width: 0, height: 2 },
@@ -4623,10 +4675,10 @@ const HistorySection = (
       <View style={{
         marginTop: isMobile ? 8 : 10,
         padding: isMobile ? 8 : 10,
-        backgroundColor: '#F0F9FF',
+        backgroundColor: '#FEF9C3',
         borderRadius: isMobile ? 6 : 8,
         borderLeftWidth: 2,
-        borderLeftColor: '#0EA5E9',
+        borderLeftColor: '#F4B942',
       }}>
         <Text style={{ 
           fontSize: isMobile ? 10 : 11, 
@@ -4669,12 +4721,12 @@ const HistorySection = (
           width: isMobile ? 48 : 56,
           height: isMobile ? 48 : 56,
           borderRadius: isMobile ? 24 : 28,
-          backgroundColor: '#EFF6FF',
+          backgroundColor: '#FEF9C3',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: isMobile ? 8 : 10,
         }}>
-          <Ionicons name="camera" size={isMobile ? 24 : 28} color="#2563EB" />
+          <Ionicons name="camera" size={isMobile ? 24 : 28} color="#6B1C23" />
         </View>
         <Text style={{ 
           fontSize: isMobile ? 17 : 20, 
@@ -4700,19 +4752,19 @@ const HistorySection = (
       >
         {/* Step 1: Open Scanner */}
         <View style={{
-          backgroundColor: '#F0F9FF',
+          backgroundColor: '#FEF9C3',
           borderRadius: isMobile ? 10 : 12,
           padding: isMobile ? 10 : 14,
           marginBottom: isMobile ? 10 : 12,
           borderLeftWidth: 3,
-          borderLeftColor: '#2563EB',
+          borderLeftColor: '#6B1C23',
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <View style={{
               width: isMobile ? 24 : 28,
               height: isMobile ? 24 : 28,
               borderRadius: isMobile ? 12 : 14,
-              backgroundColor: '#2563EB',
+              backgroundColor: '#6B1C23',
               alignItems: 'center',
               justifyContent: 'center',
               marginRight: 8,
@@ -4897,7 +4949,7 @@ const HistorySection = (
               'Works with printed & digital receipts',
             ].map((tip, idx) => (
               <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <Text style={{ color: '#2563EB', marginRight: 6, fontSize: isMobile ? 11 : 12 }}>•</Text>
+                <Text style={{ color: '#6B1C23', marginRight: 6, fontSize: isMobile ? 11 : 12 }}>•</Text>
                 <Text style={{ 
                   fontSize: isMobile ? 10 : 11, 
                   color: '#475569',
@@ -4960,11 +5012,11 @@ const HistorySection = (
       <View style={{ gap: isMobile ? 6 : 8, marginTop: isMobile ? 8 : 10 }}>
         <TouchableOpacity
           style={{
-            backgroundColor: '#2563EB',
+            backgroundColor: '#6B1C23',
             borderRadius: isMobile ? 10 : 12,
             paddingVertical: isMobile ? 10 : 12,
             alignItems: 'center',
-            shadowColor: '#2563EB',
+            shadowColor: '#6B1C23',
             shadowOpacity: 0.3,
             shadowRadius: 8,
             shadowOffset: { width: 0, height: 2 },
@@ -5012,10 +5064,10 @@ const HistorySection = (
       <View style={{
         marginTop: isMobile ? 8 : 10,
         padding: isMobile ? 8 : 10,
-        backgroundColor: '#F0F9FF',
+        backgroundColor: '#FEF9C3',
         borderRadius: isMobile ? 6 : 8,
         borderLeftWidth: 2,
-        borderLeftColor: '#0EA5E9',
+        borderLeftColor: '#F4B942',
       }}>
         <Text style={{ 
           fontSize: isMobile ? 10 : 11, 
@@ -5164,12 +5216,12 @@ const HistorySection = (
                     }
                   }}
                   style={{
-                    backgroundColor: isCurrentSelection ? '#EFF6FF' : (isLowest ? '#F0FDF4' : '#fff'),
+                    backgroundColor: isCurrentSelection ? '#FEF9C3' : (isLowest ? '#F0FDF4' : '#fff'),
                     borderRadius: 16,
                     padding: 14,
                     marginBottom: 12,
                     borderWidth: isCurrentSelection ? 2 : 1,
-                    borderColor: isCurrentSelection ? '#2563EB' : (isLowest ? '#16A34A' : '#E5E7EB'),
+                    borderColor: isCurrentSelection ? '#6B1C23' : (isLowest ? '#16A34A' : '#E5E7EB'),
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.1,
@@ -5240,7 +5292,7 @@ const HistorySection = (
                       <Text style={{ 
                         fontSize: 18, 
                         fontWeight: '700', 
-                        color: isCurrentSelection ? '#2563EB' : (isLowest ? '#16A34A' : '#1E293B'),
+                        color: isCurrentSelection ? '#6B1C23' : (isLowest ? '#16A34A' : '#1E293B'),
                         marginBottom: 8,
                       }}>
                         ₱{deal.price?.toFixed(2) || '0.00'}
@@ -5273,7 +5325,7 @@ const HistorySection = (
                         {/* Currently Selected Badge */}
                         {isCurrentSelection && (
                           <View style={{
-                            backgroundColor: '#2563EB',
+                            backgroundColor: '#6B1C23',
                             flexDirection: 'row',
                             alignItems: 'center',
                             paddingHorizontal: 8,
@@ -5434,7 +5486,7 @@ const HistorySection = (
         style={[
           styles.submitButton, 
           { 
-            backgroundColor: '#2563EB', 
+            backgroundColor: '#6B1C23', 
             marginBottom: isMobile ? 6 : 8, 
             paddingVertical: isMobile ? 12 : 14,  
           }
@@ -5709,8 +5761,8 @@ submitButton: {
   elevation: 2,
 },
 primaryBtn: {
-  backgroundColor: "#2563EB",
-  shadowColor: "#2563EB",
+  backgroundColor: "#6B1C23",
+  shadowColor: "#6B1C23",
   shadowOpacity: 0.3,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 3 },
@@ -5718,7 +5770,7 @@ primaryBtn: {
 
 outlineBtn: {
   borderWidth: 1.5,
-  borderColor: "#2563EB",
+  borderColor: "#6B1C23",
   backgroundColor: "#fff",
 },
 submitText: {
@@ -5728,7 +5780,7 @@ submitText: {
 },
 
 outlineText: {
-  color: "#2563EB",
+  color: "#6B1C23",
   fontWeight: "600",
 },
 
@@ -5789,7 +5841,7 @@ modalContainer: {
 dropdownLabel: {
   fontSize: isMobile ? 14 : 16,
   fontWeight: 'bold',
-  color: '#2563EB',
+  color: '#6B1C23',
   marginRight: 8,
   letterSpacing: 0.2,
   textAlign: isMobile ? 'center' : 'left',  // ✅ center on mobile
@@ -5823,7 +5875,7 @@ dropdownSelected: {
 
 
   dropdownItemSelectedText: {
-    color: '#2563EB', fontWeight: 'bold',
+    color: '#6B1C23', fontWeight: 'bold',
   },
 
 
@@ -5839,7 +5891,7 @@ dropdownSelected: {
     borderRadius: 20, paddingVertical: 5, paddingHorizontal: 22,
     marginBottom: 12, marginTop: -5,
     marginRight: 4, marginLeft: 4,
-    shadowColor: '#2563EB', shadowOpacity: 0.10, shadowRadius: 7, elevation: 3,
+    shadowColor: '#6B1C23', shadowOpacity: 0.10, shadowRadius: 7, elevation: 3,
     justifyContent: 'space-between',
     borderWidth: 1.5, borderColor: '#bfdbfe',  
   },
@@ -5851,7 +5903,7 @@ dropdownSelected: {
 
 
   historyLabel: {
-    fontWeight: 'bold', fontSize: 14, color: '#22223B',
+    fontWeight: 'bold', fontSize: 14, color: '#6B1C23',
     letterSpacing: 0.12,
   },
 
@@ -5886,8 +5938,8 @@ chartCard: {
 voiceHintBox: {
   flexDirection: "row",
   alignItems: "flex-start",
-  backgroundColor: "#EFF6FF",
-  borderColor: "#BFDBFE",
+  backgroundColor: "#FEF9C3",
+  borderColor: "#F4B942",
   borderWidth: 1,
   borderRadius: 10,
   padding: 10,
@@ -5906,12 +5958,12 @@ scrollContent: {
   paddingBottom: 25,   
 },
 plannedCard: {
-  backgroundColor: '#F0F9FF',
+  backgroundColor: '#FEF9C3',
   borderRadius: 16,
   marginHorizontal: 16,
   marginBottom: 16,
   borderWidth: 1,
-  borderColor: '#BFDBFE',
+  borderColor: '#F4B942',
   overflow: 'hidden',
 },
 plannedHeader: {
@@ -5964,7 +6016,7 @@ plannedItemName: {
 },
 plannedItemAmount: {
   fontSize: 13,
-  color: '#2563EB',
+  color: '#6B1C23',
   fontWeight: '600',
 },
 plannedItemActions: {
@@ -6002,7 +6054,7 @@ addPlannedBtn: {
   justifyContent: 'center',
   backgroundColor: '#fff',
   borderWidth: 1.5,
-  borderColor: '#2563EB',
+  borderColor: '#6B1C23',
   borderStyle: 'dashed',
   borderRadius: 12,
   padding: 12,
@@ -6011,7 +6063,7 @@ addPlannedBtn: {
 addPlannedBtnText: {
   fontSize: 14,
   fontWeight: '600',
-  color: '#2563EB',
+  color: '#6B1C23',
 },
 emptyPlannedText: {
   textAlign: 'center',
@@ -6041,8 +6093,8 @@ checkbox: {
   justifyContent: 'center',
 },
 checkboxActive: {
-  backgroundColor: '#2563EB',
-  borderColor: '#2563EB',
+  backgroundColor: '#6B1C23',
+  borderColor: '#6B1C23',
 },
 
  // 👇 ADD THESE NEW STYLES HERE
@@ -6088,3 +6140,4 @@ checkboxActive: {
   },
 
 });
+

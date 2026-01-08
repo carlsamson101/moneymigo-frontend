@@ -18,9 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRecentlyViewed } from '../RecentlyViewedContext';
-import api from '../../lib/api'; // adjust path if needed
+import api from '../../lib/api';
+
 
 const { width } = Dimensions.get('window');
+
 
 type Tip = {
   title: string;
@@ -30,11 +32,13 @@ type Tip = {
   color: string;
 };
 
+
 export default function FinancialTipsPage() {
   const navigation = useNavigation();
   const { recentlyViewed, addRecentlyViewed } = useRecentlyViewed();
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   // ✅ Fetch data
   useEffect(() => {
@@ -53,6 +57,7 @@ export default function FinancialTipsPage() {
           return tip.visible !== false && notExpired;
         });
 
+
         setTips(filtered);
       } catch (err) {
         console.error('Error fetching tips:', err);
@@ -62,6 +67,7 @@ export default function FinancialTipsPage() {
     };
     fetchTips();
   }, []);
+
 
   const handleOpenLink = (tip: Tip) => {
     addRecentlyViewed({
@@ -73,9 +79,11 @@ export default function FinancialTipsPage() {
     );
   };
 
+
   const handleBackPress = () => {
     navigation.goBack();
   };
+
 
   const getCategoryEmoji = (category: string) => {
     const emojiMap: { [key: string]: string } = {
@@ -96,28 +104,30 @@ export default function FinancialTipsPage() {
     return emojiMap[category] || emojiMap.default;
   };
 
+
   const getCategoryColor = (category: string) => {
     const colorMap: { [key: string]: string } = {
-      'Information': '#3b82f6',
-      'Article': '#10b981',
-      'Guide': '#f59e0b',
-      'Tips': '#8b5cf6',
-      'Budgeting': '#06b6d4',
-      'Investment': '#ef4444',
-      'Saving': '#84cc16',
-      'Credit': '#f97316',
-      'Insurance': '#6366f1',
-      'Tax': '#14b8a6',
-      'Retirement': '#ec4899',
-      'Education': '#8b5cf6',
+      'Information': '#6B1C23', // Maroon
+      'Article': '#6B1C23', // Maroon
+      'Guide': '#F4B942', // Gold
+      'Tips': '#6B1C23', // Maroon
+      'Budgeting': '#6B1C23', // Maroon
+      'Investment': '#6B1C23', // Maroon
+      'Saving': '#6B1C23', // Maroon
+      'Credit': '#F4B942', // Gold
+      'Insurance': '#6B1C23', // Maroon
+      'Tax': '#6B1C23', // Maroon
+      'Retirement': '#6B1C23', // Maroon
+      'Education': '#F4B942', // Gold
     };
-    return colorMap[category] || '#6366f1';
+    return colorMap[category] || '#6B1C23';
   };
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-      
+      <StatusBar barStyle="light-content" backgroundColor="#6B1C23" />
+     
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -125,40 +135,41 @@ export default function FinancialTipsPage() {
       >
         {/* Gradient Header Section */}
         <LinearGradient
-            colors={['#1f4b81ff', '#7fb1d6ff']}
+          colors={['#6B1C23', '#8B2635']} // ✅ Maroon gradient
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.headerContainer}
         >
-          {/* Navigation Header - Only show on mobile */}
           {/* Combined header row */}
-<View
-  style={[
-    styles.headerRow,
-    Platform.OS === 'web' && styles.headerRowWeb
-  ]}
->
-    <TouchableOpacity
-      style={styles.backButton}
-      onPress={handleBackPress}
-      activeOpacity={0.8}
-    >
-      <Ionicons name="arrow-back" size={24} color="#ffffff" />
-    </TouchableOpacity>
-  
+          <View
+            style={[
+              styles.headerRow,
+              Platform.OS === 'web' && styles.headerRowWeb
+            ]}
+          >
+            {Platform.OS == 'web' && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleBackPress}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="arrow-back" size={24} color="#F4B942" />
+              </TouchableOpacity>
+            )}
 
-  <Text style={styles.mainHeading}>Financial Tips</Text>
-</View>
 
-<Text
-  style={styles.subHeading}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  ellipsizeMode="tail"
->
-  Discover expert advice to boost your financial wellness
-</Text>
+            <Text style={styles.mainHeading}>Financial Tips</Text>
+          </View>
 
+
+          <Text
+            style={styles.subHeading}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            ellipsizeMode="tail"
+          >
+            Discover expert advice to boost your financial wellness
+          </Text>
 
 
           {/* Main Header Content */}
@@ -166,6 +177,7 @@ export default function FinancialTipsPage() {
             styles.headerContent,
             Platform.OS === 'web' && styles.headerContentWeb
           ]}>
+
 
             {/* Stats Row */}
             <View style={styles.statsRow}>
@@ -188,15 +200,17 @@ export default function FinancialTipsPage() {
             </View>
           </View>
 
+
           {/* Wave Shape Bottom */}
           <View style={styles.waveContainer}>
             <View style={styles.wave} />
           </View>
         </LinearGradient>
 
+
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#667eea" />
+            <ActivityIndicator size="large" color="#6B1C23" /> {/* ✅ Maroon */}
             <Text style={styles.loadingText}>Loading financial tips...</Text>
           </View>
         ) : (
@@ -209,14 +223,14 @@ export default function FinancialTipsPage() {
                   <Text style={styles.sectionBadgeText}>{tips.length} tips</Text>
                 </View>
               </View>
-              
+             
               <View style={styles.gridWrapper}>
                 {tips.map((tip, idx) => (
                   <TouchableOpacity
                     key={idx}
                     style={[
                       styles.card,
-                      { backgroundColor: tip.color || '#f8fafc' },
+                      { backgroundColor: '#FFF8E7' }, // ✅ Soft cream/yellow - very readable!
                     ]}
                     onPress={() => handleOpenLink(tip)}
                     activeOpacity={0.8}
@@ -224,7 +238,7 @@ export default function FinancialTipsPage() {
                     <View style={styles.cardHeader}>
                       <View style={[
                         styles.categoryContainer,
-                        { backgroundColor: getCategoryColor(tip.category) + '20' }
+                        { backgroundColor: getCategoryColor(tip.category) + '15' }
                       ]}>
                         <Text style={styles.categoryEmoji}>
                           {getCategoryEmoji(tip.category)}
@@ -237,15 +251,15 @@ export default function FinancialTipsPage() {
                         </Text>
                       </View>
                     </View>
-                    
+                   
                     <Text style={styles.title} numberOfLines={2}>
                       {tip.title}
                     </Text>
-                    
+                   
                     <Text style={styles.desc} numberOfLines={3}>
                       {tip.desc}
                     </Text>
-                    
+                   
                     <View style={styles.cardFooter}>
                       <View style={styles.readMoreContainer}>
                         <Text style={[
@@ -267,6 +281,7 @@ export default function FinancialTipsPage() {
               </View>
             </View>
 
+
             {/* Recently Viewed Section */}
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
@@ -277,11 +292,11 @@ export default function FinancialTipsPage() {
                   </Text>
                 </View>
               </View>
-              
+             
               {recentlyViewed.length === 0 ? (
                 <View style={styles.emptyStateContainer}>
                   <LinearGradient
-                    colors={['#f0f9ff', '#e0f2fe']}
+                    colors={['#FFF8E7', '#FFF4D6']} // ✅ Soft cream gradient
                     style={styles.emptyStateIcon}
                   >
                     <Text style={styles.emptyStateEmoji}>📖</Text>
@@ -298,7 +313,7 @@ export default function FinancialTipsPage() {
                       <View style={styles.recentCardContent}>
                         <View style={[
                           styles.recentCategoryIcon,
-                          { backgroundColor: getCategoryColor(item.category) + '20' }
+                          { backgroundColor: getCategoryColor(item.category) + '15' }
                         ]}>
                           <Text style={styles.recentCategoryEmoji}>
                             {getCategoryEmoji(item.category)}
@@ -311,7 +326,7 @@ export default function FinancialTipsPage() {
                           <View style={styles.recentCategoryContainer}>
                             <Text style={[
                               styles.recentCategoryTag,
-                              { 
+                              {
                                 color: getCategoryColor(item.category),
                                 backgroundColor: getCategoryColor(item.category) + '10'
                               }
@@ -337,19 +352,20 @@ export default function FinancialTipsPage() {
   );
 }
 
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#667eea',
+    backgroundColor: '#6B1C23', // ✅ Maroon
   },
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFCF5', // ✅ Very light cream background
   },
   scrollContent: {
     paddingBottom: 30,
   },
-  
+ 
   // Header Styles
   headerContainer: {
     paddingBottom: 40,
@@ -360,14 +376,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 24,
-    
     paddingBottom: 16,
     height: 56,
     paddingTop: Platform.OS === 'ios' ? 24 : 50,
-  marginTop: Platform.OS === 'ios' ? 30 : 20,
-  marginBottom: -8, // bring slightly closer to main heading
+    marginTop: Platform.OS === 'ios' ? 30 : 20,
+    marginBottom: -8,
   },
-
   placeholder: {
     width: 40,
   },
@@ -377,23 +391,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerContentWeb: {
-    paddingTop: 40, // Extra top padding for web since no navigation header
+    paddingTop: 40,
   },
-
   subHeading: {
-  fontSize: 13,
-  color: 'rgba(255, 255, 255, 0.8)',
-  textAlign: 'center',
-  lineHeight: 15,
-  paddingHorizontal: 15,
-  marginBottom: 5,
-  flexShrink: 1,
-  flexWrap: 'nowrap', // 🔒 no line breaks
-  width: 'auto',      // fit to content
-  maxWidth: '100%',   // prevent overflow on web
-  alignSelf: 'center',
-},
-
+    fontSize: 13,
+    color: '#F4B942', // ✅ Gold
+    textAlign: 'center',
+    lineHeight: 15,
+    paddingHorizontal: 15,
+    marginBottom: 5,
+    flexShrink: 1,
+    flexWrap: 'nowrap',
+    width: 'auto',
+    maxWidth: '100%',
+    alignSelf: 'center',
+  },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -439,10 +451,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 40,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFCF5', // ✅ Match container background
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
   },
+
 
   // Loading Styles
   loadingContainer: {
@@ -454,9 +467,10 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#64748b',
+    color: '#6B1C23', // ✅ Maroon
     fontWeight: '500',
   },
+
 
   // Section Styles
   sectionContainer: {
@@ -472,20 +486,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1a202c',
+    color: '#6B1C23', // ✅ Maroon
     letterSpacing: -0.3,
   },
   sectionBadge: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#FFF8E7', // ✅ Soft cream
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F4B94230', // ✅ Light gold border
   },
   sectionBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#6B1C23', // ✅ Maroon
   },
+
 
   // Grid Styles
   gridWrapper: {
@@ -498,14 +515,14 @@ const styles = StyleSheet.create({
     width: '48%',
     borderRadius: 20,
     padding: 20,
-    marginBottom: 5,
-    shadowColor: '#1a202c',
+    marginBottom: 16,
+    shadowColor: '#6B1C23', // ✅ Maroon
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderWidth: 1.5,
+    borderColor: '#F4B94240', // ✅ Gold border
   },
   cardHeader: {
     marginBottom: 10,
@@ -529,15 +546,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1a202c',
+    color: '#6B1C23', // ✅ Maroon
     lineHeight: 24,
     marginBottom: 12,
   },
   desc: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#6B1C23', // ✅ Maroon (darker for better readability)
     lineHeight: 20,
     marginBottom: 20,
+    opacity: 0.8,
   },
   cardFooter: {
     marginTop: 'auto',
@@ -552,13 +570,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   arrow: {
-
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
 
   // Empty State
   emptyStateContainer: {
@@ -580,28 +598,30 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a202c',
+    color: '#6B1C23', // ✅ Maroon
     marginBottom: 8,
   },
   emptyStateDesc: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#6B1C23', // ✅ Maroon
     textAlign: 'center',
     lineHeight: 20,
+    opacity: 0.7,
   },
+
 
   // Recent List Styles
   recentList: {
     paddingHorizontal: 24,
   },
   recentCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFF8E7', // ✅ Soft cream
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#1a202c',
+    borderWidth: 1.5,
+    borderColor: '#F4B94230', // ✅ Light gold border
+    shadowColor: '#6B1C23', // ✅ Maroon
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -630,7 +650,7 @@ const styles = StyleSheet.create({
   recentTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a202c',
+    color: '#6B1C23', // ✅ Maroon
     lineHeight: 22,
     marginBottom: 8,
   },
@@ -653,19 +673,17 @@ const styles = StyleSheet.create({
     width: 4,
   },
   headerRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center', // centers title horizontally
-  paddingHorizontal: 24,
-  marginTop: Platform.OS === 'ios' ? 20 : 60,
-  marginBottom: 8,
-},
-
-headerRowWeb: {
-  marginTop: 40, // extra top spacing for web
-},
-
- backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    marginTop: Platform.OS === 'ios' ? 20 : 60,
+    marginBottom: 8,
+  },
+  headerRowWeb: {
+    marginTop: 40,
+  },
+  backButton: {
     position: 'absolute',
     left: 24,
     width: 40,
@@ -675,13 +693,12 @@ headerRowWeb: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-mainHeading: {
-  fontSize: 26,
-  fontWeight: '800',
-  color: '#ffffff',
-  textAlign: 'center',
-  letterSpacing: -0.5,
-},
-
+  mainHeading: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
 });
+

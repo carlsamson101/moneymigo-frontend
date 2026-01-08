@@ -12,10 +12,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
+
 // Cross-platform Lucide icon imports
 let Calendar, PlusCircle, RefreshCw, Menu, ArrowLeft, ArrowRight, HelpCircle,
   ChevronDown, ChevronLeft, Wallet, Receipt, BarChart, Edit, Plus,
   PieChart, Copy, Hourglass, Settings, TrendingDown, CheckCircle;
+
 
 if (Platform.OS === "web") {
   ({
@@ -31,7 +33,6 @@ if (Platform.OS === "web") {
   } = require("lucide-react-native"));
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const BUDGET_TUTORIAL_STEPS = [
   {
@@ -42,14 +43,7 @@ const BUDGET_TUTORIAL_STEPS = [
       "This section shows your total budget, expenses, and remaining amount at a glance. Track your spending progress with real-time updates on how much you've used and how much is left.",
     icon: PieChart,
     highlightKey: "budget-overview",
-    color: "#1f4b81",
-    position: { top: SCREEN_HEIGHT * 0.45, left: 20, right: 20 },
-    highlightArea: { 
-      top: Platform.OS === "ios" ? 90 : 70, 
-      left: 0, 
-      right: 0, 
-      height: 560 
-    },
+    color: "#F4B942",
   },
   {
     id: 2,
@@ -59,14 +53,7 @@ const BUDGET_TUTORIAL_STEPS = [
       "This pill shows how much of your budget hasn't been allocated to any category yet. Tap it to see which categories need allocation.",
     icon: Hourglass,
     highlightKey: "unallocated-pill",
-    color: "#1f4b81",
-    position: { top: 270, left: 20, right: 20 },
-    highlightArea: { 
-      top: Platform.OS === "ios" ? 480 : 635, 
-      left: SCREEN_WIDTH * 0.440,
-      right: SCREEN_WIDTH * 0.440,
-      height: 60 
-    },
+    color: "#F4B942",
   },
   {
     id: 3,
@@ -76,14 +63,7 @@ const BUDGET_TUTORIAL_STEPS = [
       'Tap "Set Allocation" to divide your total budget across different categories. Remember: allocations must total 100%!',
     icon: Settings,
     highlightKey: "set-allocation-btn",
-    color: "#1f4b81",
-    position: { top: 340, left: 20, right: 20 },
-    highlightArea: { 
-     top: Platform.OS === "ios" ? 480 : 735, 
-      left: SCREEN_WIDTH * 0.440,
-      right: SCREEN_WIDTH * 0.440,
-      height: 70
-    },
+    color: "#F4B942",
   },
   {
     id: 4,
@@ -93,14 +73,7 @@ const BUDGET_TUTORIAL_STEPS = [
       'Need to reset? The "Clear All" button removes all budget allocations so you can start over with a clean slate.',
     icon: RefreshCw,
     highlightKey: "clear-all-btn",
-    color: "#1f4b81",
-     position: { top: 440, left: 20, right: 20 },
-    highlightArea: { 
-     top: Platform.OS === "ios" ? 480 : 805, 
-      left: SCREEN_WIDTH * 0.440,
-      right: SCREEN_WIDTH * 0.440,
-      height: 75
-    },
+    color: "#F4B942",
   },
   {
     id: 5,
@@ -110,19 +83,14 @@ const BUDGET_TUTORIAL_STEPS = [
       'Already set a budget before? Use "Copy Last Period" to reuse your previous allocations. Smart Scaling: The system automatically adjusts your allocations → If your new budget is larger, it scales up. → If smaller, it scales down proportionally.',
     icon: Copy,
     highlightKey: "copy-period-btn",
-    color: "#1f4b81",
-     position: { top: 440, left: 20, right: 20 },
-    highlightArea: { 
-     top: Platform.OS === "ios" ? 480 : 880, 
-      left: SCREEN_WIDTH * 0.440,
-      right: SCREEN_WIDTH * 0.440,
-      height: 75
-    },
+    color: "#F4B942",
   },
 ];
 
+
 function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
   const [fadeAnim] = useState(new Animated.Value(0));
+
 
   useEffect(() => {
     if (visible) {
@@ -140,10 +108,35 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
     }
   }, [visible]);
 
+
   if (!visible) return null;
+
 
   const step = BUDGET_TUTORIAL_STEPS[currentStep];
   const Icon = step.icon;
+
+
+  // Define highlight positions for each step
+  const getHighlightStyle = () => {
+    switch (step.highlightKey) {
+      case "budget-overview":
+        return { top: 80, left: 16, right: 16, height: 540 };
+      case "unallocated-pill":
+        return { top: 640, left: 20, right: 20, height: 60 };
+      case "set-allocation-btn":
+        return { top: 743, left: 32, right: 32, height: 68 };
+      case "clear-all-btn":
+        return { top: 818, left: 32, right: 32, height: 68 };
+      case "copy-period-btn":
+        return { top: 890, left: 32, right: 32, height: 60 };
+      default:
+        return null;
+    }
+  };
+
+
+  const highlightStyle = getHighlightStyle();
+
 
   const handleNext = () => {
     if (currentStep < BUDGET_TUTORIAL_STEPS.length - 1) {
@@ -153,11 +146,13 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
     }
   };
 
+
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
+
 
   return (
     <Modal
@@ -165,50 +160,31 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
-      statusBarTranslucent
     >
-      <ScrollView 
-        style={styles.tutorialOverlay}
-        contentContainerStyle={styles.overlayContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* Highlight box */}
-        {step.highlightArea && (
-          <View
-            style={[
-              styles.highlightBox,
-              {
-                top: step.highlightArea.top,
-                left: step.highlightArea.left,
-                right: step.highlightArea.right,
-                bottom: step.highlightArea.bottom,
-                width: step.highlightArea.width,
-                height: step.highlightArea.height,
-              },
-            ]}
-          />
+      <Animated.View style={[styles.tutorialOverlay, { opacity: fadeAnim }]}>
+        <TouchableOpacity
+          style={styles.tutorialBackdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+
+
+        {/* Highlight Box */}
+        {highlightStyle && (
+          <View style={[styles.highlightBox, highlightStyle]} />
         )}
 
-        {/* Tutorial Card */}
-        <View
-          style={[
-            styles.tutorialCard,
-            {
-              top: step.position.top,
-              left: step.position.left,
-              right: step.position.right,
-              bottom: step.position.bottom,
-            },
-          ]}
-        >
+
+        <View style={styles.tutorialCard}>
           <View style={styles.tutorialIconContainer}>
-            <Icon size={32} color="#1f4b81" strokeWidth={2.5} />
+            <Icon size={32} color="#F4B942" strokeWidth={2.5} />
           </View>
+
 
           <Text style={styles.tutorialTitle}>{step.title}</Text>
           <Text style={styles.tutorialSubtitle}>{step.subtitle}</Text>
           <Text style={styles.tutorialDescription}>{step.description}</Text>
+
 
           <View style={styles.tutorialDots}>
             {BUDGET_TUTORIAL_STEPS.map((_, i) => (
@@ -222,9 +198,11 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
             ))}
           </View>
 
+
           <Text style={styles.tutorialStepText}>
             Step {currentStep + 1} of {BUDGET_TUTORIAL_STEPS.length}
           </Text>
+
 
           <View style={styles.tutorialButtons}>
             {currentStep > 0 ? (
@@ -232,16 +210,18 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                 onPress={handlePrevious}
                 style={styles.tutorialBackBtn}
               >
-                <ArrowLeft size={18} color="#6B7280" />
+                <ArrowLeft size={18} color="#C49A3C" />
                 <Text style={styles.tutorialBackText}>Back</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.tutorialSpacer} />
             )}
 
+
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.tutorialSkipText}>Skip</Text>
             </TouchableOpacity>
+
 
             <TouchableOpacity
               onPress={handleNext}
@@ -252,46 +232,51 @@ function TutorialOverlay({ visible, onClose, currentStep, setCurrentStep }) {
                   ? "Got it!"
                   : "Next"}
               </Text>
-              <ArrowRight size={18} color="white" />
+              <ArrowRight size={18} color="#6B1C23" />
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </Animated.View>
     </Modal>
   );
 }
 
+
 export default function BudgetTutorialScreen() {
   const router = useRouter();
-  const [showTutorial, setShowTutorial] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+
 
   const handleBack = () => {
     router.back();
   };
+
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ArrowLeft size={24} color="white" />
+          <ArrowLeft size={24} color="#F4B942" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Budget Tutorial</Text>
         <View style={styles.headerSpacer} />
       </View>
 
+
       {/* Scrollable Content */}
-      <ScrollView style={styles.scrollView} scrollEnabled={!showTutorial}>
+      <ScrollView style={styles.scrollView}>
         {/* Budget Overview */}
         <View style={[styles.budgetOverview, styles.gradientBg]}>
           <View style={styles.overviewHeader}>
             <Text style={styles.overviewTitle}>Budget Overview</Text>
             <View style={styles.datePill}>
-              <Calendar size={14} color="white" />
+              <Calendar size={14} color="#6B1C23" />
               <Text style={styles.datePillText}>Weekly • Nov 4 - Nov 11</Text>
             </View>
           </View>
+
 
           <View style={styles.statsGrid}>
             {[
@@ -303,7 +288,7 @@ export default function BudgetTutorialScreen() {
               return (
                 <View key={i} style={styles.statCard}>
                   <View style={styles.statIconContainer}>
-                    <Icon size={24} color="white" />
+                    <Icon size={24} color="#F4B942" />
                   </View>
                   <View style={styles.statInfo}>
                     <Text style={styles.statLabel}>{item.label}</Text>
@@ -318,29 +303,33 @@ export default function BudgetTutorialScreen() {
           </View>
         </View>
 
+
         {/* Unallocated */}
         <View style={styles.unallocatedContainer}>
           <View style={styles.unallocatedPill}>
-            <Hourglass size={20} color="white" />
+            <Hourglass size={20} color="#6B1C23" />
             <Text style={styles.unallocatedText}>Unallocated ₱5,000</Text>
           </View>
         </View>
+
 
         {/* Action Buttons Section */}
         <View style={styles.actionsContainer}>
           <View style={styles.actionsInner}>
             <TouchableOpacity style={[styles.actionButton, styles.setPrimary]}>
-              <Settings size={24} color="white" />
+              <Settings size={24} color="#6B1C23" />
               <Text style={styles.actionButtonText}>Set Allocation</Text>
             </TouchableOpacity>
 
+
             <TouchableOpacity style={[styles.actionButton, styles.clearSecondary]}>
-              <RefreshCw size={24} color="#1f4b81" />
+              <RefreshCw size={24} color="#6B1C23" />
               <Text style={styles.actionButtonSecondaryText}>Clear All</Text>
             </TouchableOpacity>
 
+
             <TouchableOpacity style={[styles.actionButton, styles.copySecondary]}>
-              <Copy size={24} color="#1f4b81" />
+              <Copy size={24} color="#6B1C23" />
               <Text style={styles.actionButtonSecondaryText}>
                 Copy Last Period
               </Text>
@@ -349,6 +338,19 @@ export default function BudgetTutorialScreen() {
         </View>
       </ScrollView>
 
+
+      {/* Floating Help Button */}
+      <TouchableOpacity
+        style={styles.helpButton}
+        onPress={() => {
+          setShowTutorial(true);
+          setCurrentStep(0);
+        }}
+      >
+        <Text style={styles.helpButtonText}>?</Text>
+      </TouchableOpacity>
+
+
       {/* Tutorial Overlay */}
       <TutorialOverlay
         visible={showTutorial}
@@ -356,30 +358,18 @@ export default function BudgetTutorialScreen() {
         currentStep={currentStep}
         setCurrentStep={setCurrentStep}
       />
-
-      {/* Floating Help Button - only show when tutorial is closed */}
-      {!showTutorial && (
-        <TouchableOpacity
-          style={styles.helpButton}
-          onPress={() => {
-            setShowTutorial(true);
-            setCurrentStep(0);
-          }}
-        >
-          <Text style={styles.helpButtonText}>?</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#FFF9F0",
   },
   header: {
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#6B1C23",
     paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -398,7 +388,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "white",
+    color: "#F4B942",
   },
   headerSpacer: {
     width: 40,
@@ -410,7 +400,7 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   gradientBg: {
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#6B1C23",
   },
   overviewHeader: {
     marginBottom: 16,
@@ -418,14 +408,14 @@ const styles = StyleSheet.create({
   overviewTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "white",
+    color: "#F4B942",
     marginBottom: 12,
   },
   datePill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#F4B942",
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 20,
@@ -434,25 +424,27 @@ const styles = StyleSheet.create({
   datePillText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "white",
+    color: "#6B1C23",
   },
   statsGrid: {
     gap: 16,
     marginTop: 24,
   },
   statCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: "rgba(244, 185, 66, 0.15)",
     borderRadius: 12,
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+    borderWidth: 1,
+    borderColor: "rgba(244, 185, 66, 0.3)",
   },
   statIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(244, 185, 66, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -462,42 +454,42 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "rgba(255, 255, 255, 0.9)",
+    color: "#FFE4CC",
     marginBottom: 4,
   },
   statAmount: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "white",
+    color: "#F4B942",
   },
   statSub: {
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "#FFE4CC",
     marginTop: 2,
   },
   unallocatedContainer: {
     backgroundColor: "white",
     padding: 20,
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomWidth: 2,
+    borderBottomColor: "#F4B942",
   },
   unallocatedPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#F4B942",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    shadowColor: "#1f4b81",
+    shadowColor: "#F4B942",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 4,
   },
   unallocatedText: {
-    color: "white",
+    color: "#6B1C23",
     fontWeight: "600",
     fontSize: 16,
   },
@@ -526,25 +518,25 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   setPrimary: {
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#F4B942",
   },
   clearSecondary: {
     backgroundColor: "white",
     borderWidth: 2,
-    borderColor: "#1f4b81",
+    borderColor: "#F4B942",
   },
   copySecondary: {
     backgroundColor: "white",
     borderWidth: 2,
-    borderColor: "#1f4b81",
+    borderColor: "#F4B942",
   },
   actionButtonText: {
-    color: "white",
+    color: "#6B1C23",
     fontSize: 16,
     fontWeight: "700",
   },
   actionButtonSecondaryText: {
-    color: "#1f4b81",
+    color: "#6B1C23",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -555,84 +547,77 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#F4B942",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#1f4b81",
+    shadowColor: "#F4B942",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 2,
-    borderColor: "#7fb1d6",
+    borderColor: "#6B1C23",
   },
   helpButtonText: {
-    color: "white",
+    color: "#6B1C23",
     fontSize: 32,
     fontWeight: "bold",
   },
-  // Tutorial Overlay Styles
   tutorialOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(107, 28, 35, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
-  overlayContent: {
-    flexGrow: 1,
-    minHeight: SCREEN_HEIGHT,
-  },
-  highlightBox: {
+  tutorialBackdrop: {
     position: "absolute",
-    backgroundColor: "transparent",
-    borderWidth: 3,
-    borderColor: "#1f4b81",
-    borderRadius: 12,
-    shadowColor: "#1f4b81",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 10,
-    zIndex: 2,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   tutorialCard: {
-    position: "absolute",
-    marginHorizontal: 20,
-    backgroundColor: "#1F2937",
+    backgroundColor: "white",
     borderRadius: 20,
     padding: 24,
+    maxWidth: 480,
+    width: "100%",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-    zIndex: 10,
+    shadowRadius: 40,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: "#F4B942",
   },
   tutorialIconContainer: {
     width: 64,
     height: 64,
     borderRadius: 24,
-    backgroundColor: "rgba(31, 75, 129, 0.15)",
+    backgroundColor: "rgba(244, 185, 66, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: "rgba(127, 177, 214, 0.4)",
+    borderColor: "#F4B942",
   },
   tutorialTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#6B1C23",
     marginBottom: 4,
   },
   tutorialSubtitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#93E8E9",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#F4B942",
     marginBottom: 8,
   },
   tutorialDescription: {
-    color: "#D1D5DB",
-    lineHeight: 22,
-    fontSize: 15,
+    color: "#8B6B47",
+    lineHeight: 24,
+    fontSize: 16,
     marginBottom: 20,
   },
   tutorialDots: {
@@ -646,17 +631,17 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#4B5563",
+    backgroundColor: "#F0E5D8",
   },
   tutorialDotActive: {
     width: 24,
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#F4B942",
   },
   tutorialStepText: {
     textAlign: "center",
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#9CA3AF",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#8B6B47",
     marginBottom: 16,
   },
   tutorialButtons: {
@@ -668,21 +653,21 @@ const styles = StyleSheet.create({
   tutorialBackBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: "rgba(156, 163, 175, 0.1)",
+    backgroundColor: "#FFF9F0",
+    borderWidth: 1,
+    borderColor: "#F4B942",
   },
   tutorialBackText: {
-    color: "#9CA3AF",
-    fontWeight: "600",
-    fontSize: 15,
+    color: "#C49A3C",
+    fontWeight: "700",
   },
   tutorialSkipText: {
-    color: "#9CA3AF",
-    fontWeight: "600",
-    fontSize: 15,
+    color: "#8B6B47",
+    fontWeight: "700",
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
@@ -693,17 +678,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
-    backgroundColor: "#1f4b81",
+    backgroundColor: "#F4B942",
+    shadowColor: "#F4B942",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6,
   },
   tutorialNextText: {
-    color: "white",
-    fontWeight: "700",
+    color: "#6B1C23",
+    fontWeight: "800",
     fontSize: 16,
   },
   tutorialSpacer: {
     width: 80,
   },
+  highlightBox: {
+    position: "absolute",
+    backgroundColor: "transparent",
+    borderWidth: 3,
+    borderColor: "#F4B942",
+    borderRadius: 12,
+    shadowColor: "#F4B942",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+  },
 });
+
+
+

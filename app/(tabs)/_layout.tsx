@@ -51,45 +51,45 @@ export default function TabsLayout() {
   ).current;
 
   // ✅ Listen for dimension changes
- useEffect(() => {
-  let timeout;
-  const subscription = Dimensions.addEventListener("change", ({ window }) => {
-    clearTimeout(timeout);
+  useEffect(() => {
+    let timeout;
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      clearTimeout(timeout);
 
-    timeout = setTimeout(() => {
-      const newWidth = window.width;
-      const newHeight = window.height;
+      timeout = setTimeout(() => {
+        const newWidth = window.width;
+        const newHeight = window.height;
 
-      setDimensions({ width: newWidth, height: newHeight });
+        setDimensions({ width: newWidth, height: newHeight });
 
-      // Now recalc FAB position only once
-      const currentX = pan.x._value;
-      const currentY = pan.y._value;
+        const currentX = pan.x._value;
+        const currentY = pan.y._value;
 
-      const isRight = currentX > dimensions.width / 2;
-      const newX = isRight ? newWidth - FAB_SIZE * 0.4 : -FAB_SIZE * 0.6;
+        const isRight = currentX > dimensions.width / 2;
+        const newX = isRight ? newWidth - FAB_SIZE * 0.4 : -FAB_SIZE * 0.6;
 
-      const yRatio = currentY / dimensions.height;
-      const newY = Math.max(FAB_SIZE, Math.min(yRatio * newHeight, newHeight - FAB_SIZE * 2));
+        const yRatio = currentY / dimensions.height;
+        const newY = Math.max(FAB_SIZE, Math.min(yRatio * newHeight, newHeight - FAB_SIZE * 2));
 
-      Animated.spring(pan, {
-        toValue: { x: newX, y: newY },
-        useNativeDriver: false,
-      }).start();
+        Animated.spring(pan, {
+          toValue: { x: newX, y: newY },
+          useNativeDriver: false,
+        }).start();
 
-      setFabPosition({ isRight });
-    }, 120); // delay prevents rapid re-renders
-  });
+        setFabPosition({ isRight });
+      }, 120);
+    });
 
-  return () => subscription?.remove();
-}, []);
+    return () => subscription?.remove();
+  }, []);
 
+  // ✅ MAROON & GOLD COLORS
   const tabs = [
-    { name: "index", icon: "home", label: "Home", colors: ["#1f4b81ff", "#1f4b81ff"], isTab: true },
-    { name: "budget", icon: "wallet", label: "Budget", colors: ["#1f4b81ff", "#1f4b81ff"], isTab: true },
-    { name: "expenses", icon: "add-circle", label: "Expense", colors: ["#1f4b81ff", "#1f4b81ff"], isTab: true },
-    { name: "deals", icon: "pricetag", label: "Marketplace", colors: ["#1f4b81ff", "#1f4b81ff"], isTab: false },
-    { name: "profile", icon: "person-circle", label: "Profile", colors: ["#1f4b81ff", "#1f4b81ff"], isTab: true },
+    { name: "index", icon: "home", label: "Home", colors: ["#6B1C23", "#8B2A35"], isTab: true },
+    { name: "budget", icon: "wallet", label: "Budget", colors: ["#6B1C23", "#8B2A35"], isTab: true },
+    { name: "expenses", icon: "add-circle", label: "Expense", colors: ["#6B1C23", "#8B2A35"], isTab: true },
+    { name: "deals", icon: "pricetag", label: "Marketplace", colors: ["#6B1C23", "#8B2A35"], isTab: false },
+    { name: "profile", icon: "person-circle", label: "Profile", colors: ["#6B1C23", "#8B2A35"], isTab: true },
   ];
 
   tabs.forEach((tab, i) => {
@@ -117,14 +117,12 @@ export default function TabsLayout() {
         let finalX = Math.max(0, Math.min(pan.x._value, dimensions.width - FAB_SIZE));
         let finalY = Math.max(0, Math.min(pan.y._value, dimensions.height - FAB_SIZE));
 
-        // Snap horizontally (60% hidden) - only left or right
         if (finalX < dimensions.width / 2) {
           finalX = -FAB_SIZE * 0.6;
         } else {
           finalX = dimensions.width - FAB_SIZE * 0.4;
         }
 
-        // Clamp vertical position
         finalY = Math.max(FAB_SIZE, Math.min(finalY, dimensions.height - FAB_SIZE * 2));
 
         Animated.spring(pan, {
@@ -165,7 +163,7 @@ export default function TabsLayout() {
     setMenuVisible(toOpen);
   };
 
-   const handleTabPress = (tab) => {
+  const handleTabPress = (tab) => {
     toggleFab();
     setTimeout(() => {
       if (tab.name === "index") {
@@ -242,7 +240,6 @@ export default function TabsLayout() {
           let x = radius * Math.cos(angle);
           let y = radius * Math.sin(angle);
 
-          // Flip horizontally when on right
           x = fabPosition.isRight ? -Math.abs(x) : Math.abs(x);
 
           const hoverScale = hoverScales[i].interpolate({
@@ -291,7 +288,7 @@ export default function TabsLayout() {
                   style={[styles.circleWrapper, isHovered && styles.circleWrapperActive]}
                 >
                   <View style={[styles.circleInner, isHovered && styles.circleInnerActive]}>
-                    <Ionicons name={tab.icon} size={26} color="#fff" />
+                    <Ionicons name={tab.icon} size={26} color="#F4B942" /> {/* ✅ Gold icons */}
                     <Text style={[styles.iconLabel, isHovered && styles.labelActive]}>
                       {tab.label}
                     </Text>
@@ -302,11 +299,11 @@ export default function TabsLayout() {
           );
         })}
 
-        {/* Draggable FAB */}
+        {/* ✅ MAROON FAB */}
         <Animated.View {...panResponder.panHandlers}>
           <TouchableOpacity onPress={toggleFab} activeOpacity={0.9} style={styles.fabButton}>
             <LinearGradient
-              colors={["#1E40AF", "#3B82F6", "#60A5FA"]}
+              colors={["#6B1C23", "#8B2A35", "#A52A3A"]} // ✅ Maroon gradient
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.fabWrapper}
@@ -322,7 +319,7 @@ export default function TabsLayout() {
                   <Ionicons 
                     name={fabPosition.isRight ? "chevron-back" : "chevron-forward"} 
                     size={28} 
-                    color="#fff" 
+                    color="#F4B942" // ✅ Gold chevron
                   />
                 </Animated.View>
               </View>
@@ -356,9 +353,13 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
+    shadowColor: "#6B1C23", // ✅ Maroon shadow
+    shadowOpacity: 0.4,
     elevation: 8,
+  },
+  circleWrapperActive: {
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
   },
   circleInner: {
     width: 66,
@@ -366,14 +367,21 @@ const styles = StyleSheet.create({
     borderRadius: 33,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(17,24,39,0.9)",
+    backgroundColor: "rgba(107, 28, 35, 0.95)", // ✅ Dark maroon background
+  },
+  circleInnerActive: {
+    backgroundColor: "rgba(107, 28, 35, 1)", // ✅ Solid maroon on hover
   },
   iconLabel: {
-    color: "#fff",
+    color: "#F4B942", // ✅ Gold text
     fontSize: 9,
     fontWeight: "600",
     marginTop: 3,
     textAlign: "center",
+  },
+  labelActive: {
+    color: "#FCD34D", // ✅ Brighter gold on hover
+    fontWeight: "700",
   },
   fabButton: { position: "relative", zIndex: 1002 },
   fabWrapper: {
@@ -382,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: FAB_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#3B82F6",
+    shadowColor: "#6B1C23", // ✅ Maroon shadow
     shadowOpacity: 0.6,
     shadowRadius: 15,
     elevation: 20,
@@ -393,6 +401,6 @@ const styles = StyleSheet.create({
     borderRadius: (FAB_SIZE - 6) / 2,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(147,232,233,0.95)",
+    backgroundColor: "rgba(244, 185, 66, 0.95)", // ✅ Gold inner circle
   },
 });
