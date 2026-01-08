@@ -283,7 +283,7 @@ const [plannedExpanded, setPlannedExpanded] = useState(false);
 const [newPlannedName, setNewPlannedName] = useState('');
 const [newPlannedAmount, setNewPlannedAmount] = useState('');
 const [newPlannedCategory, setNewPlannedCategory] = useState('Select Category');
-const [newPlannedRecurring, setNewPlannedRecurring] = useState(false);
+const [newPlannedRecurring, setNewPlannedRecurring] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
 const [searchingMarketplace, setSearchingMarketplace] = useState(false);
 const [showDealsModal, setShowDealsModal] = useState(false);
 const [selectedPlannedDeals, setSelectedPlannedDeals] = useState<any[]>([]);
@@ -1459,7 +1459,18 @@ const handleAddPlannedExpense = async () => {
     return;
   }
 
-  const marketplaceResult = await searchMarketplace(newPlannedName);
+  // 🛡️ Smart detection: Skip marketplace for digital services, subscriptions, and bills
+  const isDigitalService = /\+|\bpro\b|\bpremium\b|\bsubscription\b|\bsub\b|\bmembership\b/i.test(newPlannedName);
+  const isBillCategory = newPlannedCategory === 'Bills';
+  const isUtility = /\belectric\b|\bwater\b|\binternet\b|\bwifi\b|\brent\b|\bphone\b|\bmobile\b|\bload\b/i.test(newPlannedName);
+  
+  const shouldSkipMarketplace = isDigitalService || isBillCategory || isUtility;
+  
+  let marketplaceResult = { found: false };
+  
+  if (!shouldSkipMarketplace) {
+    marketplaceResult = await searchMarketplace(newPlannedName);
+  }
   
   const newPlanned = {
     id: Date.now().toString(),
@@ -1477,7 +1488,7 @@ const handleAddPlannedExpense = async () => {
       unit: marketplaceResult.unit,
       category: marketplaceResult.category,
       distance: marketplaceResult.distance,
-      allDeals: marketplaceResult.allDeals, // All matching deals
+      allDeals: marketplaceResult.allDeals,
     } : null,
     recurring: newPlannedRecurring,
     status: 'planned',
@@ -1490,7 +1501,7 @@ const handleAddPlannedExpense = async () => {
   setNewPlannedName('');
   setNewPlannedAmount('');
   setNewPlannedCategory('Select Category');
-  setNewPlannedRecurring(false);
+  setNewPlannedRecurring('none');
   setShowPlannedModal(false);
   
   if (marketplaceResult.found) {
@@ -1506,6 +1517,9 @@ const handleAddPlannedExpense = async () => {
       `Stock: ${marketplaceResult.stock ? 'Available' : 'Out of Stock'}`,
       [{ text: "OK" }]
     );
+  } else if (shouldSkipMarketplace) {
+    // Optional: Silent skip, or show confirmation
+    console.log("🔕 Marketplace search skipped (digital service/bill detected)");
   }
 };
 
@@ -2210,7 +2224,7 @@ const handleEditExpense = async () => {
 
   const payload = {
     amount: parseFloat(editAmount),
-    category: editCategory,
+    category: editCategory, // ✅ This should use editCategory, not expenseCategory
     notes: editNotes,
     date: editDate?.toISOString() || selectedExpense.date,
   };
@@ -2901,12 +2915,14 @@ const HistorySection = (
         )}
         
         {/* Recurring Badge */}
-        {planned.recurring && (
-          <View style={[styles.marketplaceBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
-            <Ionicons name="repeat" size={10} color="#D97706" />
-            <Text style={[styles.marketplaceBadgeText, { color: '#D97706' }]}>Monthly</Text>
-          </View>
-        )}
+{planned.recurring && planned.recurring !== 'none' && (
+  <View style={[styles.marketplaceBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+    <Ionicons name="repeat" size={10} color="#D97706" />
+    <Text style={[styles.marketplaceBadgeText, { color: '#D97706' }]}>
+      {planned.recurring === 'daily' ? 'Daily' : planned.recurring === 'weekly' ? 'Weekly' : 'Monthly'}
+    </Text>
+  </View>
+)}
       </View>
       
       {/* Store & Distance Info */}
@@ -3660,79 +3676,102 @@ const HistorySection = (
 
       <ScrollView style={{ maxHeight: 400 }}>
         {/* Main Categories */}
-        {['Food', 'Transport', 'Bills', 'School', 'Shopping'].map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            onPress={() => {
-              // ✅ Update the correct state based on caller
-              if (editCategoryCaller) {
-                setEditCategory(cat);
-              } else if (categoryCallerModal === 'planned') {
-                setNewPlannedCategory(cat);
-              } else {
-                setExpenseCategory(cat);
-              }
-              
-              setCategoryModalVisible(false);
-              
-              // ✅ Re-show expense detail modal if editing
-              if (editCategoryCaller) {
-                setTimeout(() => {
-                  setShowExpenseDetailModal(true);
-                  setEditCategoryCaller(false);
-                }, 100);
-              }
-              
-              // ✅ Re-show planned modal if it was the caller
-              if (categoryCallerModal === 'planned') {
-                setTimeout(() => {
-                  setShowPlannedModal(true);
-                }, 100);
-              }
-              
-              setCategoryCallerModal(null);
-            }}
-            style={{
-              padding: 14,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: '#FEF9C3',
-              minWidth: 280,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '#fcfcfcff' : 'transparent',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: getCategoryColor(cat),
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}>
-                <Ionicons 
-                  name={getCategoryIcon(cat)} 
-                  size={18} 
-                  color="#FFFFFF" 
-                />
-              </View>
-              <Text style={{ 
-                fontSize: 15, 
-                color: '#6B1C23',
-                fontWeight: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '600' : '400'
-              }}>
-                {cat}
-              </Text>
-            </View>
-            {(editCategoryCaller ? editCategory === cat : expenseCategory === cat) && (
-              <Ionicons name="checkmark" size={20} color="#F4B942" />
-            )}
-          </TouchableOpacity>
-        ))}
+       {['Food', 'Transport', 'Bills', 'School', 'Shopping'].map((cat) => (
+  <TouchableOpacity
+    key={cat}
+    onPress={() => {
+      console.log('🎯 Category selected:', cat, 'Caller:', editCategoryCaller ? 'edit' : categoryCallerModal);
+      
+      // ✅ NEW: Update the correct state based on caller
+      if (editCategoryCaller) {
+        setEditCategory(cat);
+        setExpenseCategory(cat); // ✅ Also update this for highlighting
+      } else if (categoryCallerModal === 'planned') {
+        setNewPlannedCategory(cat);
+      } else {
+        setExpenseCategory(cat);
+      }
+      
+      setCategoryModalVisible(false);
+      
+      // ✅ Re-show the correct modal after selection
+      if (editCategoryCaller) {
+        setTimeout(() => {
+          setShowExpenseDetailModal(true);
+          setEditCategoryCaller(false);
+        }, 100);
+      }
+      
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      
+      setCategoryCallerModal(null);
+    }}
+    style={{
+      padding: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#FEF9C3',
+      minWidth: 280,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      // ✅ FIX: Check both editCategory AND expenseCategory for highlighting
+      backgroundColor: (
+        editCategoryCaller 
+          ? (editCategory === cat || expenseCategory === cat)
+          : (categoryCallerModal === 'planned' 
+              ? newPlannedCategory === cat 
+              : expenseCategory === cat)
+      ) ? '#fcfcfcff' : 'transparent',
+    }}
+  >
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: getCategoryColor(cat),
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+      }}>
+        <Ionicons 
+          name={getCategoryIcon(cat)} 
+          size={18} 
+          color="#FFFFFF" 
+        />
+      </View>
+      <Text style={{ 
+        fontSize: 15, 
+        color: '#6B1C23',
+        // ✅ FIX: Check both for bold text
+        fontWeight: (
+          editCategoryCaller 
+            ? (editCategory === cat || expenseCategory === cat)
+            : (categoryCallerModal === 'planned' 
+                ? newPlannedCategory === cat 
+                : expenseCategory === cat)
+        ) ? '600' : '400'
+      }}>
+        {cat}
+      </Text>
+    </View>
+    {/* ✅ FIX: Show checkmark for both conditions */}
+    {(
+      editCategoryCaller 
+        ? (editCategory === cat || expenseCategory === cat)
+        : (categoryCallerModal === 'planned' 
+            ? newPlannedCategory === cat 
+            : expenseCategory === cat)
+    ) && (
+      <Ionicons name="checkmark" size={20} color="#F4B942" />
+    )}
+  </TouchableOpacity>
+))}
 
         {/* Others Section */}
         <TouchableOpacity
@@ -3807,111 +3846,158 @@ const HistorySection = (
 
             {/* Custom Categories */}
             {customCategories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => {
-                  if (editCategoryCaller) {
-                    setEditCategory(cat);
-                  } else if (categoryCallerModal === 'planned') {
-                    setNewPlannedCategory(cat);
-                  } else {
-                    setExpenseCategory(cat);
-                  }
-                  
-                  setCategoryModalVisible(false);
-                  
-                  if (editCategoryCaller) {
-                    setTimeout(() => {
-                      setShowExpenseDetailModal(true);
-                      setEditCategoryCaller(false);
-                    }, 100);
-                  }
-                  
-                  if (categoryCallerModal === 'planned') {
-                    setTimeout(() => {
-                      setShowPlannedModal(true);
-                    }, 100);
-                  }
-                  
-                  setCategoryCallerModal(null);
-                }}
-                style={{
-                  padding: 12,
-                  paddingLeft: 64,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#FEF9C3",
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '#FEF9C3' : 'transparent',
-                }}
-              >
-                <Text style={{ 
-                  fontSize: 14, 
-                  color: '#6B1C23',
-                  fontWeight: (editCategoryCaller ? editCategory === cat : expenseCategory === cat) ? '600' : '400'
-                }}>
-                  {cat}
-                </Text>
-                {(editCategoryCaller ? editCategory === cat : expenseCategory === cat) && (
-                  <Ionicons name="checkmark" size={18} color="#F4B942" />
-                )}
-              </TouchableOpacity>
-            ))}
+  <TouchableOpacity
+    key={cat}
+    onPress={() => {
+      console.log('🎯 Custom category selected:', cat);
+      
+      // ✅ Same fix as above
+      if (editCategoryCaller) {
+        setEditCategory(cat);
+        setExpenseCategory(cat); // ✅ Also update this
+      } else if (categoryCallerModal === 'planned') {
+        setNewPlannedCategory(cat);
+      } else {
+        setExpenseCategory(cat);
+      }
+      
+      setCategoryModalVisible(false);
+      
+      if (editCategoryCaller) {
+        setTimeout(() => {
+          setShowExpenseDetailModal(true);
+          setEditCategoryCaller(false);
+        }, 100);
+      }
+      
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      
+      setCategoryCallerModal(null);
+    }}
+    style={{
+      padding: 12,
+      paddingLeft: 64,
+      borderBottomWidth: 1,
+      borderBottomColor: "#FEF9C3",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: (
+        editCategoryCaller 
+          ? (editCategory === cat || expenseCategory === cat)
+          : (categoryCallerModal === 'planned' 
+              ? newPlannedCategory === cat 
+              : expenseCategory === cat)
+      ) ? '#FEF9C3' : 'transparent',
+    }}
+  >
+    <Text style={{ 
+      fontSize: 14, 
+      color: '#6B1C23',
+      fontWeight: (
+        editCategoryCaller 
+          ? (editCategory === cat || expenseCategory === cat)
+          : (categoryCallerModal === 'planned' 
+              ? newPlannedCategory === cat 
+              : expenseCategory === cat)
+      ) ? '600' : '400'
+    }}>
+      {cat}
+    </Text>
+    {(
+      editCategoryCaller 
+        ? (editCategory === cat || expenseCategory === cat)
+        : (categoryCallerModal === 'planned' 
+            ? newPlannedCategory === cat 
+            : expenseCategory === cat)
+    ) && (
+      <Ionicons name="checkmark" size={18} color="#F4B942" />
+    )}
+  </TouchableOpacity>
+))}
 
-            {/* Other Subcategories */}
-            {otherSubcategories.map((sub) => (
-              <TouchableOpacity
-                key={sub}
-                onPress={() => {
-                  if (editCategoryCaller) {
-                    setEditCategory(sub);
-                  } else if (categoryCallerModal === 'planned') {
-                    setNewPlannedCategory(sub);
-                  } else {
-                    setExpenseCategory(sub);
-                  }
-                  
-                  setCategoryModalVisible(false);
-                  
-                  if (editCategoryCaller) {
-                    setTimeout(() => {
-                      setShowExpenseDetailModal(true);
-                      setEditCategoryCaller(false);
-                    }, 100);
-                  }
-                  
-                  if (categoryCallerModal === 'planned') {
-                    setTimeout(() => {
-                      setShowPlannedModal(true);
-                    }, 100);
-                  }
-                  
-                  setCategoryCallerModal(null);
-                }}
-                style={{
-                  padding: 12,
-                  paddingLeft: 64,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#FEF9C3",
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: (editCategoryCaller ? editCategory === sub : expenseCategory === sub) ? '#FEF9C3' : 'transparent',
-                }}
-              >
-                <Text style={{ 
-                  fontSize: 14, 
-                  color: '#6B1C23',
-                  fontWeight: (editCategoryCaller ? editCategory === sub : expenseCategory === sub) ? '600' : '400'
-                }}>
-                  {sub}
-                </Text>
-                {(editCategoryCaller ? editCategory === sub : expenseCategory === sub) && (
-                  <Ionicons name="checkmark" size={18} color="#F4B942" />
-                )}
-              </TouchableOpacity>
-            ))}
+
+// =============================================================================
+// ALSO UPDATE: Other Subcategories section
+// =============================================================================
+
+{otherSubcategories.map((sub) => (
+  <TouchableOpacity
+    key={sub}
+    onPress={() => {
+      console.log('🎯 Subcategory selected:', sub);
+      
+      if (editCategoryCaller) {
+        setEditCategory(sub);
+        setExpenseCategory(sub); // ✅ Also update this
+      } else if (categoryCallerModal === 'planned') {
+        setNewPlannedCategory(sub);
+      } else {
+        setExpenseCategory(sub);
+      }
+      
+      setCategoryModalVisible(false);
+      
+      if (editCategoryCaller) {
+        setTimeout(() => {
+          setShowExpenseDetailModal(true);
+          setEditCategoryCaller(false);
+        }, 100);
+      }
+      
+      if (categoryCallerModal === 'planned') {
+        setTimeout(() => {
+          setShowPlannedModal(true);
+        }, 100);
+      }
+      
+      setCategoryCallerModal(null);
+    }}
+    style={{
+      padding: 12,
+      paddingLeft: 64,
+      borderBottomWidth: 1,
+      borderBottomColor: "#FEF9C3",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: (
+        editCategoryCaller 
+          ? (editCategory === sub || expenseCategory === sub)
+          : (categoryCallerModal === 'planned' 
+              ? newPlannedCategory === sub 
+              : expenseCategory === sub)
+      ) ? '#FEF9C3' : 'transparent',
+    }}
+  >
+    <Text style={{ 
+      fontSize: 14, 
+      color: '#6B1C23',
+      fontWeight: (
+        editCategoryCaller 
+          ? (editCategory === sub || expenseCategory === sub)
+          : (categoryCallerModal === 'planned' 
+              ? newPlannedCategory === sub 
+              : expenseCategory === sub)
+      ) ? '600' : '400'
+    }}>
+      {sub}
+    </Text>
+    {(
+      editCategoryCaller 
+        ? (editCategory === sub || expenseCategory === sub)
+        : (categoryCallerModal === 'planned' 
+            ? newPlannedCategory === sub 
+            : expenseCategory === sub)
+    ) && (
+      <Ionicons name="checkmark" size={18} color="#F4B942" />
+    )}
+  </TouchableOpacity>
+))}
          </View>
         )}
     </ScrollView>
@@ -4186,33 +4272,21 @@ const HistorySection = (
                   />
                 </View>
 
-               {/* Category Picker */}
+             {/* Category Picker */}
 <View>
-  <Text style={{ fontSize: 12, color: "#6B1C23", marginBottom: 4, fontWeight: '600' }}>
+  <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 4, fontWeight: '600' }}>
     Category
   </Text>
   <TouchableOpacity
     onPress={() => {
-      // ✅ Save current edit category to expenseCategory
       setExpenseCategory(editCategory);
-      
-      // ✅ Mark that we're calling from edit mode
       setEditCategoryCaller(true);
-      
-      // ✅ Hide expense detail modal FIRST
       setShowExpenseDetailModal(false);
-      
-      // ✅ Then show category modal after a brief delay
-      setTimeout(() => {
-        setCategoryModalVisible(true);
-      }, 100);
+      setTimeout(() => setCategoryModalVisible(true), 100);
     }}
-    style={[styles.input, { 
-      justifyContent: 'center',
-      borderColor: '#F4B942', // Gold border
-    }]}
+    style={styles.input}
   >
-    <Text style={{ color: editCategory === 'Select Category' ? '#7D2E3A' : '#6B1C23' }}>
+    <Text style={{ color: editCategory === 'Select Category' ? '#64748B' : '#1E293B' }}>
       {editCategory}
     </Text>
   </TouchableOpacity>
@@ -4278,21 +4352,14 @@ const HistorySection = (
 
               {/* Action Buttons - Edit Mode */}
               <View style={{ gap: 8, marginBottom: 5 }}>
-                <TouchableOpacity
-                  style={[styles.submitButton,
-                  { backgroundColor: "#6B1C23", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 2 }]}
-                  onPress={() => {
-                    // Update the edited values back to the category picker
-                    if (expenseCategory !== editCategory) {
-                      setEditCategory(expenseCategory);
-                    }
-                    handleEditExpense();
-                  }}
-                  
-                  disabled={isLoading}
-                >
-                  <Text style={styles.submitText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
-                </TouchableOpacity>
+               <TouchableOpacity
+  style={[styles.submitButton,
+  { backgroundColor: "#6B1C23", flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 2 }]}
+  onPress={handleEditExpense}
+  disabled={isLoading}
+>
+  <Text style={styles.submitText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
+</TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.submitButton, { flex: 1, backgroundColor: "#94A3B8" }]}
@@ -4315,18 +4382,7 @@ const HistorySection = (
   </Pressable>
 </Modal>
 
-{/* Update Category Modal to sync with edit mode */}
-{categoryModalVisible && isEditMode && (
-  <Modal
-    visible={categoryModalVisible}
-    transparent
-    animationType="fade"
-    onRequestClose={() => {
-      setCategoryModalVisible(false);
-      setEditCategory(expenseCategory);
-    }}
-  />
-)}
+
 
 {isListening && (
   <View
@@ -5457,28 +5513,54 @@ const HistorySection = (
   </Text>
 </TouchableOpacity>
       
+     {/* Recurring Frequency Selector */}
+<View style={{ marginBottom: 14 }}>
+  <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 8, fontWeight: '600' }}>
+    Recurring Frequency
+  </Text>
+  <View style={{ flexDirection: 'row', gap: 8 }}>
+    {[
+      { value: 'none', label: 'None', icon: 'close-circle-outline' },
+      { value: 'daily', label: 'Daily', icon: 'today-outline' },
+      { value: 'weekly', label: 'Weekly', icon: 'calendar-outline' },
+      { value: 'monthly', label: 'Monthly', icon: 'repeat' },
+    ].map((option) => (
       <TouchableOpacity
-        style={styles.recurringToggle}
-        onPress={() => setNewPlannedRecurring(!newPlannedRecurring)}
+        key={option.value}
+        onPress={() => setNewPlannedRecurring(option.value as any)}
+        style={{
+          flex: 1,
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: newPlannedRecurring === option.value ? '#6B1C23' : '#F8FAFC',
+          borderRadius: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 8,
+          borderWidth: 1.5,
+          borderColor: newPlannedRecurring === option.value ? '#6B1C23' : '#E2E8F0',
+        }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons 
-            name="repeat" 
-            size={isMobile ? 16 : 18}  
-            style={{ marginRight: 8 }} 
-          />
-          <Text style={{ fontSize: isMobile ? 13 : 14, color: '#1E293B' }}>  
-            Recurring (Monthly)
-          </Text>
-        </View>
-        <View style={[
-          styles.checkbox, 
-          newPlannedRecurring && styles.checkboxActive,
-          isMobile && { width: 20, height: 20 } 
-        ]}>
-          {newPlannedRecurring && <Ionicons name="checkmark" size={isMobile ? 14 : 16} color="#fff" />}  
-        </View>
+        <Ionicons
+          name={option.icon as any}
+          size={18}
+          color={newPlannedRecurring === option.value ? '#fff' : '#64748B'}
+          style={{ marginBottom: 4 }}
+        />
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: '600',
+            color: newPlannedRecurring === option.value ? '#fff' : '#64748B',
+            textAlign: 'center',
+          }}
+        >
+          {option.label}
+        </Text>
       </TouchableOpacity>
+    ))}
+  </View>
+</View>
       
      
       
@@ -6083,19 +6165,8 @@ recurringToggle: {
   borderWidth: 1,
   borderColor: '#E2E8F0',
 },
-checkbox: {
-  width: 24,
-  height: 24,
-  borderRadius: 6,
-  borderWidth: 2,
-  borderColor: '#CBD5E1',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-checkboxActive: {
-  backgroundColor: '#6B1C23',
-  borderColor: '#6B1C23',
-},
+
+
 
  // 👇 ADD THESE NEW STYLES HERE
   dealCard: {
